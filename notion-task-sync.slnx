@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="NotionTaskSync.csproj" />
+  <Project Path="tests/notion-task-sync.Tests/notion-task-sync.Tests.csproj" />
+</Solution>
