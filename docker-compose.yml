@@ -1,0 +1,96 @@
+# =============================================================================
+# Author: Vladyslav Zaiets | https://sarmkadan.com
+# CTO & Software Architect
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # Main Notion Task Sync service
+  notion-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notion-task-sync
+    restart: unless-stopped
+
+    # Environment variables
+    environment:
+      - NotionApi__ApiKey=${NOTION_API_KEY}
+      - NotionApi__DatabaseId=${NOTION_DATABASE_ID}
+      - NotionApi__RateLimitPerSecond=3
+      - AppSettings__LocalTasksDirectory=/data/tasks
+      - AppSettings__BackupDirectory=/data/backups
+      - AppSettings__LogFilePath=/var/log/notion-sync/sync.log
+      - Logging__LogLevel__Default=Information
+      - SyncConfig__SyncInterval=300
+      - SyncConfig__ConflictResolutionStrategy=latest-wins
+      - SyncConfig__AutoBackup=true
+
+    # Volume mounts
+    volumes:
+      - ./config:/app/config
+      - ./tasks:/data/tasks
+      - ./backups:/data/backups
+      - ./logs:/var/log/notion-sync
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "dotnet", "run", "--", "status"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Optional: Prometheus for metrics (if integrated)
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: notion-sync-prometheus
+  #   volumes:
+  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  #     - ./metrics:/prometheus
+  #   ports:
+  #     - "9090:9090"
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+
+  # Optional: Grafana for visualization (if integrated)
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: notion-sync-grafana
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   volumes:
+  #     - ./grafana:/var/lib/grafana
+
+# Named volumes
+volumes:
+  notion-sync-data:
+    driver: local
+  notion-sync-logs:
+    driver: local
+
+# Networks
+networks:
+  default:
+    name: notion-sync-network
+    driver: bridge
