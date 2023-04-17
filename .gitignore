@@ -1,0 +1,80 @@
+# Build results
+bin/
+obj/
+.vs/
+.vscode/
+
+# Local app settings
+appsettings.local.json
+
+# IDE and editor files
+*.swp
+*.swo
+*~
+.DS_Store
+*.user
+*.suo
+*.sln.iml
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Rider
+.idea/
+*.sln.iml
+riderModule.iml
+
+# Environment files
+.env
+.env.local
+*.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Runtime files
+appsettings.*.json
+!appsettings.json
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.backup
+*~
+
+# Task files and local storage
+tasks/
+backups/
+.sync.lock
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test results
+TestResults/
+*.trx
+
+# NuGet
+.nuget/
+*.nupkg
+*.snupkg
+
+# Migrations
+**/Migrations/
+
+# Playwright
+.playwright/
