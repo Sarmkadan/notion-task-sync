@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -40,7 +41,7 @@ public static class StringExtensions
     /// </summary>
     public static string Truncate(this string str, int maxLength, string suffix = "...")
     {
-        if (str == null || str.Length <= maxLength)
+        if (str is null || str.Length <= maxLength)
             return str;
 
         return str.Substring(0, maxLength - suffix.Length) + suffix;

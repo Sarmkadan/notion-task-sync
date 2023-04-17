@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,7 +15,7 @@ using System.Linq;
 /// Tracks success rates, performance metrics, and error patterns.
 /// Used for generating health reports and identifying performance bottlenecks.
 /// </summary>
-public class SyncStatistics
+public sealed class SyncStatistics
 {
     /// <summary>
     /// Total number of sync operations performed.
@@ -143,7 +144,7 @@ public class SyncStatistics
 /// Snapshot of a single sync operation result.
 /// Allows historical analysis of sync performance.
 /// </summary>
-public class SyncOperationSnapshot
+public sealed class SyncOperationSnapshot
 {
     /// <summary>
     /// When the sync operation occurred.

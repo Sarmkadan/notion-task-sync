@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -15,7 +16,7 @@ using Microsoft.Extensions.Logging;
 /// Provides utilities for reading, writing, and managing files with proper error handling.
 /// Abstracts away filesystem complexity and makes code more testable.
 /// </summary>
-public class FileSystemHelper
+public sealed class FileSystemHelper
 {
     private readonly ILogger<FileSystemHelper> _logger;
 

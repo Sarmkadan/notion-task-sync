@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -135,7 +136,7 @@ public static class TimeHelper
     /// </summary>
     public static bool ShouldSync(DateTime? lastSyncTime, int intervalSeconds)
     {
-        if (lastSyncTime == null)
+        if (lastSyncTime is null)
             return true;
 
         var elapsed = GetCurrentUtcTime() - lastSyncTime.Value;
@@ -147,7 +148,7 @@ public static class TimeHelper
     /// </summary>
     public static DateTime CalculateNextSyncTime(DateTime? lastSyncTime, int intervalSeconds)
     {
-        if (lastSyncTime == null)
+        if (lastSyncTime is null)
             return GetCurrentUtcTime();
 
         return lastSyncTime.Value.AddSeconds(intervalSeconds);
