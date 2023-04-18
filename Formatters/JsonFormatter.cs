@@ -9,8 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NotionTaskSync.Domain.Models;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -20,25 +20,20 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class JsonFormatter
 {
-    private readonly JsonSerializerSettings _settings;
+    private readonly JsonSerializerOptions _options;
     private readonly ILogger<JsonFormatter> _logger;
 
     public JsonFormatter(ILogger<JsonFormatter> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        // Configure JSON settings for consistency
-        _settings = new JsonSerializerSettings
+        _options = new JsonSerializerOptions
         {
-            ContractResolver = new CamelCasePropertyNamesContractResolver(),
-            Formatting = Formatting.Indented,
-            NullValueHandling = NullValueHandling.Ignore,
-            DateFormatString = "o", // ISO 8601 format
-            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-            Converters = new List<JsonConverter>
-            {
-                new Newtonsoft.Json.Converters.StringEnumConverter(),
-            }
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            ReferenceHandler = ReferenceHandler.IgnoreCycles,
+            Converters = { new JsonStringEnumConverter() }
         };
     }
 
@@ -49,7 +44,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonConvert.SerializeObject(task, _settings);
+            return JsonSerializer.Serialize(task, _options);
         }
         catch (Exception ex)
         {
@@ -65,7 +60,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonConvert.SerializeObject(tasks, _settings);
+            return JsonSerializer.Serialize(tasks, _options);
         }
         catch (Exception ex)
         {
@@ -82,7 +77,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonConvert.SerializeObject(config, _settings);
+            return JsonSerializer.Serialize(config, _options);
         }
         catch (Exception ex)
         {
@@ -99,7 +94,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonConvert.SerializeObject(obj, _settings);
+            return JsonSerializer.Serialize(obj, _options);
         }
         catch (Exception ex)
         {
@@ -115,7 +110,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonConvert.DeserializeObject<Task>(json, _settings);
+            return JsonSerializer.Deserialize<Task>(json, _options);
         }
         catch (Exception ex)
         {
@@ -131,7 +126,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonConvert.DeserializeObject<List<Task>>(json, _settings);
+            return JsonSerializer.Deserialize<List<Task>>(json, _options);
         }
         catch (Exception ex)
         {
@@ -148,7 +143,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonConvert.DeserializeObject<T>(json, _settings);
+            return JsonSerializer.Deserialize<T>(json, _options);
         }
         catch (Exception ex)
         {
@@ -168,7 +163,7 @@ public class JsonFormatter
 
         try
         {
-            JsonConvert.DeserializeObject(json);
+            using var doc = JsonDocument.Parse(json);
             return true;
         }
         catch
@@ -185,12 +180,12 @@ public class JsonFormatter
     {
         try
         {
-            var obj = JsonConvert.DeserializeObject(json);
-            return JsonConvert.SerializeObject(obj, new JsonSerializerSettings
+            using var doc = JsonDocument.Parse(json);
+            return JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions
             {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                Formatting = Formatting.None,
-                NullValueHandling = NullValueHandling.Ignore
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
         }
         catch (Exception ex)
@@ -208,8 +203,8 @@ public class JsonFormatter
     {
         try
         {
-            var obj = JsonConvert.DeserializeObject(json);
-            return JsonConvert.SerializeObject(obj, Formatting.Indented);
+            using var doc = JsonDocument.Parse(json);
+            return JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
         {

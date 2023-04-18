@@ -6,7 +6,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using NotionTaskSync.Domain.Models;
 using NotionTaskSync.Infrastructure.Configuration;
 using NotionTaskSync.Services;

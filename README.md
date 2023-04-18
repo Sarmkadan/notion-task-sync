@@ -1,3 +1,7 @@
+[![Build](https://github.com/sarmkadan/notion-task-sync/actions/workflows/build.yml/badge.svg)](https://github.com/sarmkadan/notion-task-sync/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com/)
+
 # Notion Task Sync
 
 A powerful .NET application for bidirectional synchronization between Notion databases and local task files with intelligent conflict resolution and change detection.
