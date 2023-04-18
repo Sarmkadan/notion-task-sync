@@ -8,6 +8,7 @@ namespace NotionTaskSync.Domain.Models;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// Represents a Notion database page with its properties and metadata.
@@ -48,6 +49,7 @@ public class NotionPage
     /// <summary>
     /// Initializes a new NotionPage with required identifiers.
     /// </summary>
+    [SetsRequiredMembers]
     public NotionPage(string pageId, string databaseId, string title)
     {
         PageId = pageId;

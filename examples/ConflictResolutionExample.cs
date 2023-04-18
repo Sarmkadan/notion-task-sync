@@ -18,7 +18,7 @@ namespace NotionTaskSync.Examples;
 /// </summary>
 public class ConflictResolutionExample
 {
-    public static async Task Main(string[] args)
+    public static async global::System.Threading.Tasks.Task Main(string[] args)
     {
         var configuration = BuildConfiguration();
         var services = SetupDependencyInjection(configuration);
@@ -28,19 +28,20 @@ public class ConflictResolutionExample
         try
         {
             // Example 1: Latest-wins strategy (automatic, no prompts)
-            await RunSyncWithStrategy(logger, syncService, "latest-wins",
+            await RunSyncWithStrategy(logger, syncService, ConflictResolutionStrategy.LastWrite,
                 "Uses timestamp to determine winner automatically");
 
             // Example 2: Local priority strategy
-            await RunSyncWithStrategy(logger, syncService, "local-priority",
+            await RunSyncWithStrategy(logger, syncService, ConflictResolutionStrategy.LocalWins,
                 "Prefers local file changes over Notion changes");
 
             // Example 3: Notion priority strategy
-            await RunSyncWithStrategy(logger, syncService, "notion-priority",
+            await RunSyncWithStrategy(logger, syncService, ConflictResolutionStrategy.NotionWins,
                 "Prefers Notion database changes over local files");
 
-            // Example 4: Custom field-based strategy
-            await RunCustomFieldStrategy(logger, syncService);
+            // Example 4: Manual resolution strategy
+            await RunSyncWithStrategy(logger, syncService, ConflictResolutionStrategy.Manual,
+                "Marks conflicts for manual review");
         }
         catch (Exception ex)
         {
@@ -49,26 +50,23 @@ public class ConflictResolutionExample
         }
     }
 
-    private static async Task RunSyncWithStrategy(
+    private static async global::System.Threading.Tasks.Task RunSyncWithStrategy(
         ILogger logger,
         SyncService syncService,
-        string strategy,
+        ConflictResolutionStrategy strategy,
         string description)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Testing Strategy: {Strategy}", strategy);
         logger.LogInformation("Description: {Description}", description);
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
         var config = new SyncConfig(
             name: $"ConflictTest-{strategy}",
-            notionDatabaseId: "test-db-id",
+            notionDatabaseId: "test-db-id-conflict-0",
             localFolderPath: "./tasks"
-        )
-        {
-            ConflictResolutionStrategy = strategy,
-            AutoBackup = true
-        };
+        );
+        config.ConflictStrategy = strategy;
 
         var result = await syncService.ExecuteSyncAsync(config);
 
@@ -76,33 +74,24 @@ public class ConflictResolutionExample
         logger.LogInformation("  Status: {Status}", result.Status);
         logger.LogInformation("  Conflicts Detected: {Detected}", result.ConflictsDetected);
         logger.LogInformation("  Conflicts Resolved: {Resolved}", result.ConflictsResolved);
-        logger.LogInformation("  Duration: {Duration}ms", result.Duration.TotalMilliseconds);
+        logger.LogInformation("  Duration: {Duration}", result.Duration);
         logger.LogInformation("");
     }
 
-    private static async Task RunCustomFieldStrategy(
+    private static async global::System.Threading.Tasks.Task RunCustomFieldStrategy(
         ILogger logger,
         SyncService syncService)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
-        logger.LogInformation("Testing Custom Field-Based Strategy");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
+        logger.LogInformation("Testing Manual Field-Based Strategy");
+        logger.LogInformation("==============================================");
 
         var config = new SyncConfig(
             name: "CustomFieldStrategy",
-            notionDatabaseId: "test-db-id",
+            notionDatabaseId: "test-db-id-custom-0",
             localFolderPath: "./tasks"
-        )
-        {
-            ConflictResolutionStrategy = "latest-wins",
-            // Override strategy for specific fields
-            PreferLocalChangesWhen = new[] { "description", "notes", "custom_field" },
-            PreferNotionChangesWhen = new[] { "status", "priority", "assignee", "due_date" }
-        };
-
-        logger.LogInformation("Configuration:");
-        logger.LogInformation("  Prefer Local: {Fields}", string.Join(", ", config.PreferLocalChangesWhen ?? Array.Empty<string>()));
-        logger.LogInformation("  Prefer Notion: {Fields}", string.Join(", ", config.PreferNotionChangesWhen ?? Array.Empty<string>()));
+        );
+        config.ConflictStrategy = ConflictResolutionStrategy.Manual;
 
         var result = await syncService.ExecuteSyncAsync(config);
 

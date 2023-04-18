@@ -6,10 +6,10 @@
 namespace NotionTaskSync.Services;
 
 using NotionTaskSync.Domain.Models;
+using NotionTaskSync.Data.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Resolves conflicts detected during sync operations using configured strategies.
@@ -119,6 +119,7 @@ public class ConflictResolutionService
         var conflict = new ConflictResolution
         {
             Id = conflictId,
+            TaskId = Guid.Empty,
             Status = ResolutionStatus.Pending
         };
 

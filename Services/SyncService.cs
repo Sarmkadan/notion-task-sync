@@ -8,10 +8,10 @@ namespace NotionTaskSync.Services;
 using NotionTaskSync.Domain.Models;
 using NotionTaskSync.Domain.Exceptions;
 using NotionTaskSync.Domain.Enums;
+using NotionTaskSync.Data.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Orchestrates bidirectional sync between Notion and local file system.
@@ -110,7 +110,7 @@ public class SyncService
     /// <summary>
     /// Applies changes from one source to the other based on sync direction.
     /// </summary>
-    private async Task ApplyChangesAsync(List<Task> localTasks, List<NotionPage> notionPages, SyncConfig config)
+    private async global::System.Threading.Tasks.Task ApplyChangesAsync(List<Task> localTasks, List<NotionPage> notionPages, SyncConfig config)
     {
         if (config.Direction == SyncDirection.Bidirectional || config.Direction == SyncDirection.LocalToNotion)
         {
@@ -187,26 +187,26 @@ public class SyncService
         // Implementation would fetch from persistent storage
         return new List<SyncResult>();
     }
-}
 
-/// <summary>
-/// Contains the results and statistics from a sync operation.
-/// </summary>
-public class SyncResult
-{
-    public Guid ConfigId { get; set; }
-    public DateTime StartedAt { get; set; }
-    public DateTime? CompletedAt { get; set; }
-    public SyncStatus Status { get; set; }
-    public int LocalTaskCount { get; set; }
-    public int NotionPageCount { get; set; }
-    public int LocalChangesDetected { get; set; }
-    public int NotionChangesDetected { get; set; }
-    public int ConflictsDetected { get; set; }
-    public int ConflictsResolved { get; set; }
-    public int ConflictsPendingReview { get; set; }
-    public string? ErrorMessage { get; set; }
-    public string? ErrorDetails { get; set; }
+    /// <summary>
+    /// Contains the results and statistics from a sync operation.
+    /// </summary>
+    public class SyncResult
+    {
+        public Guid ConfigId { get; set; }
+        public DateTime StartedAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
+        public SyncStatus Status { get; set; }
+        public int LocalTaskCount { get; set; }
+        public int NotionPageCount { get; set; }
+        public int LocalChangesDetected { get; set; }
+        public int NotionChangesDetected { get; set; }
+        public int ConflictsDetected { get; set; }
+        public int ConflictsResolved { get; set; }
+        public int ConflictsPendingReview { get; set; }
+        public string? ErrorMessage { get; set; }
+        public string? ErrorDetails { get; set; }
 
-    public TimeSpan? Duration => CompletedAt.HasValue ? CompletedAt.Value - StartedAt : null;
+        public TimeSpan? Duration => CompletedAt.HasValue ? CompletedAt.Value - StartedAt : null;
+    }
 }

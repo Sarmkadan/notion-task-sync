@@ -18,7 +18,7 @@ namespace NotionTaskSync.Examples;
 /// </summary>
 public class ExportAndFormatExample
 {
-    public static async Task Main(string[] args)
+    public static async global::System.Threading.Tasks.Task Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
@@ -39,16 +39,16 @@ public class ExportAndFormatExample
         try
         {
             // Load tasks from local directory
-            var tasks = await localFileService.LoadTasksAsync("./tasks");
+            var tasks = await localFileService.LoadAllTasksAsync();
             logger.LogInformation("Loaded {Count} tasks", tasks.Count);
 
             // Export in multiple formats
-            await ExportAsJsonAsync(logger, tasks);
-            await ExportAsCsvAsync(logger, tasks);
-            await ExportAsXmlAsync(logger, tasks);
-            await ExportAsMarkdownAsync(logger, tasks);
+            await ExportAsJsonAsync(logger, serviceProvider, tasks);
+            await ExportAsCsvAsync(logger, serviceProvider, tasks);
+            await ExportAsXmlAsync(logger, serviceProvider, tasks);
+            await ExportAsMarkdownAsync(logger, serviceProvider, tasks);
 
-            logger.LogInformation("✓ All exports completed");
+            logger.LogInformation("All exports completed");
         }
         catch (Exception ex)
         {
@@ -57,89 +57,92 @@ public class ExportAndFormatExample
         }
     }
 
-    private static async Task ExportAsJsonAsync(
+    private static async global::System.Threading.Tasks.Task ExportAsJsonAsync(
         ILogger logger,
+        IServiceProvider serviceProvider,
         List<Domain.Models.Task> tasks)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Exporting as JSON...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
-        var formatter = new JsonFormatter();
-        var output = formatter.Format(tasks);
+        var formatter = serviceProvider.GetRequiredService<JsonFormatter>();
+        var output = formatter.FormatTasks(tasks);
         var filePath = $"./exports/tasks_{DateTime.Now:yyyyMMdd_HHmmss}.json";
 
         Directory.CreateDirectory("./exports");
         await File.WriteAllTextAsync(filePath, output);
 
-        logger.LogInformation("✓ JSON export completed");
+        logger.LogInformation("JSON export completed");
         logger.LogInformation("  File: {Path}", filePath);
         logger.LogInformation("  Size: {Size} bytes", new FileInfo(filePath).Length);
         logger.LogInformation("");
     }
 
-    private static async Task ExportAsCsvAsync(
+    private static async global::System.Threading.Tasks.Task ExportAsCsvAsync(
         ILogger logger,
+        IServiceProvider serviceProvider,
         List<Domain.Models.Task> tasks)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Exporting as CSV...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
-        var formatter = new CsvFormatter();
-        var output = formatter.Format(tasks);
+        var formatter = serviceProvider.GetRequiredService<CsvFormatter>();
+        var output = formatter.FormatTasks(tasks);
         var filePath = $"./exports/tasks_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
 
         Directory.CreateDirectory("./exports");
         await File.WriteAllTextAsync(filePath, output);
 
-        logger.LogInformation("✓ CSV export completed");
+        logger.LogInformation("CSV export completed");
         logger.LogInformation("  File: {Path}", filePath);
         logger.LogInformation("  Lines: {Count}", output.Split(Environment.NewLine).Length);
         logger.LogInformation("");
     }
 
-    private static async Task ExportAsXmlAsync(
+    private static async global::System.Threading.Tasks.Task ExportAsXmlAsync(
         ILogger logger,
+        IServiceProvider serviceProvider,
         List<Domain.Models.Task> tasks)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Exporting as XML...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
-        var formatter = new XmlFormatter();
-        var output = formatter.Format(tasks);
+        var formatter = serviceProvider.GetRequiredService<XmlFormatter>();
+        var output = formatter.FormatTasks(tasks);
         var filePath = $"./exports/tasks_{DateTime.Now:yyyyMMdd_HHmmss}.xml";
 
         Directory.CreateDirectory("./exports");
         await File.WriteAllTextAsync(filePath, output);
 
-        logger.LogInformation("✓ XML export completed");
+        logger.LogInformation("XML export completed");
         logger.LogInformation("  File: {Path}", filePath);
         logger.LogInformation("  Size: {Size} bytes", new FileInfo(filePath).Length);
         logger.LogInformation("");
     }
 
-    private static async Task ExportAsMarkdownAsync(
+    private static async global::System.Threading.Tasks.Task ExportAsMarkdownAsync(
         ILogger logger,
+        IServiceProvider serviceProvider,
         List<Domain.Models.Task> tasks)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Exporting as Markdown...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
-        var formatter = new MarkdownFormatter();
-        var output = formatter.Format(tasks);
+        var formatter = serviceProvider.GetRequiredService<MarkdownFormatter>();
+        var output = formatter.FormatTasks(tasks);
         var filePath = $"./exports/tasks_{DateTime.Now:yyyyMMdd_HHmmss}.md";
 
         Directory.CreateDirectory("./exports");
         await File.WriteAllTextAsync(filePath, output);
 
-        logger.LogInformation("✓ Markdown export completed");
+        logger.LogInformation("Markdown export completed");
         logger.LogInformation("  File: {Path}", filePath);
         logger.LogInformation("  Lines: {Count}", output.Split(Environment.NewLine).Length);
 
-        // Display preview
         logger.LogInformation("");
         logger.LogInformation("Preview (first 500 characters):");
         logger.LogInformation(output.Substring(0, Math.Min(500, output.Length)));

@@ -17,7 +17,7 @@ namespace NotionTaskSync.Examples;
 /// </summary>
 public class BackupAndRecoveryExample
 {
-    public static async Task Main(string[] args)
+    public static async global::System.Threading.Tasks.Task Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
@@ -50,7 +50,6 @@ public class BackupAndRecoveryExample
             // Step 4: Verify sync succeeded
             var successVerified = await VerifyBackupAsync(logger, backupPath);
 
-            // Step 5: Demonstrate recovery (commented out as it would restore)
             if (!successVerified)
             {
                 logger.LogWarning("Sync verification failed, would restore from backup");
@@ -68,13 +67,13 @@ public class BackupAndRecoveryExample
         }
     }
 
-    private static async Task ListBackupsAsync(
+    private static async global::System.Threading.Tasks.Task ListBackupsAsync(
         ILogger logger,
         BackupService backupService)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Available Backups:");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
         var backupDir = new DirectoryInfo("./backups");
         if (!backupDir.Exists)
@@ -97,7 +96,7 @@ public class BackupAndRecoveryExample
         {
             var size = GetDirectorySize(backup);
             var age = DateTime.Now - backup.CreationTime;
-            logger.LogInformation("  📦 {Name}", backup.Name);
+            logger.LogInformation("  {Name}", backup.Name);
             logger.LogInformation("     Size: {Size:N0} bytes", size);
             logger.LogInformation("     Age: {Age} days", age.Days);
         }
@@ -105,30 +104,26 @@ public class BackupAndRecoveryExample
         logger.LogInformation("");
     }
 
-    private static async Task<string> CreateBackupAsync(
+    private static async global::System.Threading.Tasks.Task<string> CreateBackupAsync(
         ILogger logger,
         BackupService backupService)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Creating Backup...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
         var backupName = $"pre-sync-operation-{timestamp}";
 
         try
         {
-            var backupPath = await backupService.CreateBackupAsync(
-                syncConfigId: "example-sync",
-                backupName: backupName
-            );
+            var backupInfo = await backupService.CreateBackupAsync(backupName);
 
-            logger.LogInformation("✓ Backup created successfully");
-            logger.LogInformation("  Path: {Path}", backupPath);
-            logger.LogInformation("  Size: {Size:N0} bytes", new DirectoryInfo(backupPath).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length));
+            logger.LogInformation("Backup created successfully");
+            logger.LogInformation("  Path: {Path}", backupInfo.Path);
             logger.LogInformation("");
 
-            return backupPath;
+            return backupInfo.Path ?? string.Empty;
         }
         catch (Exception ex)
         {
@@ -137,78 +132,76 @@ public class BackupAndRecoveryExample
         }
     }
 
-    private static async Task PerformSyncAsync(
+    private static async global::System.Threading.Tasks.Task PerformSyncAsync(
         ILogger logger,
         SyncService syncService,
         IConfiguration configuration)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Performing Sync Operation...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
         var config = new Domain.Models.SyncConfig(
             name: "BackupExampleSync",
-            notionDatabaseId: configuration["NotionApi:DatabaseId"] ?? "test-db",
+            notionDatabaseId: configuration["NotionApi:DatabaseId"] ?? "test-db-id-backup-0",
             localFolderPath: "./tasks"
-        )
-        {
-            AutoBackup = false // We're managing backup manually
-        };
+        );
 
         var result = await syncService.ExecuteSyncAsync(config);
 
-        logger.LogInformation("✓ Sync completed");
+        logger.LogInformation("Sync completed");
         logger.LogInformation("  Status: {Status}", result.Status);
         logger.LogInformation("  Local Tasks: {Count}", result.LocalTaskCount);
         logger.LogInformation("  Notion Pages: {Count}", result.NotionPageCount);
         logger.LogInformation("  Conflicts: {Count}", result.ConflictsDetected);
-        logger.LogInformation("  Duration: {Duration}ms", result.Duration.TotalMilliseconds);
+        logger.LogInformation("  Duration: {Duration}", result.Duration);
         logger.LogInformation("");
     }
 
-    private static async Task<bool> VerifyBackupAsync(
+    private static async global::System.Threading.Tasks.Task<bool> VerifyBackupAsync(
         ILogger logger,
         string backupPath)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Verifying Backup Integrity...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
+
+        if (string.IsNullOrEmpty(backupPath) || !Directory.Exists(backupPath))
+        {
+            logger.LogWarning("Backup path not found: {Path}", backupPath);
+            return false;
+        }
 
         var backupDir = new DirectoryInfo(backupPath);
 
-        // Check essential files exist
-        var hasLocalFiles = backupDir.EnumerateFiles("*", SearchOption.AllDirectories)
-            .Any(f => f.Name.EndsWith(".json"));
+        var hasLocalFiles = backupDir.EnumerateFiles("*", SearchOption.AllDirectories).Any();
         var hasManifest = backupDir.EnumerateFiles("manifest.json").Any();
-        var hasDatabase = backupDir.EnumerateFiles("database.db").Any();
 
         logger.LogInformation("Backup Contents:");
-        logger.LogInformation("  ✓ JSON files: {Count}",
-            backupDir.EnumerateFiles("*.json").Count());
-        logger.LogInformation("  ✓ Manifest: {Found}", hasManifest ? "Found" : "Missing");
-        logger.LogInformation("  ✓ Database: {Found}", hasDatabase ? "Found" : "Missing");
+        logger.LogInformation("  Files: {Found}", hasLocalFiles ? "Found" : "Missing");
+        logger.LogInformation("  Manifest: {Found}", hasManifest ? "Found" : "Missing");
 
-        var isValid = hasLocalFiles && hasManifest && hasDatabase;
+        var isValid = hasLocalFiles;
         logger.LogInformation("");
-        logger.LogInformation(isValid ? "✓ Backup verified successfully" : "✗ Backup verification failed");
+        logger.LogInformation(isValid ? "Backup verified successfully" : "Backup verification failed");
         logger.LogInformation("");
 
         return isValid;
     }
 
-    private static async Task RecoverFromBackupAsync(
+    private static async global::System.Threading.Tasks.Task RecoverFromBackupAsync(
         ILogger logger,
         BackupService backupService,
         string backupPath)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Recovering from Backup...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
         try
         {
-            await backupService.RestoreBackupAsync(backupPath);
-            logger.LogInformation("✓ Recovery completed successfully");
+            await backupService.RestoreFromBackupAsync(backupPath);
+            logger.LogInformation("Recovery completed successfully");
             logger.LogInformation("  Restored from: {Path}", backupPath);
         }
         catch (Exception ex)

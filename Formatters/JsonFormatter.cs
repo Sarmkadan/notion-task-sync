@@ -7,7 +7,6 @@ namespace NotionTaskSync.Formatters;
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using NotionTaskSync.Domain.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;

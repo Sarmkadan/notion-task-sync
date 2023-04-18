@@ -7,7 +7,6 @@ namespace NotionTaskSync.Workers;
 
 using System;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NotionTaskSync.Services;
 using NotionTaskSync.Domain.Models;
@@ -27,7 +26,7 @@ public class SyncWorker : IDisposable
     private readonly int _syncIntervalSeconds;
 
     private CancellationTokenSource? _cancellationTokenSource;
-    private Task? _workerTask;
+    private global::System.Threading.Tasks.Task? _workerTask;
     private bool _isRunning;
 
     public SyncWorker(
@@ -59,7 +58,7 @@ public class SyncWorker : IDisposable
         _cancellationTokenSource = new CancellationTokenSource();
         _isRunning = true;
 
-        _workerTask = Task.Run(async () => await RunWorkerAsync(_cancellationTokenSource.Token));
+        _workerTask = global::System.Threading.Tasks.Task.Run(async () => await RunWorkerAsync(_cancellationTokenSource.Token));
 
         _logger.LogInformation("Sync worker started (interval: {Interval}s)", _syncIntervalSeconds);
     }
@@ -68,7 +67,7 @@ public class SyncWorker : IDisposable
     /// Stops the background sync worker.
     /// Waits for current sync operation to complete before returning.
     /// </summary>
-    public async Task StopAsync()
+    public async global::System.Threading.Tasks.Task StopAsync()
     {
         if (!_isRunning)
         {
@@ -104,7 +103,7 @@ public class SyncWorker : IDisposable
     /// <summary>
     /// Main worker loop that executes sync operations at configured intervals.
     /// </summary>
-    private async Task RunWorkerAsync(CancellationToken cancellationToken)
+    private async global::System.Threading.Tasks.Task RunWorkerAsync(CancellationToken cancellationToken)
     {
         var failureCount = 0;
         const int maxConsecutiveFailures = 3;
@@ -176,7 +175,7 @@ public class SyncWorker : IDisposable
             // Wait for next sync interval
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(_syncIntervalSeconds), cancellationToken);
+                await global::System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(_syncIntervalSeconds), cancellationToken);
             }
             catch (OperationCanceledException)
             {

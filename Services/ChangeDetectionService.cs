@@ -6,6 +6,7 @@
 namespace NotionTaskSync.Services;
 
 using NotionTaskSync.Domain.Models;
+using NotionTaskSync.Data.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -137,8 +138,8 @@ public class ChangeDetectionService
         var conflictWindow = TimeSpan.FromMinutes(5); // Consider changes within 5 minutes as potential conflicts
 
         // Group changes by TaskId
-        var localByTask = localChanges.GroupBy(c => c.TaskId).ToLookup(g => g.Key);
-        var notionByTask = notionChanges.GroupBy(c => c.TaskId).ToLookup(g => g.Key);
+        var localByTask = localChanges.ToLookup(c => c.TaskId);
+        var notionByTask = notionChanges.ToLookup(c => c.TaskId);
 
         // Find tasks with changes in both sources
         var conflictingTaskIds = localByTask.Select(g => g.Key)

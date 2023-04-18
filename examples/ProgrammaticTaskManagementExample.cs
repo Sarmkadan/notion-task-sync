@@ -6,10 +6,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NotionTaskSync.Domain.Enums;
 using NotionTaskSync.Domain.Models;
 using NotionTaskSync.Infrastructure.Configuration;
 using NotionTaskSync.Services;
+using DomainTask = NotionTaskSync.Domain.Models.Task;
+using DomainTaskStatus = NotionTaskSync.Domain.Models.TaskStatus;
 
 namespace NotionTaskSync.Examples;
 
@@ -19,7 +20,7 @@ namespace NotionTaskSync.Examples;
 /// </summary>
 public class ProgrammaticTaskManagementExample
 {
-    public static async Task Main(string[] args)
+    public static async global::System.Threading.Tasks.Task Main(string[] args)
     {
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
@@ -61,51 +62,51 @@ public class ProgrammaticTaskManagementExample
         }
     }
 
-    private static async Task CreateNewTasksAsync(
+    private static async global::System.Threading.Tasks.Task CreateNewTasksAsync(
         ILogger logger,
         LocalFileService localFileService)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Creating New Tasks...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
-        var newTasks = new List<Task>
+        var newTasks = new List<DomainTask>
         {
             new()
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = Guid.NewGuid(),
                 Title = "Implement feature authentication",
-                Status = "Todo",
-                Priority = "High",
+                Status = DomainTaskStatus.Todo,
+                Priority = 3,
                 DueDate = DateTime.UtcNow.AddDays(7),
-                Tags = new List<string> { "backend", "security" },
+                Tags = "backend,security",
                 Description = "Add OAuth2 authentication to API",
                 CreatedAt = DateTime.UtcNow,
-                ModifiedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow
             },
             new()
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = Guid.NewGuid(),
                 Title = "Write unit tests for ChangeDetectionService",
-                Status = "InProgress",
-                Priority = "Medium",
+                Status = DomainTaskStatus.InProgress,
+                Priority = 2,
                 DueDate = DateTime.UtcNow.AddDays(3),
-                Tags = new List<string> { "testing", "core" },
+                Tags = "testing,core",
                 Description = "Ensure 90%+ code coverage",
                 CreatedAt = DateTime.UtcNow,
-                ModifiedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow
             },
             new()
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = Guid.NewGuid(),
                 Title = "Update documentation",
-                Status = "Todo",
-                Priority = "Low",
+                Status = DomainTaskStatus.Todo,
+                Priority = 1,
                 DueDate = DateTime.UtcNow.AddDays(14),
-                Tags = new List<string> { "docs" },
+                Tags = "docs",
                 Description = "Update API documentation with new endpoints",
                 CreatedAt = DateTime.UtcNow,
-                ModifiedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow
             }
         };
 
@@ -113,22 +114,22 @@ public class ProgrammaticTaskManagementExample
         foreach (var task in newTasks)
         {
             await localFileService.SaveTaskAsync(task);
-            logger.LogInformation("✓ Created: {Title}", task.Title);
+            logger.LogInformation("Created: {Title}", task.Title);
         }
 
-        logger.LogInformation("✓ Created {Count} tasks", newTasks.Count);
+        logger.LogInformation("Created {Count} tasks", newTasks.Count);
         logger.LogInformation("");
     }
 
-    private static async Task LoadAndModifyTasksAsync(
+    private static async global::System.Threading.Tasks.Task LoadAndModifyTasksAsync(
         ILogger logger,
         LocalFileService localFileService)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Loading and Modifying Tasks...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
-        var tasks = await localFileService.LoadTasksAsync("./tasks");
+        var tasks = await localFileService.LoadAllTasksAsync();
         logger.LogInformation("Loaded {Count} tasks", tasks.Count);
 
         // Modify first task
@@ -137,27 +138,26 @@ public class ProgrammaticTaskManagementExample
             var task = tasks[0];
             logger.LogInformation("Modifying: {Title}", task.Title);
 
-            task.Status = "InProgress";
-            task.Priority = "High";
-            task.ModifiedAt = DateTime.UtcNow;
-            task.Tags?.Add("urgent");
+            task.Status = DomainTaskStatus.InProgress;
+            task.Priority = 3;
+            task.UpdatedAt = DateTime.UtcNow;
 
             await localFileService.SaveTaskAsync(task);
-            logger.LogInformation("✓ Task updated and saved");
+            logger.LogInformation("Task updated and saved");
         }
 
         logger.LogInformation("");
     }
 
-    private static async Task OrganizeTasksAsync(
+    private static async global::System.Threading.Tasks.Task OrganizeTasksAsync(
         ILogger logger,
         LocalFileService localFileService)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Organizing Tasks by Status...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
-        var tasks = await localFileService.LoadTasksAsync("./tasks");
+        var tasks = await localFileService.LoadAllTasksAsync();
 
         // Group by status
         var grouped = tasks.GroupBy(t => t.Status)
@@ -165,62 +165,52 @@ public class ProgrammaticTaskManagementExample
 
         foreach (var group in grouped)
         {
-            logger.LogInformation("{Status}: {Count} tasks", group.Key ?? "Unknown", group.Count());
+            logger.LogInformation("{Status}: {Count} tasks", group.Key, group.Count());
             foreach (var task in group)
             {
-                logger.LogInformation("  • [{Priority}] {Title}",
-                    task.Priority ?? "None",
-                    task.Title);
+                logger.LogInformation("  [{Priority}] {Title}", task.Priority, task.Title);
             }
         }
 
         logger.LogInformation("");
     }
 
-    private static async Task GenerateTaskStatisticsAsync(
+    private static async global::System.Threading.Tasks.Task GenerateTaskStatisticsAsync(
         ILogger logger,
         LocalFileService localFileService)
     {
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
         logger.LogInformation("Task Statistics...");
-        logger.LogInformation("═══════════════════════════════════════════════");
+        logger.LogInformation("==============================================");
 
-        var tasks = await localFileService.LoadTasksAsync("./tasks");
+        var tasks = await localFileService.LoadAllTasksAsync();
 
         // Calculate statistics
         var totalTasks = tasks.Count;
-        var completedCount = tasks.Count(t => t.Status == "Done");
-        var inProgressCount = tasks.Count(t => t.Status == "InProgress");
-        var highPriorityCount = tasks.Count(t => t.Priority == "High");
+        var completedCount = tasks.Count(t => t.Status == DomainTaskStatus.Done);
+        var inProgressCount = tasks.Count(t => t.Status == DomainTaskStatus.InProgress);
+        var highPriorityCount = tasks.Count(t => t.Priority >= 3);
         var overdueTasks = tasks.Where(t => t.DueDate.HasValue && t.DueDate < DateTime.UtcNow).ToList();
 
-        // Get tag statistics
-        var allTags = tasks.Where(t => t.Tags != null)
-            .SelectMany(t => t.Tags)
-            .GroupBy(tag => tag)
-            .OrderByDescending(g => g.Count());
-
         logger.LogInformation("Total Tasks: {Count}", totalTasks);
-        logger.LogInformation("Completed: {Count} ({Percent:P})", completedCount, (double)completedCount / totalTasks);
-        logger.LogInformation("In Progress: {Count} ({Percent:P})", inProgressCount, (double)inProgressCount / totalTasks);
+
+        if (totalTasks > 0)
+        {
+            logger.LogInformation("Completed: {Count} ({Percent:P})", completedCount, (double)completedCount / totalTasks);
+            logger.LogInformation("In Progress: {Count} ({Percent:P})", inProgressCount, (double)inProgressCount / totalTasks);
+        }
+
         logger.LogInformation("High Priority: {Count}", highPriorityCount);
         logger.LogInformation("Overdue: {Count}", overdueTasks.Count);
-
-        logger.LogInformation("");
-        logger.LogInformation("Top Tags:");
-        foreach (var tagGroup in allTags.Take(5))
-        {
-            logger.LogInformation("  • {Tag}: {Count} tasks", tagGroup.Key, tagGroup.Count());
-        }
 
         if (overdueTasks.Count > 0)
         {
             logger.LogInformation("");
-            logger.LogInformation("⚠️  Overdue Tasks:");
+            logger.LogInformation("Overdue Tasks:");
             foreach (var task in overdueTasks)
             {
-                var days = (DateTime.UtcNow - task.DueDate.Value).Days;
-                logger.LogInformation("  • {Title} ({Days}d overdue)", task.Title, days);
+                var days = (DateTime.UtcNow - task.DueDate!.Value).Days;
+                logger.LogInformation("  {Title} ({Days}d overdue)", task.Title, days);
             }
         }
 

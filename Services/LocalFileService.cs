@@ -10,7 +10,6 @@ using NotionTaskSync.Domain.Exceptions;
 using System;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -35,7 +34,7 @@ public class LocalFileService
     /// Saves a task to a local Markdown file.
     /// Creates or overwrites the file with task metadata and content.
     /// </summary>
-    public async Task SaveTaskAsync(Task task)
+    public async global::System.Threading.Tasks.Task SaveTaskAsync(Task task)
     {
         if (!task.Validate())
             throw new ValidationException("Invalid task cannot be saved");
@@ -127,7 +126,7 @@ public class LocalFileService
     /// <summary>
     /// Deletes a task file from the local file system.
     /// </summary>
-    public async Task DeleteTaskAsync(string filePath)
+    public async global::System.Threading.Tasks.Task DeleteTaskAsync(string filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath))
             return;
@@ -139,7 +138,7 @@ public class LocalFileService
                 File.Delete(filePath);
             }
 
-            await Task.CompletedTask;
+            await global::System.Threading.Tasks.Task.CompletedTask;
         }
         catch (Exception ex)
         {
@@ -174,7 +173,7 @@ public class LocalFileService
                 File.Copy(file, backupFilePath, overwrite: true);
             }
 
-            await Task.CompletedTask;
+            await global::System.Threading.Tasks.Task.CompletedTask;
             return backupPath;
         }
         catch (Exception ex)
@@ -272,6 +271,7 @@ public class LocalFileService
 
         var task = new Task
         {
+            Title = string.Empty,
             LocalFilePath = filePath,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

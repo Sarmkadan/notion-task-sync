@@ -9,7 +9,6 @@ using NotionTaskSync.Domain.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 /// <summary>
 /// In-memory implementation of ITaskRepository for managing task entities.
@@ -26,7 +25,7 @@ public class TaskRepository : ITaskRepository
         _hasChanges = false;
     }
 
-    public async Task AddAsync(Task task)
+    public async global::System.Threading.Tasks.Task AddAsync(Task task)
     {
         if (task == null)
             throw new ArgumentNullException(nameof(task));
@@ -40,7 +39,7 @@ public class TaskRepository : ITaskRepository
         await System.Threading.Tasks.Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(Task task)
+    public async global::System.Threading.Tasks.Task UpdateAsync(Task task)
     {
         if (task == null)
             throw new ArgumentNullException(nameof(task));
@@ -61,7 +60,7 @@ public class TaskRepository : ITaskRepository
         await System.Threading.Tasks.Task.CompletedTask;
     }
 
-    public async Task DeleteAsync(Guid taskId)
+    public async global::System.Threading.Tasks.Task DeleteAsync(Guid taskId)
     {
         var task = _tasks.FirstOrDefault(t => t.Id == taskId);
 
@@ -127,7 +126,7 @@ public class TaskRepository : ITaskRepository
             .ToList());
     }
 
-    public async Task SaveAsync()
+    public async global::System.Threading.Tasks.Task SaveAsync()
     {
         // In-memory implementation: persist to file or database here
         // For now, just reset the change flag

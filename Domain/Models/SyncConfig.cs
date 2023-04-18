@@ -8,6 +8,7 @@ namespace NotionTaskSync.Domain.Models;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// Configuration for sync settings between local tasks and Notion.
@@ -59,6 +60,7 @@ public class SyncConfig
     /// <summary>
     /// Initializes a new SyncConfig with required database and folder information.
     /// </summary>
+    [SetsRequiredMembers]
     public SyncConfig(string name, string notionDatabaseId, string localFolderPath)
     {
         Name = name;
