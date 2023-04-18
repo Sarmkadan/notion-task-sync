@@ -9,7 +9,7 @@ using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using System.Text.Json;
 using NotionTaskSync.Utils;
 
 /// <summary>
@@ -52,7 +52,7 @@ public class ExternalApiWrapper
                 IsTransientError);
 
             var content = await response.Content.ReadAsStringAsync();
-            var obj = JsonConvert.DeserializeObject<T>(content);
+            var obj = JsonSerializer.Deserialize<T>(content);
 
             _logger.LogDebug("GET request successful: {Endpoint}", endpoint);
             return obj;
@@ -71,7 +71,7 @@ public class ExternalApiWrapper
     {
         try
         {
-            var jsonContent = JsonConvert.SerializeObject(payload);
+            var jsonContent = JsonSerializer.Serialize(payload);
 
             var response = await _retryHelper.ExecuteWithRetryAsync(
                 async () =>
@@ -85,7 +85,7 @@ public class ExternalApiWrapper
                 IsTransientError);
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            var obj = JsonConvert.DeserializeObject<T>(responseContent);
+            var obj = JsonSerializer.Deserialize<T>(responseContent);
 
             _logger.LogDebug("POST request successful: {Endpoint}", endpoint);
             return obj;
@@ -104,7 +104,7 @@ public class ExternalApiWrapper
     {
         try
         {
-            var jsonContent = JsonConvert.SerializeObject(payload);
+            var jsonContent = JsonSerializer.Serialize(payload);
 
             var response = await _retryHelper.ExecuteWithRetryAsync(
                 async () =>
@@ -118,7 +118,7 @@ public class ExternalApiWrapper
                 IsTransientError);
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            var obj = JsonConvert.DeserializeObject<T>(responseContent);
+            var obj = JsonSerializer.Deserialize<T>(responseContent);
 
             _logger.LogDebug("PUT request successful: {Endpoint}", endpoint);
             return obj;
