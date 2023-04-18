@@ -10,7 +10,6 @@ using NotionTaskSync.Services;
 using NotionTaskSync.Domain.Models;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -105,13 +104,13 @@ public class SyncCommand : CliCommand
     /// Parses sync direction string into enum value.
     /// Defaults to Bidirectional if invalid input.
     /// </summary>
-    private Domain.Enums.SyncDirection ParseSyncDirection(string direction)
+    private SyncDirection ParseSyncDirection(string direction)
     {
         return direction?.ToLowerInvariant() switch
         {
-            "local-to-notion" => Domain.Enums.SyncDirection.LocalToNotion,
-            "notion-to-local" => Domain.Enums.SyncDirection.NotionToLocal,
-            _ => Domain.Enums.SyncDirection.Bidirectional
+            "local-to-notion" => SyncDirection.LocalToNotion,
+            "notion-to-local" => SyncDirection.NotionToLocal,
+            _ => SyncDirection.Bidirectional
         };
     }
 
@@ -119,13 +118,13 @@ public class SyncCommand : CliCommand
     /// Parses conflict strategy string into enum value.
     /// Defaults to LastWrite if invalid input.
     /// </summary>
-    private Domain.Enums.ConflictStrategy ParseConflictStrategy(string strategy)
+    private ConflictResolutionStrategy ParseConflictStrategy(string strategy)
     {
         return strategy?.ToLowerInvariant() switch
         {
-            "manual" => Domain.Enums.ConflictStrategy.Manual,
-            "local-priority" => Domain.Enums.ConflictStrategy.LocalPriority,
-            _ => Domain.Enums.ConflictStrategy.LastWrite
+            "manual" => ConflictResolutionStrategy.Manual,
+            "local-priority" => ConflictResolutionStrategy.LocalWins,
+            _ => ConflictResolutionStrategy.LastWrite
         };
     }
 

@@ -8,7 +8,6 @@ namespace NotionTaskSync.Data.Repositories;
 using NotionTaskSync.Domain.Models;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Repository interface for ChangeLog CRUD operations and audit queries.
@@ -19,7 +18,7 @@ public interface IChangeLogRepository
     /// <summary>
     /// Adds a new change log entry.
     /// </summary>
-    Task AddAsync(ChangeLog changeLog);
+    global::System.Threading.Tasks.Task AddAsync(ChangeLog changeLog);
 
     /// <summary>
     /// Retrieves change logs for a specific task.
@@ -64,5 +63,5 @@ public interface IChangeLogRepository
     /// <summary>
     /// Saves all pending changes.
     /// </summary>
-    Task SaveAsync();
+    global::System.Threading.Tasks.Task SaveAsync();
 }

@@ -10,7 +10,6 @@ using NotionTaskSync.Domain.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Provides integration with the Notion API for reading and writing task data.
@@ -70,7 +69,7 @@ public class NotionApiService
         }
         catch (Exception ex)
         {
-            throw NotionApiException.CreateWithContext(
+            throw new NotionApiException(
                 $"Failed to fetch pages from database {databaseId}: {ex.Message}", ex);
         }
 
@@ -179,7 +178,7 @@ public class NotionApiService
     /// <summary>
     /// Deletes or archives a page in Notion.
     /// </summary>
-    public async Task ArchivePageAsync(string pageId)
+    public async global::System.Threading.Tasks.Task ArchivePageAsync(string pageId)
     {
         if (string.IsNullOrEmpty(pageId))
             throw new ValidationException("Page ID cannot be empty");

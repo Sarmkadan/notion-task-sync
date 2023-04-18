@@ -80,18 +80,18 @@ public class EventHandlingExample
         {
             _logger.LogWarning("⚠️  CONFLICT DETECTED");
             _logger.LogWarning("Task ID: {TaskId}", e.TaskId);
-            _logger.LogWarning("Local change at: {LocalTime}", e.LocalChange?.ModifiedAt);
-            _logger.LogWarning("Notion change at: {NotionTime}", e.NotionChange?.ModifiedAt);
+            _logger.LogWarning("Local change at: {LocalTime}", e.LocalModifiedAt);
+            _logger.LogWarning("Notion change at: {NotionTime}", e.RemoteModifiedAt);
 
             // You could trigger alerts, send notifications, etc.
-            await NotifyTeamAsync(e.TaskId, "Conflict detected - manual review needed");
+            await NotifyTeamAsync(e.TaskId.ToString(), "Conflict detected - manual review needed");
         });
 
         // Subscribe to sync completion events
         eventBus.Subscribe<SyncCompletedEvent>(async e =>
         {
             _logger.LogInformation("✓ SYNC COMPLETED");
-            _logger.LogInformation("  Status: {Status}", e.Status);
+            _logger.LogInformation("  Status: {Status}", e.Success ? "Success" : "Failed");
             _logger.LogInformation("  Duration: {Duration}ms", e.Duration.TotalMilliseconds);
             _logger.LogInformation("  Conflicts Resolved: {Count}", e.ConflictsResolved);
 
@@ -131,22 +131,3 @@ public class EventHandlingExample
     }
 }
 
-/// <summary>
-/// Example event types. In production, these would be in the core library.
-/// </summary>
-public interface IEvent { }
-
-public class ConflictDetectedEvent : IEvent
-{
-    public string TaskId { get; set; }
-    public object LocalChange { get; set; }
-    public object NotionChange { get; set; }
-}
-
-public class SyncCompletedEvent : IEvent
-{
-    public string Status { get; set; }
-    public int ConflictsResolved { get; set; }
-    public TimeSpan Duration { get; set; }
-    public string ErrorMessage { get; set; }
-}
