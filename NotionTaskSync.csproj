@@ -7,6 +7,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <StartupObject>NotionTaskSync.Program</StartupObject>
+    <RepositoryUrl>https://github.com/sarmkadan/notion-task-sync</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Authors>Vladyslav Zaiets</Authors>
   </PropertyGroup>
 
   <ItemGroup>

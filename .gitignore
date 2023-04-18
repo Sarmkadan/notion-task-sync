@@ -44,10 +44,12 @@ npm-debug.log*
 # Dependencies
 node_modules/
 package-lock.json
+packages/
 
 # Runtime files
 appsettings.*.json
 !appsettings.json
+appsettings.Development.json
 
 # Backup and temporary files
 *.bak
@@ -72,6 +74,9 @@ TestResults/
 .nuget/
 *.nupkg
 *.snupkg
+
+# JetBrains DotSettings
+*.DotSettings.user
 
 # Migrations
 **/Migrations/
