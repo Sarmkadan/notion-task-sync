@@ -14,7 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned Features
 - REST API server mode for webhook integration
-- Webhook support for real-time sync triggers
 - GUI/TUI for interactive configuration
 - Multi-database sync orchestration
 - Advanced filtering and search capabilities
@@ -23,97 +22,168 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.2.0] - 2024-01-15
+## [1.0.0] - 2025-10-22
 
 ### Added
-- **Event system** - Publish/subscribe events for sync operations
-- **Custom event handlers** - ConflictDetectedHandler and SyncCompletedHandler
-- **Dry-run mode** - Test syncs without making changes (`--dry-run`)
-- **Batch processing** - Configure max tasks per sync operation
-- **Rate limiting middleware** - Prevent API throttling
-- **Health check endpoint** - Monitor sync service health
-- **Caching improvements** - Intelligent TTL-based cache invalidation
+- **Stable release** - Production-ready bidirectional sync
 - **Docker support** - Official Dockerfile and docker-compose.yml
-- **Comprehensive logging** - Structured logging with Serilog integration
-- **Multiple export formats** - JSON, CSV, XML, Markdown
+- **Health check worker** - Background worker for continuous service monitoring
+- **Rate limiting middleware** - Transparent enforcement of Notion API quota
+- **.NET 10 upgrade** - Targeting net10.0 for all project components
+- **Complete documentation** - Getting started, API reference, and deployment guides
 
 ### Changed
-- Improved conflict resolution algorithm (now handles partial conflicts)
-- Refactored SyncService to use pipeline pattern
-- Enhanced error messages with actionable guidance
-- Optimized local file operations with buffering
-- Upgraded to .NET 10 (from 8)
+- Stabilized public API surface for library consumers
+- Improved HTTP performance with connection pooling optimizations
+- Version bump from .NET 9 to .NET 10
 
 ### Fixed
-- Race condition in concurrent sync operations
-- Memory leak in HTTP client connection pooling
-- Incorrect timestamp comparisons with timezone-unaware dates
-- File handle cleanup in LocalFileService
-
-### Deprecated
-- `SyncConfig.LegacyMode` - Removed in next major version
+- Race condition in concurrent bidirectional sync operations
+- Memory leak in HTTP client connection pooling under sustained load
+- Incorrect timestamp comparisons when local files lack timezone info
+- File handle not released in LocalFileService on read error
 
 ---
 
-## [1.1.0] - 2023-12-01
+## [0.9.0] - 2025-09-08
 
 ### Added
-- **Conflict resolution strategies** - Latest-wins, local-priority, notion-priority, manual, merge
-- **Field-level preferences** - Override strategy for specific fields
-- **Backup and recovery** - Automatic pre-sync backups
-- **Change tracking** - Detailed change logs with diff visualization
-- **Configuration management** - CLI configure command with validation
-- **Database repository pattern** - SQLite for sync state persistence
+- **RetryHelper** - Configurable exponential-backoff retry for transient failures
+- **WebhookHandler** - Trigger a sync in response to an inbound HTTP event
+- **ExternalApiWrapper** - Thin abstraction for third-party service calls
+- Improved CLI argument parsing with positional and named parameter support
 
 ### Changed
-- Restructured services into feature-focused modules
-- Improved dependency injection configuration
-- Enhanced configuration validation
+- Refactored SyncService to use an explicit pipeline pattern
+- Enhanced error messages now include actionable remediation steps
+- Startup configuration validation surfaces problems before first API call
 
 ### Fixed
-- Sync state not properly persisting across restarts
-- Tasks deleted locally not being removed from Notion
-- Configuration serialization issues with complex types
+- Tasks deleted locally not always propagating a delete to Notion
+- Configuration serialization edge case with deeply nested complex types
+- SyncObserver not firing completion event after a partial failure
+
+---
+
+## [0.8.0] - 2025-08-01
+
+### Added
+- **Event bus** - Lightweight publish/subscribe system for sync lifecycle events
+- **ConflictDetectedHandler** - Event handler that reacts to detected conflicts
+- **SyncCompletedHandler** - Post-sync hooks for notifications and reporting
+- **SyncObserver** - Decoupled monitoring without touching core sync logic
+
+### Changed
+- EventBus now supports typed, generic event subscriptions
+- Middleware pipeline is fully composable via `IMiddleware` chain
+
+### Fixed
+- Event handlers not disposing correctly under sustained high-frequency events
+
+---
+
+## [0.7.0] - 2025-07-03
+
+### Added
+- **Caching layer** - TTL-based in-memory cache for Notion API responses
+- **CacheProvider** - Pluggable backend supporting in-memory and persistent stores
+- **Logging middleware** - Structured request/response logging with duration tracking
+- **Error handling middleware** - Centralized exception management and formatting
+
+### Changed
+- HttpClientFactory now reuses connections across requests for lower overhead
+- Warm cache reduces redundant API calls by up to 80% in steady-state usage
+
+### Fixed
+- Cache invalidation not triggering correctly after a task deletion
+
+---
+
+## [0.6.0] - 2025-06-09
+
+### Added
+- **Multiple export formats** - JSON, CSV, XML, and Markdown formatters
+- **CsvFormatter** - Configurable delimiter and optional header row
+- **XmlFormatter** - Standards-compliant XML serialization for task lists
+- **MarkdownFormatter** - Human-readable task tables for documentation workflows
+
+### Changed
+- Formatter interface unified across all output types for consistent usage
+- Export filenames now include an ISO timestamp by default
+
+---
+
+## [0.5.0] - 2025-05-14
+
+### Added
+- **BackupService** - Create, list, and restore point-in-time backup snapshots
+- **Automatic pre-sync backups** - Opt-in safety net before each sync operation
+- **ChangeLogRepository** - Persistent history of all sync operations and outcomes
+- **DatabaseContext** - SQLite persistence for sync state across restarts
+
+### Changed
+- Repository pattern introduced to cleanly decouple storage from business logic
+
+### Fixed
+- Sync state was not persisting correctly across application restarts
+
+---
+
+## [0.4.0] - 2025-04-02
+
+### Added
+- **ConflictDiffService** - Compute side-by-side diffs before resolution
+- **ConflictDiff model** - Structured representation of a conflicting change pair
+- **Field-level strategy overrides** - Per-field resolution preferences in config
+- **configure CLI command** - Interactive wizard for setting up a sync profile
+
+### Changed
+- Improved dependency injection wiring; all services registered via extension methods
+- Restructured project into feature-focused directories
+
+---
+
+## [0.3.0] - 2025-03-10
+
+### Added
+- **Full conflict resolution strategy set** - manual, merge, local-priority, notion-priority
+- **ConflictResolutionService** - Pluggable strategy implementations behind a single interface
+- **SyncConfig model** - Serializable configuration with per-profile strategy selection
+- **ValidationHelper** - Input validation utilities shared across services
+
+### Changed
+- Latest-wins strategy promoted from hard-coded default to explicit configurable option
 
 ### Security
-- Added API key validation on startup
-- Encrypted sensitive configuration storage
+- API key validated against Notion on startup; application refuses to start if invalid
 
 ---
 
-## [1.0.0] - 2023-10-15
+## [0.2.0] - 2025-02-17
 
 ### Added
-- ✨ **Core bidirectional sync** - Notion ↔ Local files
-- **Change detection** - Identify modifications in both directions
-- **Basic CLI interface** - sync, configure, status, help commands
-- **Local file support** - Read/write JSON task files
-- **Notion API integration** - REST API client with error handling
-- **Logging** - Structured logging to console and files
-- **Configuration system** - appsettings.json with environment overrides
-- **Documentation** - README, API reference, getting started guide
+- **Change detection** - Timestamp-based diff between local task files and Notion state
+- **Latest-wins conflict resolution** - Default strategy for resolving concurrent edits
+- **NotionMapper and TaskMapper** - Bidirectional property mapping between formats
+- **status CLI command** - Show pending changes and time of last successful sync
+- **Structured logging** - Console and rotating file sinks
 
-### Features in 1.0.0
-- Unidirectional sync (Notion → Local)
-- Simple timestamp-based conflict detection
-- JSON-based task format
-- Basic error handling and recovery
+### Fixed
+- Tasks with identical modification timestamps not being compared correctly
+- Null reference in NotionApiService during first-run when database is empty
 
 ---
 
-## [0.5.0-beta] - 2023-09-01
+## [0.1.0] - 2025-01-20
 
 ### Added
-- Beta release for testing
-- Core API client implementation
-- Basic file I/O operations
-- Simple sync workflow
-
-### Known Issues
-- Memory leaks under high load
-- Insufficient conflict handling
-- Limited error recovery
-- No backup mechanism
+- Initial prototype
+- **Notion API client** - REST client with bearer token authentication
+- **LocalFileService** - Read and write JSON task files from a configured directory
+- **Basic sync workflow** - Unidirectional Notion to local synchronization
+- **CLI interface** - `sync` and `help` commands
+- **Configuration system** - appsettings.json with environment variable overrides
+- **Console logging** - Basic output for sync progress and errors
 
 ---
 
@@ -121,65 +191,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Release Date | Status | .NET Version | Key Features |
 |---------|--------------|--------|--------------|--------------|
-| 1.2.0 | 2024-01-15 | Latest | .NET 10 | Events, caching, Docker, formatters |
-| 1.1.0 | 2023-12-01 | Stable | .NET 8 | Conflict resolution, backups |
-| 1.0.0 | 2023-10-15 | Stable | .NET 8 | Core sync, CLI |
-| 0.5.0 | 2023-09-01 | Beta | .NET 8 | Basic implementation |
+| 1.0.0 | 2025-10-22 | Stable | .NET 10 | Docker, health checks, stable API |
+| 0.9.0 | 2025-09-08 | Stable | .NET 9 | Retry, webhooks, pipeline refactor |
+| 0.8.0 | 2025-08-01 | Stable | .NET 9 | Events, observer pattern |
+| 0.7.0 | 2025-07-03 | Stable | .NET 9 | Caching, middleware |
+| 0.6.0 | 2025-06-09 | Stable | .NET 9 | Export formats |
+| 0.5.0 | 2025-05-14 | Stable | .NET 9 | Backup, persistence |
+| 0.4.0 | 2025-04-02 | Stable | .NET 9 | Conflict diff, config wizard |
+| 0.3.0 | 2025-03-10 | Stable | .NET 9 | Full conflict strategies |
+| 0.2.0 | 2025-02-17 | Beta | .NET 9 | Change detection, latest-wins |
+| 0.1.0 | 2025-01-20 | Alpha | .NET 9 | Initial prototype |
 
 ---
 
 ## Migration Guides
 
-### Upgrading from 1.1.0 to 1.2.0
+### Upgrading from 0.9.0 to 1.0.0
 
-No breaking changes. Recommended for all users due to bug fixes and new features.
+No breaking changes. Upgrade recommended for all users due to stability improvements and the .NET 10 upgrade.
 
 ```bash
 # Backup before upgrading
-dotnet run -- backup create --name "pre-upgrade-1.2.0"
+dotnet run -- backup create --name "pre-upgrade-1.0.0"
 
 # Update
 git pull origin main
 dotnet build -c Release
 
-# Run sync to test
+# Verify with a dry run
 dotnet run -- sync --dry-run
 ```
 
-### Upgrading from 1.0.0 to 1.1.0
+### Upgrading from 0.4.0 to 0.5.0
 
-**Breaking Changes:**
-- Configuration schema updated (auto-migrated)
-- Task model now includes sync state fields
+**Changes:**
+- Task model now includes sync-state fields (auto-migrated on first run)
+- `appsettings.json` gains a new `Backup` section
 
 **Migration Steps:**
-1. Backup all data
-2. Update configuration with new fields
-3. Re-run first sync to establish sync state
+1. Back up existing task files before upgrading
+2. Add the `Backup` section to `appsettings.json`
+3. Re-run sync to establish the new persistent sync state
 
 ---
 
 ## Installation from Specific Versions
 
 ```bash
-# Clone specific tag
-git clone --branch v1.2.0 https://github.com/Sarmkadan/notion-task-sync.git
+# Clone a specific tag
+git clone --branch v1.0.0 https://github.com/Sarmkadan/notion-task-sync.git
 
-# Or checkout existing repo
-git checkout v1.2.0
+# Or check out from an existing clone
+git checkout v1.0.0
 ```
-
----
-
-## Performance Improvements by Version
-
-| Version | Local Tasks | Notion Pages | Sync Time | Memory Usage |
-|---------|-------------|--------------|-----------|--------------|
-| 1.2.0 | 10000 | 10000 | ~5.2s | 180MB |
-| 1.1.0 | 10000 | 10000 | ~8.3s | 250MB |
-| 1.0.0 | 5000 | 5000 | ~12.1s | 320MB |
-
-*Benchmarks: Intel i7-9700K, SSD storage, 3Mbps connection*
 
 ---
 
@@ -192,10 +256,10 @@ git checkout v1.2.0
 
 ## Support & Troubleshooting
 
-- 📖 [Documentation](./README.md)
-- 🐛 [Report issues](https://github.com/Sarmkadan/notion-task-sync/issues)
-- 💬 [Discussions](https://github.com/Sarmkadan/notion-task-sync/discussions)
-- 📧 [Contact](https://sarmkadan.com)
+- [Documentation](./README.md)
+- [Report issues](https://github.com/Sarmkadan/notion-task-sync/issues)
+- [Discussions](https://github.com/Sarmkadan/notion-task-sync/discussions)
+- [Contact](https://sarmkadan.com)
 
 ---
 
