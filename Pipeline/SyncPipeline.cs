@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -31,7 +32,7 @@ public class SyncPipeline
     /// </summary>
     public void AddStep(ISyncStep step)
     {
-        if (step == null)
+        if (step is null)
             throw new ArgumentNullException(nameof(step));
 
         _steps.Add(step);
@@ -106,7 +107,7 @@ public class SyncPipeline
         }
 
         // Mark as successful only if no critical failures
-        if (result.ErrorMessage == null)
+        if (result.ErrorMessage is null)
             result.Success = true;
 
         _logger.LogInformation("Sync pipeline completed. Success: {Success}, Steps executed: {StepCount}",

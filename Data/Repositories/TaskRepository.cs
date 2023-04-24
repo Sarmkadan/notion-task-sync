@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -27,7 +28,7 @@ public class TaskRepository : ITaskRepository
 
     public async global::System.Threading.Tasks.Task AddAsync(Task task)
     {
-        if (task == null)
+        if (task is null)
             throw new ArgumentNullException(nameof(task));
 
         if (!task.Validate())
@@ -41,12 +42,12 @@ public class TaskRepository : ITaskRepository
 
     public async global::System.Threading.Tasks.Task UpdateAsync(Task task)
     {
-        if (task == null)
+        if (task is null)
             throw new ArgumentNullException(nameof(task));
 
         var existing = _tasks.FirstOrDefault(t => t.Id == task.Id);
 
-        if (existing == null)
+        if (existing is null)
             throw new InvalidOperationException($"Task with ID {task.Id} not found");
 
         if (!task.Validate())
@@ -64,7 +65,7 @@ public class TaskRepository : ITaskRepository
     {
         var task = _tasks.FirstOrDefault(t => t.Id == taskId);
 
-        if (task == null)
+        if (task is null)
             throw new InvalidOperationException($"Task with ID {taskId} not found");
 
         _tasks.Remove(task);

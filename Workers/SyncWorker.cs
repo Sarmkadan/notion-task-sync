@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -80,7 +81,7 @@ public class SyncWorker : IDisposable
         _cancellationTokenSource?.Cancel();
         _isRunning = false;
 
-        if (_workerTask != null)
+        if (_workerTask is not null)
         {
             try
             {
