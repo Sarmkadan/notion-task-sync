@@ -146,10 +146,18 @@ public class ConflictResolutionService
             conflict.Resolve(mergedValue ?? string.Empty, ResolutionMethod.Merged,
                 "Merged by selecting non-empty value");
         }
+        else if (conflict.LocalValue == conflict.NotionValue)
+        {
+            // If both values are the same, use either value
+            conflict.Resolve(conflict.LocalValue, ResolutionMethod.Merged,
+                "Merged: both sides had identical values");
+        }
         else
         {
-            // For non-empty values, use last-write approach
-            conflict = ResolveByLastWrite(conflict);
+            // Hotfix: Both sides modified the same property with different values
+            // This should be marked for manual review rather than auto-merged
+            conflict.MarkForManualReview(
+                $"Conflict: both sides modified {conflict.PropertyName ?? "property"} with different values. Manual review required.");
         }
 
         return conflict;
