@@ -52,23 +52,34 @@ public class ConflictResolutionService
     }
 
     /// <summary>
-    /// Resolves conflict by keeping the last written value (newest timestamp).
+    /// Resolves conflict by comparing the actual modification timestamps from
+    /// both sides. Uses <see cref="ConflictResolution.LocalModifiedAt"/> and
+    /// <see cref="ConflictResolution.NotionModifiedAt"/> which must be populated
+    /// by the change detection phase before conflict resolution runs.
+    /// Falls back to <see cref="ResolveNotionWins"/> when timestamps are missing.
     /// </summary>
     private ConflictResolution ResolveByLastWrite(ConflictResolution conflict)
     {
-        // In real implementation, would fetch actual timestamps from change logs
-        var localTimestamp = DateTime.UtcNow.AddMinutes(-2);
-        var notionTimestamp = DateTime.UtcNow;
+        var localTimestamp = conflict.LocalModifiedAt;
+        var notionTimestamp = conflict.NotionModifiedAt;
 
-        if (notionTimestamp > localTimestamp)
+        // If either timestamp is missing, we can't reliably compare - fall back
+        if (!localTimestamp.HasValue || !notionTimestamp.HasValue)
         {
             conflict.Resolve(conflict.NotionValue ?? string.Empty, ResolutionMethod.LastWrite,
-                "Resolved using last-write-wins: Notion value is newer");
+                "Resolved using last-write-wins (fallback): timestamps unavailable, preferring Notion");
+            return conflict;
+        }
+
+        if (notionTimestamp.Value > localTimestamp.Value)
+        {
+            conflict.Resolve(conflict.NotionValue ?? string.Empty, ResolutionMethod.LastWrite,
+                $"Resolved using last-write-wins: Notion value is newer ({notionTimestamp.Value:O} > {localTimestamp.Value:O})");
         }
         else
         {
             conflict.Resolve(conflict.LocalValue ?? string.Empty, ResolutionMethod.LastWrite,
-                "Resolved using last-write-wins: Local value is newer");
+                $"Resolved using last-write-wins: Local value is newer ({localTimestamp.Value:O} > {notionTimestamp.Value:O})");
         }
 
         return conflict;
