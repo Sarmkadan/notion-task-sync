@@ -40,16 +40,16 @@ public class BackupAndRecoveryExample
         try
         {
             // Step 1: List existing backups
-            await ListBackupsAsync(logger, backupService);
+            await ListBackupsAsync(logger, backupService).ConfigureAwait(false);
 
             // Step 2: Create a backup before risky operation
-            var backupPath = await CreateBackupAsync(logger, backupService);
+            var backupPath = await CreateBackupAsync(logger, backupService).ConfigureAwait(false);
 
             // Step 3: Perform sync operation
-            await PerformSyncAsync(logger, syncService, configuration);
+            await PerformSyncAsync(logger, syncService, configuration).ConfigureAwait(false);
 
             // Step 4: Verify sync succeeded
-            var successVerified = await VerifyBackupAsync(logger, backupPath);
+            var successVerified = await VerifyBackupAsync(logger, backupPath).ConfigureAwait(false);
 
             if (!successVerified)
             {
@@ -118,7 +118,7 @@ public class BackupAndRecoveryExample
 
         try
         {
-            var backupInfo = await backupService.CreateBackupAsync(backupName);
+            var backupInfo = await backupService.CreateBackupAsync(backupName).ConfigureAwait(false);
 
             logger.LogInformation("Backup created successfully");
             logger.LogInformation("  Path: {Path}", backupInfo.Path);
@@ -148,7 +148,7 @@ public class BackupAndRecoveryExample
             localFolderPath: "./tasks"
         );
 
-        var result = await syncService.ExecuteSyncAsync(config);
+        var result = await syncService.ExecuteSyncAsync(config).ConfigureAwait(false);
 
         logger.LogInformation("Sync completed");
         logger.LogInformation("  Status: {Status}", result.Status);
@@ -201,7 +201,7 @@ public class BackupAndRecoveryExample
 
         try
         {
-            await backupService.RestoreFromBackupAsync(backupPath);
+            await backupService.RestoreFromBackupAsync(backupPath).ConfigureAwait(false);
             logger.LogInformation("Recovery completed successfully");
             logger.LogInformation("  Restored from: {Path}", backupPath);
         }

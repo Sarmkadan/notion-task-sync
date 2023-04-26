@@ -63,7 +63,7 @@ public class ConfigureCommand : CliCommand
             }
             else
             {
-                settings = await PromptUserInteractively();
+                settings = await PromptUserInteractively().ConfigureAwait(false);
             }
 
             // Validate settings before saving
@@ -74,7 +74,7 @@ public class ConfigureCommand : CliCommand
             }
 
             // Save settings to appsettings.json
-            var success = await SaveSettingsAsync(settings);
+            var success = await SaveSettingsAsync(settings).ConfigureAwait(false);
             if (success)
             {
                 _logger.LogInformation("Configuration saved successfully");
@@ -195,7 +195,7 @@ public class ConfigureCommand : CliCommand
             JsonNode appSettings = new JsonObject();
             if (File.Exists(appSettingsPath))
             {
-                var content = await File.ReadAllTextAsync(appSettingsPath);
+                var content = await File.ReadAllTextAsync(appSettingsPath).ConfigureAwait(false);
                 appSettings = JsonNode.Parse(content) ?? appSettings;
             }
 
@@ -210,7 +210,7 @@ public class ConfigureCommand : CliCommand
 
             // Write updated settings
             var updatedJson = appSettings.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(appSettingsPath, updatedJson);
+            await File.WriteAllTextAsync(appSettingsPath, updatedJson).ConfigureAwait(false);
 
             return true;
         }

@@ -62,7 +62,7 @@ public sealed class FileSystemHelper
                 return null;
             }
 
-            var content = await File.ReadAllTextAsync(path);
+            var content = await File.ReadAllTextAsync(path).ConfigureAwait(false);
             return content;
         }
         catch (Exception ex)
@@ -86,7 +86,7 @@ public sealed class FileSystemHelper
                 EnsureDirectoryExists(directory);
             }
 
-            await File.WriteAllTextAsync(path, content);
+            await File.WriteAllTextAsync(path, content).ConfigureAwait(false);
             _logger.LogInformation("Wrote file: {Path}", path);
             return true;
         }
@@ -111,7 +111,7 @@ public sealed class FileSystemHelper
                 EnsureDirectoryExists(directory);
             }
 
-            await File.AppendAllTextAsync(path, content);
+            await File.AppendAllTextAsync(path, content).ConfigureAwait(false);
             return true;
         }
         catch (Exception ex)

@@ -59,7 +59,7 @@ public class SyncWorker : IDisposable
         _cancellationTokenSource = new CancellationTokenSource();
         _isRunning = true;
 
-        _workerTask = global::System.Threading.Tasks.Task.Run(async () => await RunWorkerAsync(_cancellationTokenSource.Token));
+        _workerTask = global::System.Threading.Tasks.Task.Run(async () => await RunWorkerAsync(_cancellationTokenSource.Token)).ConfigureAwait(false);
 
         _logger.LogInformation("Sync worker started (interval: {Interval}s)", _syncIntervalSeconds);
     }
@@ -123,7 +123,7 @@ public class SyncWorker : IDisposable
 
                 // Execute sync
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                var result = await _syncService.ExecuteSyncAsync(_config);
+                var result = await _syncService.ExecuteSyncAsync(_config).ConfigureAwait(false);
                 stopwatch.Stop();
 
                 // Publish completion event
@@ -155,7 +155,7 @@ public class SyncWorker : IDisposable
                 if (failureCount >= maxConsecutiveFailures)
                 {
                     _logger.LogError("Too many consecutive sync failures. Stopping worker.");
-                    await StopAsync();
+                    await StopAsync().ConfigureAwait(false);
                     return;
                 }
             }
@@ -168,7 +168,7 @@ public class SyncWorker : IDisposable
                 if (failureCount >= maxConsecutiveFailures)
                 {
                     _logger.LogError("Too many consecutive failures. Stopping worker.");
-                    await StopAsync();
+                    await StopAsync().ConfigureAwait(false);
                     return;
                 }
             }
@@ -176,7 +176,7 @@ public class SyncWorker : IDisposable
             // Wait for next sync interval
             try
             {
-                await global::System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(_syncIntervalSeconds), cancellationToken);
+                await global::System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(_syncIntervalSeconds), cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

@@ -40,14 +40,14 @@ public class ExportAndFormatExample
         try
         {
             // Load tasks from local directory
-            var tasks = await localFileService.LoadAllTasksAsync();
+            var tasks = await localFileService.LoadAllTasksAsync().ConfigureAwait(false);
             logger.LogInformation("Loaded {Count} tasks", tasks.Count);
 
             // Export in multiple formats
-            await ExportAsJsonAsync(logger, serviceProvider, tasks);
-            await ExportAsCsvAsync(logger, serviceProvider, tasks);
-            await ExportAsXmlAsync(logger, serviceProvider, tasks);
-            await ExportAsMarkdownAsync(logger, serviceProvider, tasks);
+            await ExportAsJsonAsync(logger, serviceProvider, tasks).ConfigureAwait(false);
+            await ExportAsCsvAsync(logger, serviceProvider, tasks).ConfigureAwait(false);
+            await ExportAsXmlAsync(logger, serviceProvider, tasks).ConfigureAwait(false);
+            await ExportAsMarkdownAsync(logger, serviceProvider, tasks).ConfigureAwait(false);
 
             logger.LogInformation("All exports completed");
         }
@@ -72,7 +72,7 @@ public class ExportAndFormatExample
         var filePath = $"./exports/tasks_{DateTime.Now:yyyyMMdd_HHmmss}.json";
 
         Directory.CreateDirectory("./exports");
-        await File.WriteAllTextAsync(filePath, output);
+        await File.WriteAllTextAsync(filePath, output).ConfigureAwait(false);
 
         logger.LogInformation("JSON export completed");
         logger.LogInformation("  File: {Path}", filePath);
@@ -94,7 +94,7 @@ public class ExportAndFormatExample
         var filePath = $"./exports/tasks_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
 
         Directory.CreateDirectory("./exports");
-        await File.WriteAllTextAsync(filePath, output);
+        await File.WriteAllTextAsync(filePath, output).ConfigureAwait(false);
 
         logger.LogInformation("CSV export completed");
         logger.LogInformation("  File: {Path}", filePath);
@@ -116,7 +116,7 @@ public class ExportAndFormatExample
         var filePath = $"./exports/tasks_{DateTime.Now:yyyyMMdd_HHmmss}.xml";
 
         Directory.CreateDirectory("./exports");
-        await File.WriteAllTextAsync(filePath, output);
+        await File.WriteAllTextAsync(filePath, output).ConfigureAwait(false);
 
         logger.LogInformation("XML export completed");
         logger.LogInformation("  File: {Path}", filePath);
@@ -138,7 +138,7 @@ public class ExportAndFormatExample
         var filePath = $"./exports/tasks_{DateTime.Now:yyyyMMdd_HHmmss}.md";
 
         Directory.CreateDirectory("./exports");
-        await File.WriteAllTextAsync(filePath, output);
+        await File.WriteAllTextAsync(filePath, output).ConfigureAwait(false);
 
         logger.LogInformation("Markdown export completed");
         logger.LogInformation("  File: {Path}", filePath);

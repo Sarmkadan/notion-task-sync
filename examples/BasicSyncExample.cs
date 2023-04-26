@@ -51,7 +51,7 @@ public class BasicSyncExample
 
             // Execute sync
             logger.LogInformation("Executing sync operation...");
-            var result = await syncService.ExecuteSyncAsync(syncConfig);
+            var result = await syncService.ExecuteSyncAsync(syncConfig).ConfigureAwait(false);
 
             // Display results
             logger.LogInformation("Sync completed successfully!");

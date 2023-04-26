@@ -58,7 +58,7 @@ public class NotionApiService
                     start_cursor = string.IsNullOrEmpty(startCursor) ? null : startCursor
                 };
 
-                var response = await PostAsync(url, payload);
+                var response = await PostAsync(url, payload).ConfigureAwait(false);
 
                 if (response is not null)
                 {
@@ -88,7 +88,7 @@ public class NotionApiService
         try
         {
             var url = $"{NotionApiBaseUrl}/pages/{pageId}";
-            var response = await GetAsync(url);
+            var response = await GetAsync(url).ConfigureAwait(false);
 
             // Parse response into NotionPage
             return new NotionPage(pageId, string.Empty, "Retrieved Page");
@@ -124,7 +124,7 @@ public class NotionApiService
                 }
             };
 
-            var response = await PostAsync(url, payload);
+            var response = await PostAsync(url, payload).ConfigureAwait(false);
 
             // In real implementation, would extract page ID from response
             var newPage = new NotionPage(Guid.NewGuid().ToString(), databaseId, task.Title);
@@ -162,7 +162,7 @@ public class NotionApiService
                 }
             };
 
-            var response = await PatchAsync(url, payload);
+            var response = await PatchAsync(url, payload).ConfigureAwait(false);
 
             var updatedPage = new NotionPage(pageId, string.Empty, task.Title);
             updatedPage.LastEditedTime = task.UpdatedAt;
@@ -189,7 +189,7 @@ public class NotionApiService
             var url = $"{NotionApiBaseUrl}/pages/{pageId}";
             var payload = new { archived = true };
 
-            await PatchAsync(url, payload);
+            await PatchAsync(url, payload).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -206,7 +206,7 @@ public class NotionApiService
         try
         {
             var url = $"{NotionApiBaseUrl}/users/me";
-            var response = await GetAsync(url);
+            var response = await GetAsync(url).ConfigureAwait(false);
             return response is not null;
         }
         catch
@@ -222,7 +222,7 @@ public class NotionApiService
     {
         try
         {
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync(url).ConfigureAwait(false);
             return response.IsSuccessStatusCode
                 ? await response.Content.ReadAsStringAsync()
                 : null;
@@ -242,7 +242,7 @@ public class NotionApiService
         {
             var json = System.Text.Json.JsonSerializer.Serialize(payload);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync(url, content);
+            var response = await _httpClient.PostAsync(url, content).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode
                 ? await response.Content.ReadAsStringAsync()
@@ -264,7 +264,7 @@ public class NotionApiService
             var json = System.Text.Json.JsonSerializer.Serialize(payload);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             var request = new HttpRequestMessage(HttpMethod.Patch, url) { Content = content };
-            var response = await _httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode
                 ? await response.Content.ReadAsStringAsync()

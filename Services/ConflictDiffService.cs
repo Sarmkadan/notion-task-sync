@@ -184,7 +184,7 @@ public class ConflictDiffService
         foreach (var conflict in conflicts)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            results[conflict.Id] = await GenerateDiffAsync(conflict, cancellationToken);
+            results[conflict.Id] = await GenerateDiffAsync(conflict, cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation(

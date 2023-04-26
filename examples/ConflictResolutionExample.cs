@@ -69,7 +69,7 @@ public class ConflictResolutionExample
         );
         config.ConflictStrategy = strategy;
 
-        var result = await syncService.ExecuteSyncAsync(config);
+        var result = await syncService.ExecuteSyncAsync(config).ConfigureAwait(false);
 
         logger.LogInformation("Results:");
         logger.LogInformation("  Status: {Status}", result.Status);
@@ -94,7 +94,7 @@ public class ConflictResolutionExample
         );
         config.ConflictStrategy = ConflictResolutionStrategy.Manual;
 
-        var result = await syncService.ExecuteSyncAsync(config);
+        var result = await syncService.ExecuteSyncAsync(config).ConfigureAwait(false);
 
         logger.LogInformation("Results:");
         logger.LogInformation("  Status: {Status}", result.Status);

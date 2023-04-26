@@ -115,7 +115,7 @@ public class EventBus
         // Wait for all async handlers to complete
         if (tasks.Any())
         {
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
         }
 
         _logger.LogDebug("Event {EventType} published to all subscribers", eventType.Name);

@@ -100,12 +100,12 @@ public class ChangeLogRepository : IChangeLogRepository
 
     public async Task<int> CountAsync()
     {
-        return await global::System.Threading.Tasks.Task.FromResult(_changeLogs.Count);
+        return await global::System.Threading.Tasks.Task.FromResult(_changeLogs.Count).ConfigureAwait(false);
     }
 
     public async Task<int> CountConflictsAsync()
     {
-        return await global::System.Threading.Tasks.Task.FromResult(_changeLogs.Count(c => c.IsConflict));
+        return await global::System.Threading.Tasks.Task.FromResult(_changeLogs.Count(c => c.IsConflict)).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task SaveAsync()
@@ -121,7 +121,7 @@ public class ChangeLogRepository : IChangeLogRepository
     /// </summary>
     public async Task<List<ChangeLog>> GetFullAuditTrailAsync(Guid taskId)
     {
-        return await GetByTaskIdAsync(taskId, int.MaxValue);
+        return await GetByTaskIdAsync(taskId, int.MaxValue).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -141,7 +141,7 @@ public class ChangeLogRepository : IChangeLogRepository
             DeletedCount = _changeLogs.Count(c => c.ChangeType == "Deleted")
         };
 
-        return await global::System.Threading.Tasks.Task.FromResult(stats);
+        return await global::System.Threading.Tasks.Task.FromResult(stats).ConfigureAwait(false);
     }
 
     /// <summary>

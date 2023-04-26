@@ -101,7 +101,7 @@ public class CacheProvider
             return cached;
 
         _logger.LogDebug("Cache miss: {Key}, computing value asynchronously", key);
-        var value = await factory();
+        var value = await factory().ConfigureAwait(false);
         Set(key, value, expiration);
 
         return value;

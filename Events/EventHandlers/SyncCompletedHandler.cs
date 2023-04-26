@@ -74,7 +74,7 @@ public class SyncCompletedHandler
             CheckForWarnings(@event);
 
             // Could trigger cleanup or maintenance actions
-            await PerformPostSyncActionsAsync(@event);
+            await PerformPostSyncActionsAsync(@event).ConfigureAwait(false);
 
             _logger.LogDebug("Sync completed handler processed event {EventId}", @event.EventId);
         }

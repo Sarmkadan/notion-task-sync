@@ -59,7 +59,7 @@ public class SyncPipeline
                     i + 1, _steps.Count, step.Name);
 
                 // Execute the step
-                var stepResult = await step.ExecuteAsync(context);
+                var stepResult = await step.ExecuteAsync(context).ConfigureAwait(false);
 
                 // Track step result
                 result.StepResults.Add(new StepResult
