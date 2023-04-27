@@ -36,8 +36,14 @@ public class NotionApiService
     }
 
     /// <summary>
-    /// Fetches all pages from a Notion database with pagination support.
+    /// Fetches all pages from a Notion database with automatic cursor-based pagination.
+    /// Continues fetching until all pages are retrieved or an error occurs.
     /// </summary>
+    /// <param name="databaseId">The Notion database UUID to query.</param>
+    /// <param name="pageSize">Number of results per API call (max 100). Defaults to 100.</param>
+    /// <returns>A complete list of <see cref="NotionPage"/> entities from the database.</returns>
+    /// <exception cref="ValidationException">Thrown when <paramref name="databaseId"/> is empty.</exception>
+    /// <exception cref="NotionApiException">Thrown when the Notion API request fails.</exception>
     public async Task<List<NotionPage>> FetchPagesAsync(string databaseId, int pageSize = 100)
     {
         if (string.IsNullOrEmpty(databaseId))
