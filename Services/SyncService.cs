@@ -78,10 +78,11 @@ public class SyncService
 
             if (conflicts.Count > 0)
             {
-                // Resolve conflicts using configured strategy
+                // Resolve conflicts using configured strategy and optional per-field overrides
                 var resolutions = await _conflictResolutionService.ResolveConflictsAsync(
                     conflicts,
-                    config.ConflictStrategy);
+                    config.ConflictStrategy,
+                    config.FieldConflictStrategies);
 
                 result.ConflictsResolved = resolutions.Count(r => r.Status == ResolutionStatus.Resolved);
                 result.ConflictsPendingReview = resolutions.Count(r => r.Status == ResolutionStatus.PendingReview);
