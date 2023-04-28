@@ -53,9 +53,15 @@ public class SyncService
 
         try
         {
-            // Fetch current state from both sources
+            // Fetch current state from both sources.
+            // When a previous sync timestamp is available use incremental mode:
+            // FetchPagesSinceAsync applies a last_edited_time filter so only recently
+            // changed pages are retrieved, dramatically reducing API calls for large databases.
             var localTasks = await _taskRepository.GetAllAsync();
-            var notionPages = await _notionApiService.FetchPagesAsync(config.NotionDatabaseId);
+            var notionPages = config.LastSyncAt.HasValue
+                ? await _notionApiService.FetchPagesSinceAsync(
+                    config.NotionDatabaseId, config.LastSyncAt.Value)
+                : await _notionApiService.FetchPagesAsync(config.NotionDatabaseId);
 
             result.LocalTaskCount = localTasks.Count;
             result.NotionPageCount = notionPages.Count;
