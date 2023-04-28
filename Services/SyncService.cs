@@ -10,6 +10,7 @@ using NotionTaskSync.Domain.Models;
 using NotionTaskSync.Domain.Exceptions;
 using NotionTaskSync.Domain.Enums;
 using NotionTaskSync.Data.Repositories;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,19 +26,22 @@ public class SyncService
     private readonly NotionApiService _notionApiService;
     private readonly ITaskRepository _taskRepository;
     private readonly IChangeLogRepository _changeLogRepository;
+    private readonly ILogger<SyncService>? _logger;
 
     public SyncService(
         ChangeDetectionService changeDetectionService,
         ConflictResolutionService conflictResolutionService,
         NotionApiService notionApiService,
         ITaskRepository taskRepository,
-        IChangeLogRepository changeLogRepository)
+        IChangeLogRepository changeLogRepository,
+        ILogger<SyncService>? logger = null)
     {
         _changeDetectionService = changeDetectionService;
         _conflictResolutionService = conflictResolutionService;
         _notionApiService = notionApiService;
         _taskRepository = taskRepository;
         _changeLogRepository = changeLogRepository;
+        _logger = logger;
     }
 
     /// <summary>
@@ -95,7 +99,13 @@ public class SyncService
             }
 
             // Apply changes based on sync direction
-            await ApplyChangesAsync(localTasks, notionPages, config);
+            var (created, updated, deleted) = await ApplyChangesAsync(localTasks, notionPages, config);
+            result.Created = created;
+            result.Updated = updated;
+            result.Deleted = deleted;
+            result.Unchanged = (result.LocalTaskCount + result.NotionPageCount)
+                - (result.LocalChangesDetected + result.NotionChangesDetected);
+            if (result.Unchanged < 0) result.Unchanged = 0;
 
             // Update sync metadata
             config.UpdateSyncStatus();
@@ -103,6 +113,8 @@ public class SyncService
 
             result.Status = SyncStatus.Completed;
             result.CompletedAt = DateTime.UtcNow;
+
+            _logger?.LogInformation(result.Summary);
         }
         catch (Exception ex)
         {
@@ -117,9 +129,12 @@ public class SyncService
 
     /// <summary>
     /// Applies changes from one source to the other based on sync direction.
+    /// Returns counts of (created, updated, deleted) operations performed.
     /// </summary>
-    private async global::System.Threading.Tasks.Task ApplyChangesAsync(List<Task> localTasks, List<NotionPage> notionPages, SyncConfig config)
+    private async global::System.Threading.Tasks.Task<(int Created, int Updated, int Deleted)> ApplyChangesAsync(List<Task> localTasks, List<NotionPage> notionPages, SyncConfig config)
     {
+        int created = 0, updated = 0, deleted = 0;
+
         if (config.Direction == SyncDirection.Bidirectional || config.Direction == SyncDirection.LocalToNotion)
         {
             // Push local changes to Notion
@@ -129,13 +144,23 @@ public class SyncService
 
                 if (page is not null)
                 {
-                    await _notionApiService.UpdatePageAsync(page.PageId, task);
+                    if (task.IsDeleted)
+                    {
+                        await _notionApiService.UpdatePageAsync(page.PageId, task);
+                        deleted++;
+                    }
+                    else
+                    {
+                        await _notionApiService.UpdatePageAsync(page.PageId, task);
+                        updated++;
+                    }
                 }
                 else if (task.NotionPageId is null)
                 {
                     var newPage = await _notionApiService.CreatePageAsync(config.NotionDatabaseId, task);
                     task.NotionPageId = newPage.PageId;
                     await _taskRepository.UpdateAsync(task);
+                    created++;
                 }
             }
         }
@@ -151,14 +176,21 @@ public class SyncService
                 {
                     UpdateTaskFromPage(task, page);
                     await _taskRepository.UpdateAsync(task);
+                    if (page.Archived)
+                        deleted++;
+                    else
+                        updated++;
                 }
                 else
                 {
                     var newTask = CreateTaskFromPage(page);
                     await _taskRepository.AddAsync(newTask);
+                    created++;
                 }
             }
         }
+
+        return (created, updated, deleted);
     }
 
     /// <summary>
@@ -212,9 +244,27 @@ public class SyncService
         public int ConflictsDetected { get; set; }
         public int ConflictsResolved { get; set; }
         public int ConflictsPendingReview { get; set; }
+        public int Created { get; set; }
+        public int Updated { get; set; }
+        public int Deleted { get; set; }
+        public int Unchanged { get; set; }
         public string? ErrorMessage { get; set; }
         public string? ErrorDetails { get; set; }
 
         public TimeSpan? Duration => CompletedAt.HasValue ? CompletedAt.Value - StartedAt : null;
+
+        /// <summary>
+        /// Returns a human-readable summary of the sync cycle results.
+        /// Example: "Sync completed: 3 created, 2 updated, 0 deleted, 45 unchanged, 1 conflicted (1.2s)"
+        /// </summary>
+        public string Summary
+        {
+            get
+            {
+                var durationSec = Duration.HasValue ? Duration.Value.TotalSeconds.ToString("F1") : "?";
+                return $"Sync completed: {Created} created, {Updated} updated, {Deleted} deleted, " +
+                       $"{Unchanged} unchanged, {ConflictsDetected} conflicted ({durationSec}s)";
+            }
+        }
     }
 }
