@@ -224,27 +224,52 @@ public static class NotionMapper
     /// </summary>
     private static string? ExtractRichText(object? richTextObj)
     {
-        if (richTextObj is List<object> textArray)
-        {
-            var texts = new System.Text.StringBuilder();
+        return NormalizeRichTextForComparison(richTextObj);
+    }
 
+    /// <summary>
+    /// Normalizes a Notion rich-text value to plain text for semantic comparison.
+    /// Strips annotation metadata (bold, italic, colour, etc.) and merges adjacent
+    /// text runs so that fields which are semantically identical compare as equal even
+    /// when Notion returns different annotation orderings or split text runs.
+    /// Use this method whenever two property values are compared for change detection.
+    /// </summary>
+    public static string NormalizeRichTextForComparison(object? richTextValue)
+    {
+        if (richTextValue is null)
+            return string.Empty;
+
+        if (richTextValue is string strValue)
+            return strValue.Trim();
+
+        if (richTextValue is List<object> textArray)
+        {
+            var sb = new System.Text.StringBuilder();
             foreach (var item in textArray)
             {
-                if (item is Dictionary<string, object?> textItem &&
-                    textItem.ContainsKey("text"))
+                if (item is Dictionary<string, object?> textItem)
                 {
-                    if (textItem["text"] is Dictionary<string, object?> textContent &&
-                        textContent.ContainsKey("content"))
+                    // Notion always populates plain_text; prefer it over reconstructing from text.content
+                    if (textItem.TryGetValue("plain_text", out var plainText))
                     {
-                        texts.Append(textContent["content"]);
+                        sb.Append(plainText?.ToString());
+                        continue;
+                    }
+
+                    // Fallback: extract content from the nested text object
+                    if (textItem.TryGetValue("text", out var textObj) &&
+                        textObj is Dictionary<string, object?> textContent &&
+                        textContent.TryGetValue("content", out var content))
+                    {
+                        sb.Append(content?.ToString());
                     }
                 }
             }
 
-            return texts.ToString();
+            return sb.ToString().Trim();
         }
 
-        return null;
+        return richTextValue.ToString()?.Trim() ?? string.Empty;
     }
 
     /// <summary>

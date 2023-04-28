@@ -8,6 +8,7 @@ namespace NotionTaskSync.Services;
 
 using NotionTaskSync.Domain.Models;
 using NotionTaskSync.Data.Repositories;
+using NotionTaskSync.Data.Mappers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -218,5 +219,24 @@ public class ChangeDetectionService
     {
         var changes = _changeLogRepository.GetByTaskIdAsync(taskId, 1).Result;
         return changes.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Compares two Notion property values for semantic equality.
+    /// Rich-text fields are normalised to plain text before comparison so that
+    /// differing annotation orderings or split text runs do not produce false positives.
+    /// </summary>
+    public static bool ArePropertyValuesEqual(object? localValue, object? notionValue)
+    {
+        if (localValue is null && notionValue is null)
+            return true;
+
+        if (localValue is null || notionValue is null)
+            return false;
+
+        var normalizedLocal = NotionMapper.NormalizeRichTextForComparison(localValue);
+        var normalizedNotion = NotionMapper.NormalizeRichTextForComparison(notionValue);
+
+        return string.Equals(normalizedLocal, normalizedNotion, StringComparison.Ordinal);
     }
 }
