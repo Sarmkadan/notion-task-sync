@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using NotionTaskSync.Services;
 using NotionTaskSync.Data.Repositories;
+using NotionTaskSync.Commands;
 using System;
 
 /// <summary>
@@ -46,7 +47,19 @@ public static class DependencyInjection
 
         services.AddSingleton<ChangeDetectionService>();
         services.AddSingleton<ConflictResolutionService>();
+        services.AddSingleton<ConflictDiffService>();
         services.AddSingleton<SyncService>();
+
+        // Calendar sync
+        services.AddSingleton<CalendarSyncService>();
+
+        // Bulk operations
+        services.AddSingleton<BulkOperationService>();
+
+        // CLI commands
+        services.AddSingleton<CalendarCommand>();
+        services.AddSingleton<BulkCommand>();
+        services.AddSingleton<ConflictCommand>();
 
         return services;
     }
