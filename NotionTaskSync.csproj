@@ -7,11 +7,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <StartupObject>NotionTaskSync.Program</StartupObject>
-    <PackageId>Zaiets.notion.task.sync</PackageId>
-    <Version>2.0.2</Version>
+    <PackageId>sarmkadan.notion-task-sync</PackageId>
+    <Version>1.0.0</Version>
     <Authors>Vladyslav Zaiets</Authors>
-    <Description>Bidirectional sync between Notion databases and local task files in .NET - conflict resolution, change detection</Description>
-    <PackageTags>notion task sync dotnet csharp bidirectional conflict resolution</PackageTags>
+    <Description>A .NET library and CLI tool for bidirectional synchronization between Notion databases and local task files, featuring robust change detection and conflict resolution.</Description>
+    <PackageTags>notion, task, sync, dotnet, csharp, bidirectional, conflict-resolution</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/sarmkadan/notion-task-sync</PackageProjectUrl>
     <RepositoryUrl>https://github.com/sarmkadan/notion-task-sync</RepositoryUrl>
