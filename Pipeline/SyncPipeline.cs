@@ -43,6 +43,8 @@ public class SyncPipeline
     /// Executes the entire pipeline with provided context.
     /// Returns result containing success status and any errors.
     /// </summary>
+    /// <param name="context">The pipeline context containing shared data and messages.</param>
+    /// <returns>A <see cref="PipelineResult"/> containing the outcome of the pipeline execution.</returns>
     public async Task<PipelineResult> ExecuteAsync(PipelineContext context)
     {
         var result = new PipelineResult();
