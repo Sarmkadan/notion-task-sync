@@ -10,6 +10,13 @@ All notable changes to Notion Task Sync are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-12-29
+
+### Security
+- Added input validation and length limits for string parameters
+- Added request timeout configuration
+- Added security policy and vulnerability reporting
+
 ## [Unreleased]
 
 ### Planned Features
