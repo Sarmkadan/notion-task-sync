@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NotionTaskSync" Version="2.0.0" />
+    <PackageReference Include="NotionTaskSync" Version="2.0.2" />
   </ItemGroup>
 
 </Project>
