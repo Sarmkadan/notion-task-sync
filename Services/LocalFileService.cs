@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -105,7 +106,7 @@ public class LocalFileService
                 {
                     var task = await LoadTaskAsync(file);
 
-                    if (task != null)
+                    if (task is not null)
                         tasks.Add(task);
                 }
                 catch

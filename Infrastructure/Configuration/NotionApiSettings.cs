@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -12,7 +13,7 @@ using System.Collections.Generic;
 /// Notion API configuration settings.
 /// Contains API authentication, endpoints, and rate limiting configuration.
 /// </summary>
-public class NotionApiSettings
+public sealed class NotionApiSettings
 {
     /// <summary>
     /// Gets or sets the Notion API authentication token.

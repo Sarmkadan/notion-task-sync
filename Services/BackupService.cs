@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -177,7 +178,7 @@ public class BackupService
 
             var latestBackup = GetAvailableBackups().FirstOrDefault();
 
-            if (latestBackup != null)
+            if (latestBackup is not null)
                 stats.LastBackupTime = latestBackup.CreatedAt;
         }
         catch

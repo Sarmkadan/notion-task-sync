@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -98,7 +99,7 @@ public class SyncConfig
     /// </summary>
     public string? MapLocalFieldToNotion(string localFieldName)
     {
-        if (FieldMappings == null || !FieldMappings.ContainsKey(localFieldName))
+        if (FieldMappings is null || !FieldMappings.ContainsKey(localFieldName))
             return localFieldName;
 
         return FieldMappings[localFieldName];
@@ -109,7 +110,7 @@ public class SyncConfig
     /// </summary>
     public bool ShouldSyncField(string fieldName)
     {
-        if (IgnoredFields == null || IgnoredFields.Count == 0)
+        if (IgnoredFields is null || IgnoredFields.Count == 0)
             return true;
 
         return !IgnoredFields.Contains(fieldName);
@@ -133,7 +134,7 @@ public class SyncConfig
         if (!IsEnabled)
             return false;
 
-        if (NextScheduledSyncAt == null)
+        if (NextScheduledSyncAt is null)
             return true;
 
         return DateTime.UtcNow >= NextScheduledSyncAt;

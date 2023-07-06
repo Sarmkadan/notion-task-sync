@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -82,7 +83,7 @@ public class ConfigRepository
             var filePath = Path.Combine(_configDirectory, fileName);
 
             var json = await _fileSystemHelper.ReadFileAsync(filePath);
-            if (json == null)
+            if (json is null)
                 return null;
 
             var config = _jsonFormatter.Deserialize<SyncConfig>(json);
@@ -113,10 +114,10 @@ public class ConfigRepository
             foreach (var file in directory.GetFiles("*.json"))
             {
                 var json = await _fileSystemHelper.ReadFileAsync(file.FullName);
-                if (json != null)
+                if (json is not null)
                 {
                     var config = _jsonFormatter.Deserialize<SyncConfig>(json);
-                    if (config != null)
+                    if (config is not null)
                     {
                         configs.Add(config);
                     }
@@ -192,14 +193,14 @@ public class ConfigRepository
         try
         {
             var json = await _fileSystemHelper.ReadFileAsync(importPath);
-            if (json == null)
+            if (json is null)
             {
                 _logger.LogWarning("Import file not found: {ImportPath}", importPath);
                 return null;
             }
 
             var config = _jsonFormatter.Deserialize<SyncConfig>(json);
-            if (config != null)
+            if (config is not null)
             {
                 // Save the imported configuration
                 await SaveConfigAsync(config);

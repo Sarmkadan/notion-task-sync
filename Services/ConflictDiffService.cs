@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -198,7 +199,7 @@ public class ConflictDiffService
 
     private static string[] SplitLines(string? value) =>
         string.IsNullOrEmpty(value)
-            ? Array.Empty<string>()
+            ? new string[0]
             : value.Replace("\r\n", "\n").Split('\n');
 
     private static int[,] ComputeLcs(string[] local, string[] notion)
