@@ -146,7 +146,7 @@ dotnet run -- configure \
   --name "MyTaskSync" \
   --database-id "your_database_id" \
   --local-path "./tasks" \
-  --conflict-strategy "latest-wins"
+  --conflict-strategy "LastWrite"
 ```
 
 Or edit `appsettings.json` manually:
@@ -155,22 +155,93 @@ Or edit `appsettings.json` manually:
 {
   "NotionApi": {
     "ApiKey": "your_integration_token",
-    "DatabaseId": "your_database_id",
-    "RateLimitPerSecond": 3
+    "DatabaseIds": ["your_database_id"],
+    "RateLimitPerMinute": 30
   },
   "AppSettings": {
     "LocalTasksDirectory": "./tasks",
     "BackupDirectory": "./backups",
-    "LogFilePath": "./logs/sync.log"
+    "LogFilePath": "./logs/sync.log",
+    "DefaultConflictStrategy": "LastWrite",
+    "DefaultSyncIntervalSeconds": 300,
+    "EnableAutoBackup": true,
+    "EnableChangeTracking": true
   },
-  "SyncConfig": {
-    "ConflictResolutionStrategy": "latest-wins",
-    "AutoBackup": true,
-    "EnableChangeDetection": true,
-    "SyncInterval": 300
+  "SyncProfiles": {
+    "default": {
+      "notionDatabaseId": "your_database_id",
+      "localFolderPath": "./tasks",
+      "conflictStrategy": "LastWrite",
+      "syncIntervalSeconds": 300
+    }
   }
 }
 ```
+
+### Configuration Reference
+
+#### `AppSettings`
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `LocalTasksDirectory` | string | `"./tasks"` | Directory where local task files are stored |
+| `DefaultConflictStrategy` | string | `"LastWrite"` | Global conflict strategy. See values below. |
+| `DefaultSyncIntervalSeconds` | int | `300` | How often to sync (seconds). Range: 5–3600. |
+| `EnableAutoBackup` | bool | `true` | Create automatic backups before each sync |
+| `BackupDirectory` | string | `"./backups"` | Where backups are written |
+| `MaxBackupFiles` | int | `10` | Backup retention count |
+| `EnableChangeTracking` | bool | `true` | Record every change to the audit log |
+| `LogFilePath` | string | `null` | Write logs to this file (optional) |
+| `LogLevel` | string | `"Information"` | `Debug`, `Information`, `Warning`, `Error` |
+
+#### `SyncProfiles.<name>`
+
+Each key under `SyncProfiles` defines a named sync profile. All fields are optional
+except `notionDatabaseId` and `localFolderPath`.
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `notionDatabaseId` | string | Notion database UUID (from the page URL) |
+| `localFolderPath` | string | Path to the local task files for this profile |
+| `conflictStrategy` | string | Per-profile override for the global default (see values below) |
+| `fieldConflictStrategies` | object | Per-field strategy overrides (key = field name, value = strategy) |
+| `syncIntervalSeconds` | int | Per-profile sync interval override |
+| `ignoredFields` | array | List of property names excluded from sync |
+
+#### Conflict Strategy Values
+
+| Value | Behaviour |
+|-------|-----------|
+| `LastWrite` | Keep whichever side has the newer modification timestamp *(default)* |
+| `LocalWins` | Always keep the local value, discard the Notion value |
+| `NotionWins` | Always keep the Notion value, discard the local value |
+| `Manual` | Do not auto-resolve; flag conflict for manual review |
+
+**Per-field example** (local is authoritative for `Title`, Notion for `Status`):
+
+```json
+"SyncProfiles": {
+  "default": {
+    "notionDatabaseId": "your_database_id",
+    "localFolderPath": "./tasks",
+    "conflictStrategy": "LastWrite",
+    "fieldConflictStrategies": {
+      "Title": "LocalWins",
+      "Status": "NotionWins"
+    }
+  }
+}
+```
+
+> **Migration note (v1.x → v2.x):** Configuration keys were renamed in v2.0.
+> Replace any old values in your config files:
+> - `"latest-wins"` → `"LastWrite"`
+> - `"local-priority"` → `"LocalWins"`
+> - `"notion-priority"` → `"NotionWins"`
+> - `"manual"` → `"Manual"`
+> The key path also changed: `SyncConfig:ConflictResolutionStrategy` →
+> `AppSettings:DefaultConflictStrategy` (global) or
+> `SyncProfiles:<name>:conflictStrategy` (per profile).
 
 ## Step 5: Run Your First Sync
 
@@ -345,10 +416,27 @@ You want tasks in version control alongside code:
 
 ```json
 {
-  "SyncConfig": {
-    "ConflictResolutionStrategy": "local-priority",
-    "PreferLocalChangesWhen": ["description", "notes", "status"],
-    "SyncInterval": 600
+  "AppSettings": {
+    "DefaultConflictStrategy": "LocalWins",
+    "DefaultSyncIntervalSeconds": 600
+  }
+}
+```
+
+Or per-field, if only certain fields are locally authoritative:
+
+```json
+{
+  "SyncProfiles": {
+    "default": {
+      "notionDatabaseId": "your_database_id",
+      "localFolderPath": "./tasks",
+      "conflictStrategy": "LastWrite",
+      "fieldConflictStrategies": {
+        "Title": "LocalWins",
+        "Description": "LocalWins"
+      }
+    }
   }
 }
 ```
@@ -359,10 +447,9 @@ Your team uses Notion as the primary interface:
 
 ```json
 {
-  "SyncConfig": {
-    "ConflictResolutionStrategy": "notion-priority",
-    "PreferNotionChangesWhen": ["status", "priority", "assignee"],
-    "SyncInterval": 300
+  "AppSettings": {
+    "DefaultConflictStrategy": "NotionWins",
+    "DefaultSyncIntervalSeconds": 300
   }
 }
 ```
@@ -373,28 +460,26 @@ For high-stakes environments requiring approval:
 
 ```json
 {
-  "SyncConfig": {
-    "ConflictResolutionStrategy": "manual",
-    "AutoResolveNonConflicting": true,
-    "SyncInterval": 0
+  "AppSettings": {
+    "DefaultConflictStrategy": "Manual"
   }
 }
 ```
 
 ### Scenario 4: Large Scale (1000+ tasks)
 
-For performance with big databases:
+For performance with big databases, incremental sync is enabled automatically
+after the first full sync (uses Notion's `last_edited_time` filter):
 
 ```json
 {
-  "SyncConfig": {
-    "MaxTasksPerSync": 500,
-    "SyncInterval": 1800
+  "AppSettings": {
+    "DefaultSyncIntervalSeconds": 1800
   },
-  "Caching": {
-    "Enabled": true,
-    "DurationSeconds": 600,
-    "MaxEntries": 5000
+  "NotionApi": {
+    "EnableCaching": true,
+    "CacheDurationMinutes": 10,
+    "DefaultPageSize": 100
   }
 }
 ```
