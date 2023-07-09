@@ -59,6 +59,23 @@ public class SyncConfig
     public List<string>? IgnoredFields { get; set; }
 
     /// <summary>
+    /// Per-field conflict resolution strategy overrides.
+    /// Keys are field/property names (e.g. "Title", "Status").
+    /// Values are strategy names matching <see cref="ConflictResolutionStrategy"/> enum
+    /// values: <c>LastWrite</c>, <c>LocalWins</c>, <c>NotionWins</c>, or <c>Manual</c>.
+    /// A per-field entry takes precedence over <see cref="ConflictStrategy"/> for that field.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// "fieldConflictStrategies": {
+    ///   "Title":  "LocalWins",
+    ///   "Status": "NotionWins"
+    /// }
+    /// </code>
+    /// </example>
+    public Dictionary<string, ConflictResolutionStrategy>? FieldConflictStrategies { get; set; }
+
+    /// <summary>
     /// Initializes a new SyncConfig with required database and folder information.
     /// </summary>
     [SetsRequiredMembers]
@@ -157,6 +174,31 @@ public class SyncConfig
         IgnoredFields ??= new List<string>();
         if (!IgnoredFields.Contains(fieldName))
             IgnoredFields.Add(fieldName);
+    }
+
+    /// <summary>
+    /// Returns the conflict resolution strategy for a specific field.
+    /// When a per-field override is present in <see cref="FieldConflictStrategies"/>
+    /// it takes precedence; otherwise the global <see cref="ConflictStrategy"/> is used.
+    /// </summary>
+    public ConflictResolutionStrategy GetFieldConflictStrategy(string fieldName)
+    {
+        if (FieldConflictStrategies is not null
+            && FieldConflictStrategies.TryGetValue(fieldName, out var fieldStrategy))
+        {
+            return fieldStrategy;
+        }
+
+        return ConflictStrategy;
+    }
+
+    /// <summary>
+    /// Sets a per-field conflict resolution strategy override.
+    /// </summary>
+    public void SetFieldConflictStrategy(string fieldName, ConflictResolutionStrategy strategy)
+    {
+        FieldConflictStrategies ??= new Dictionary<string, ConflictResolutionStrategy>();
+        FieldConflictStrategies[fieldName] = strategy;
     }
 }
 
