@@ -48,6 +48,8 @@ public class SyncService
     /// Executes a full bidirectional sync for a given configuration.
     /// Detects changes, resolves conflicts, and propagates updates.
     /// </summary>
+    /// <param name="config">The synchronization configuration to apply.</param>
+    /// <returns>A <see cref="SyncResult"/> containing the outcome of the sync operation.</returns>
     public async Task<SyncResult> ExecuteSyncAsync(SyncConfig config)
     {
         if (!config.Validate())

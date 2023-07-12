@@ -35,6 +35,8 @@ public class LocalFileService
     /// Saves a task to a local Markdown file.
     /// Creates or overwrites the file with task metadata and content.
     /// </summary>
+    /// <param name="task">The task to save.</param>
+    /// <returns>A task representing the asynchronous save operation.</returns>
     public async global::System.Threading.Tasks.Task SaveTaskAsync(Task task)
     {
         if (!task.Validate())
@@ -64,6 +66,8 @@ public class LocalFileService
     /// <summary>
     /// Loads a task from a local file by its path.
     /// </summary>
+    /// <param name="filePath">The path to the local Markdown file.</param>
+    /// <returns>The loaded <see cref="Task"/>, or null if the file does not exist.</returns>
     public async Task<Task?> LoadTaskAsync(string filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath))
