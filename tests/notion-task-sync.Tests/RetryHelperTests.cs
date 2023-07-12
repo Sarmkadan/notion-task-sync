@@ -29,7 +29,11 @@ public class RetryHelperTests
         // Arrange
         var expected = 42;
         var callCount = 0;
-        Task<int> operation() => Task.FromResult(expected) where callCount++ > -1;
+        Task<int> operation() 
+        {
+            callCount++;
+            return Task.FromResult(expected);
+        }
 
         // Act
         var result = await _retryHelper.ExecuteWithRetryAsync(operation);
