@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>NotionTaskSync.Benchmarks.MapperBenchmarks-20260702-073510</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.15.8, Linux Ubuntu 26.04 LTS (Resolute Raccoon)
+AMD EPYC-Rome Processor 2.45GHz, 1 CPU, 16 logical and 16 physical cores
+.NET SDK 10.0.300
+  [Host]     : .NET 10.0.8 (10.0.8, 10.0.826.23019), X64 RyuJIT x86-64-v3
+  DefaultJob : .NET 10.0.8 (10.0.8, 10.0.826.23019), X64 RyuJIT x86-64-v3
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method              </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>NormalizeRichText</td><td>193.3 ns</td><td>3.94 ns</td><td>10.11 ns</td><td>0.0966</td><td>808 B</td>
+</tr><tr><td>MapFromNotionPageBenchmark</td><td>1,181.9 ns</td><td>23.09 ns</td><td>31.60 ns</td><td>0.0973</td><td>816 B</td>
+</tr></tbody></table>
+</body>
+</html>
