@@ -1,0 +1,44 @@
+# Build output directories
+bin/
+obj/
+
+# Version control
+.git/
+.gitignore
+
+# Visual Studio specific
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+
+# IDE specific
+.idea/
+*.swp
+*.swo
+
+# Build and test artifacts
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Logs and temporary files
+*.log
+*.tmp
+*.cache
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Configuration overrides
+appsettings.local.json
+
+# User secrets
+secrets.json
