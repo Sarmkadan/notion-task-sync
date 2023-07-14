@@ -262,6 +262,14 @@ dotnet run -- status
 
 ## Usage Examples
 
+See the **[examples/](examples/README.md)** directory for complete, runnable examples:
+
+- **[BasicUsage.cs](examples/BasicUsage.cs)** - Minimal setup and first sync call
+- **[AdvancedUsage.cs](examples/AdvancedUsage.cs)** - Configuration, custom options, and error handling
+- **[IntegrationExample.cs](examples/IntegrationExample.cs)** - ASP.NET Core DI integration
+
+
+
 ### Example 1: Basic Sync with Default Configuration
 
 ```csharp

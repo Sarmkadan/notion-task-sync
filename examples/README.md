@@ -1,64 +1,196 @@
-// =============================================================================
-// Author: Vladyslav Zaiets | https://sarmkadan.com
-// CTO & Software Architect
-// =============================================================================
-
 # Code Examples
 
 This directory contains practical examples demonstrating Notion Task Sync usage and integration patterns.
 
-## Available Examples
+## Quick Start - Essential Examples
 
-### 1. BasicSyncExample.cs
-**Difficulty**: Beginner  
-**Time**: 5 minutes
+These three examples cover the most common use cases and are recommended starting points:
+
+### 1. BasicUsage.cs - Minimal Setup and First Sync
+**Difficulty**: Beginner | **Time**: 5 minutes
 
 The simplest way to use Notion Task Sync - load configuration and execute a sync.
 
 **Key Concepts:**
-- Building configuration
 - Setting up dependency injection
+- Creating a sync configuration
 - Executing sync operation
-- Handling results
+- Handling basic results
 
-**When to use:** First-time users, simple integration
+**When to use:** First-time users, simple integration, getting started quickly
 
+**Run it:**
 ```bash
 cd examples
-dotnet run --project BasicSyncExample.cs
+# The example is self-contained - just compile and run
 ```
 
-### 2. ConflictResolutionExample.cs
-**Difficulty**: Intermediate  
-**Time**: 10 minutes
+**What you'll learn:**
+```csharp
+// Minimal setup pattern
+var services = new ServiceCollection();
+services.AddLogging(builder => builder.AddConsole());
+services.AddApplicationServices(configuration);
+
+var syncService = serviceProvider.GetRequiredService<SyncService>();
+
+var config = new SyncConfig(
+    name: "MyFirstSync",
+    notionDatabaseId: "your_database_id_here",
+    localFolderPath: "./tasks"
+);
+
+var result = await syncService.ExecuteSyncAsync(config);
+```
+
+---
+
+### 2. AdvancedUsage.cs - Configuration and Custom Options
+**Difficulty**: Intermediate | **Time**: 15 minutes
+
+Advanced configuration with custom options, field mappings, error handling, and monitoring.
+
+**Key Concepts:**
+- Custom configuration with field mappings
+- Per-field conflict resolution strategies
+- Error handling and retry logic
+- Monitoring and logging
+- Integration with external services
+
+**When to use:** Production deployments, fine-grained control over sync behavior
+
+**Run it:**
+```bash
+cd examples
+# The example demonstrates advanced patterns
+```
+
+**What you'll learn:**
+```csharp
+// Advanced configuration
+var config = new SyncConfig("TeamProjectSync", "your_db_id_here", "./team-tasks")
+{
+    Direction = SyncDirection.NotionToLocal,
+    ConflictStrategy = ConflictResolutionStrategy.LocalWins,
+    SyncIntervalSeconds = 300,
+    IsEnabled = true
+};
+
+// Field mappings
+config.FieldMappings = new Dictionary<string, string>
+{
+    {"title", "Title"},
+    {"status", "Status"},
+    {"priority", "Priority"}
+};
+
+// Per-field strategies
+config.FieldConflictStrategies = new Dictionary<string, ConflictResolutionStrategy>
+{
+    {"description", ConflictResolutionStrategy.LocalWins},
+    {"status", ConflictResolutionStrategy.NotionWins}
+};
+
+// Error handling
+try
+{
+    var result = await syncService.ExecuteSyncAsync(config);
+}
+catch (NotionApiException ex) when (ex.StatusCode == 429)
+{
+    // Handle rate limiting
+}
+```
+
+---
+
+### 3. IntegrationExample.cs - ASP.NET Core DI Integration
+**Difficulty**: Intermediate | **Time**: 15 minutes
+
+Integrate Notion Task Sync into an ASP.NET Core application with dependency injection.
+
+**Key Concepts:**
+- Setting up the DI container in ASP.NET Core style
+- Registering services with IHostBuilder
+- Using the sync service in controllers
+- Background service integration
+- Configuration management
+
+**When to use:** Web applications, REST APIs, background workers
+
+**Run it:**
+```bash
+cd examples
+# Demonstrates ASP.NET Core integration patterns
+```
+
+**What you'll learn:**
+```csharp
+// ASP.NET Core style setup
+var hostBuilder = new HostBuilder();
+
+hostBuilder.ConfigureServices((context, services) =>
+{
+    services.AddLogging(builder => builder.AddConsole());
+    services.AddApplicationServices(context.Configuration);
+    services.AddHostedService<SyncBackgroundService>();
+    services.AddSingleton<SyncService>();
+});
+
+// Controller integration
+public class SyncController : ControllerBase
+{
+    private readonly SyncService _syncService;
+    
+    public SyncController(SyncService syncService) => _syncService = syncService;
+    
+    [HttpPost("sync")]
+    public async Task<IActionResult> Sync([FromBody] SyncRequest request)
+    {
+        var config = new SyncConfig(request.Name, request.DatabaseId, request.LocalPath);
+        var result = await _syncService.ExecuteSyncAsync(config);
+        return Ok(result);
+    }
+}
+
+// Background service
+public class SyncBackgroundService : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            var result = await _syncService.ExecuteSyncAsync(_config.Value);
+            await Task.Delay(TimeSpan.FromSeconds(_config.Value.SyncIntervalSeconds), stoppingToken);
+        }
+    }
+}
+```
+
+---
+
+## Additional Examples
+
+These examples cover specific scenarios and advanced patterns:
+
+### ConflictResolutionExample.cs
+**Difficulty**: Intermediate | **Time**: 10 minutes
 
 Demonstrates all conflict resolution strategies and field-level preferences.
 
 **Key Concepts:**
-- Different conflict strategies (latest-wins, local-priority, notion-priority)
+- Different conflict strategies (latest-wins, local-priority, notion-priority, manual, merge)
 - Field-level overrides
 - Testing different approaches
-- Understanding conflict handling
 
 **When to use:** Setting up conflict handling for your use case
 
-```bash
-# Run with verbose output to see conflict details
-dotnet run -- sync --verbose
-```
+---
 
-**Strategies explained:**
-- `latest-wins` - Auto-resolve based on modification time
-- `local-priority` - Always prefer local file changes
-- `notion-priority` - Always prefer Notion database changes
-- `manual` - Prompt user for each conflict
-- `merge` - Attempt intelligent merge
+### EventHandlingExample.cs
+**Difficulty**: Intermediate | **Time**: 10 minutes
 
-### 3. EventHandlingExample.cs
-**Difficulty**: Intermediate  
-**Time**: 10 minutes
-
-Subscribe to sync events and implement custom handlers.
+Subscribe to sync events and implement custom handlers for notifications and monitoring.
 
 **Key Concepts:**
 - Event bus architecture
@@ -72,15 +204,10 @@ Subscribe to sync events and implement custom handlers.
 - `ConflictDetectedEvent` - When conflicts are found
 - `SyncCompletedEvent` - When sync finishes
 
-**Real-world use cases:**
-- Send Slack notifications on conflicts
-- Log metrics to monitoring service
-- Trigger downstream workflows
-- Update dashboards
+---
 
-### 4. BackupAndRecoveryExample.cs
-**Difficulty**: Intermediate  
-**Time**: 15 minutes
+### BackupAndRecoveryExample.cs
+**Difficulty**: Intermediate | **Time**: 15 minutes
 
 Create backups before risky operations and recover if needed.
 
@@ -92,20 +219,10 @@ Create backups before risky operations and recover if needed.
 
 **When to use:** Before major changes, migration procedures
 
-**Backup workflow:**
-```
-Create backup → Perform operation → Verify success → Keep backup → Recover if needed
-```
+---
 
-**Data protected:**
-- Local task files
-- Sync state database
-- Configuration
-- Change history
-
-### 5. ExportAndFormatExample.cs
-**Difficulty**: Beginner  
-**Time**: 10 minutes
+### ExportAndFormatExample.cs
+**Difficulty**: Beginner | **Time**: 10 minutes
 
 Export tasks in multiple formats for integration with other tools.
 
@@ -115,24 +232,12 @@ Export tasks in multiple formats for integration with other tools.
 - Exporting to different formats
 - Integrating with external tools
 
-**When to use:** Integration with Jira, Asana, GitHub Projects, etc.
+**Supported formats:** JSON, CSV, XML, Markdown
 
-**Supported formats:**
-- JSON - Programmatic processing
-- CSV - Spreadsheet imports
-- XML - Legacy system integration
-- Markdown - Documentation and sharing
+---
 
-**Example:** Export to CSV for Excel analysis
-```csharp
-var formatter = new CsvFormatter();
-var csv = formatter.Format(tasks);
-await File.WriteAllTextAsync("tasks.csv", csv);
-```
-
-### 6. ProgrammaticTaskManagementExample.cs
-**Difficulty**: Advanced  
-**Time**: 15 minutes
+### ProgrammaticTaskManagementExample.cs
+**Difficulty**: Advanced | **Time**: 15 minutes
 
 Create, modify, and manage tasks entirely through code.
 
@@ -144,28 +249,21 @@ Create, modify, and manage tasks entirely through code.
 
 **When to use:** Bulk operations, automation, scripting
 
-**Example operations:**
-- Create 100 tasks from CSV
-- Update priority based on due date
-- Archive completed tasks
-- Generate team reports
-
-**Advanced patterns:**
-- Batch create tasks
-- Filter by criteria
-- Group and aggregate
-- Export to different formats
+---
 
 ## Running Examples
 
-### Option 1: Run Single Example
+### Option 1: Compile and Run
+Each example is a complete C# file with a `Main()` method:
+
 ```bash
 cd examples
-dotnet run BasicSyncExample.cs
+# Compile and run (example files are standalone)
+dotnet run -- BasicUsage.cs
 ```
 
-### Option 2: Create Example Project
-Create a test console project:
+### Option 2: Copy to Your Project
+Create a test console project and copy example code:
 
 ```bash
 dotnet new console -n MyExample
@@ -180,6 +278,8 @@ dotnet run
 
 ### Option 3: Use as Templates
 Copy example code into your application and adapt for your needs.
+
+---
 
 ## Configuration for Examples
 
@@ -198,6 +298,7 @@ All examples use the standard `appsettings.json`:
 ```
 
 ### Setting Environment Variables
+
 ```bash
 export NOTION_API_KEY="your_token"
 export NOTION_DATABASE_ID="your_database_id"
@@ -206,9 +307,12 @@ export NOTION_DATABASE_ID="your_database_id"
 dotnet run
 ```
 
+---
+
 ## Common Patterns
 
 ### Pattern 1: Simple Sync Loop
+
 ```csharp
 while (true)
 {
@@ -219,6 +323,7 @@ while (true)
 ```
 
 ### Pattern 2: Error Handling with Retry
+
 ```csharp
 var retryHelper = new RetryHelper(maxRetries: 3, delayMs: 1000);
 var result = await retryHelper.ExecuteWithRetryAsync(
@@ -228,6 +333,7 @@ var result = await retryHelper.ExecuteWithRetryAsync(
 ```
 
 ### Pattern 3: Conditional Sync
+
 ```csharp
 var changes = await changeDetectionService.DetectChangesAsync(local, notion);
 if (changes.Any(c => c.Type == ChangeType.Modified))
@@ -237,6 +343,7 @@ if (changes.Any(c => c.Type == ChangeType.Modified))
 ```
 
 ### Pattern 4: Task Transformation
+
 ```csharp
 var tasks = await localFileService.LoadTasksAsync("./tasks");
 var updated = tasks
@@ -248,9 +355,12 @@ foreach (var task in updated)
     await localFileService.SaveTaskAsync(task);
 ```
 
+---
+
 ## Debugging Examples
 
 ### Enable Verbose Logging
+
 ```json
 {
   "Logging": {
@@ -263,10 +373,11 @@ foreach (var task in updated)
 ```
 
 ### Dry-Run Mode
+
 Test before making changes:
 ```csharp
 var result = await syncService.ExecuteSyncAsync(config);
-// Check result.Status before applying changes
+if (result.ConflictsDetected > 0) { /* handle */ }
 ```
 
 ### Inspect Local Files
@@ -275,97 +386,39 @@ ls -la ./tasks
 cat ./tasks/task-*.json | jq .
 ```
 
-### Check Sync History
-```bash
-dotnet run -- history --format json | jq .
-```
+---
 
-## Examples by Use Case
-
-### "I want to automate task creation"
-👉 **ProgrammaticTaskManagementExample.cs**
-- Create tasks from code
-- Bulk operations
-- Scheduled creation
-
-### "I want to export to other tools"
-👉 **ExportAndFormatExample.cs**
-- Multiple format support
-- Integration templates
-- Data transformation
-
-### "I need to handle conflicts"
-👉 **ConflictResolutionExample.cs**
-- Conflict strategies
-- Custom resolution logic
-- Event-based handling
-
-### "I want to add monitoring/alerts"
-👉 **EventHandlingExample.cs**
-- Subscribe to events
-- Custom handlers
-- Integration with monitoring
-
-### "I need safe operations with rollback"
-👉 **BackupAndRecoveryExample.cs**
-- Pre-operation backups
-- Integrity verification
-- Recovery procedures
-
-### "I'm just getting started"
-👉 **BasicSyncExample.cs**
-- Simplest approach
-- Minimal configuration
-- Common use case
-
-## Best Practices from Examples
+## Best Practices
 
 1. **Always backup before risky operations**
-   ```csharp
-   await backupService.CreateBackupAsync(config.Id, "pre-operation");
-   ```
+```csharp
+await backupService.CreateBackupAsync(config.Id, "pre-operation");
+```
 
 2. **Use DRY-RUN for testing**
-   ```csharp
-   var result = await syncService.ExecuteSyncAsync(config);
-   if (result.ConflictsDetected > 0) { /* handle */ }
-   ```
+```csharp
+var result = await syncService.ExecuteSyncAsync(config);
+if (result.ConflictsDetected > 0) { /* handle */ }
+```
 
 3. **Subscribe to events for monitoring**
-   ```csharp
-   eventBus.Subscribe<SyncCompletedEvent>(LogResults);
-   ```
+```csharp
+eventBus.Subscribe<SyncCompletedEvent>(LogResults);
+```
 
 4. **Handle exceptions gracefully**
-   ```csharp
-   try { /* operation */ }
-   catch (ConflictException) { /* special handling */ }
-   catch (SyncException) { /* retry */ }
-   ```
+```csharp
+try { /* operation */ }
+catch (ConflictException) { /* special handling */ }
+catch (SyncException) { /* retry */ }
+```
 
 5. **Log important operations**
-   ```csharp
-   logger.LogInformation("Created {Count} tasks", tasks.Count);
-   ```
+```csharp
+logger.LogInformation("Created {Count} tasks", tasks.Count);
+```
 
-## Extending Examples
-
-Each example is designed to be extended:
-
-1. **Copy the example** to your project
-2. **Modify for your needs** - Add your business logic
-3. **Test thoroughly** - Use dry-run and backups
-4. **Deploy to production** - Follow deployment guide
-
-## Troubleshooting Examples
-
-| Issue | Solution |
-|-------|----------|
-| "API Key invalid" | Update appsettings.json or env vars |
-| "Database not found" | Verify Database ID and integration sharing |
-| "Out of memory" | Reduce batch size, enable caching |
-| "Rate limited" | Increase SyncInterval, reduce RateLimitPerSecond |
-| "File permission denied" | Check ./tasks directory permissions |
+---
 
 ## More Resources
 
