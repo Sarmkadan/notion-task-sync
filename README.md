@@ -151,47 +151,46 @@ dotnet build -c Release
 dotnet run -- sync
 ```
 
-### Method 2: Using Docker
+## Docker Usage
+
+Notion Task Sync is container-ready. 
+
+### Prerequisites
+
+- Docker installed on your host machine.
+
+### Quick Start with Docker Compose
+
+1. **Configure Environment Variables:**
+   Copy the example environment file and fill in your credentials:
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your NOTION_API_KEY and NOTION_DATABASE_ID
+   ```
+
+2. **Start the container:**
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Check logs:**
+   ```bash
+   docker-compose logs -f notion-sync
+   ```
+
+### Building and Running Manually
 
 ```bash
-# Build the Docker image
-docker build -t notion-task-sync:latest .
+# Build the image
+docker build -t notion-task-sync .
 
-# Run in a container
-docker run -e NotionApi__ApiKey=your_integration_token_here \n  -e NotionApi__DatabaseId=your_database_id_here \n  -v $(pwd)/tasks:/data/tasks \n  -v $(pwd)/backups:/data/backups \n  -v $(pwd)/logs:/var/log/notion-sync \n  notion-task-sync:latest sync
+# Run the container
+docker run -d \
+  -e NotionApi__ApiKey=your_token \
+  -e NotionApi__DatabaseId=your_db_id \
+  -v $(pwd)/data:/data \
+  notion-task-sync
 ```
-
-### Method 3: Using Docker Compose
-
-```bash
-# Start the services in detached mode
-docker-compose up -d
-
-# View logs
-# docker-compose logs -f notion-sync
-
-# Stop services
-# docker-compose down
-```
-
-### Docker Configuration Details
-
-The Docker setup includes:
-- Multi-stage build for optimized image size
-- Health checks to verify container health
-- Resource limits (0.5 CPU, 512MB memory)
-- Persistent volumes for tasks, backups, and logs
-- Environment variable configuration via `.env` file
-- Exposes port 8080
-
-**Required Environment Variables:**
-- `NotionApi__ApiKey` - Your Notion integration API token
-- `NotionApi__DatabaseId` - Your Notion database ID
-
-**Optional Configuration:**
-- Customize `appsettings.local.json` mounted to `/app/appsettings.local.json`
-- Adjust resource limits in `docker-compose.yml`
-- Configure health check interval and timeout
 
 ### Method 4: As a Global Tool
 
