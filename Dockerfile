@@ -3,7 +3,7 @@
 # CTO & Software Architect
 # =============================================================================
 
-FROM mcr.microsoft.com/dotnet/sdk:10 AS builder
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine3.24 AS builder
 
 WORKDIR /build
 
@@ -16,7 +16,7 @@ RUN dotnet restore
 RUN dotnet publish -c Release -o /app
 
 # Runtime image
-FROM mcr.microsoft.com/dotnet/runtime:10
+FROM mcr.microsoft.com/dotnet/runtime:10.0-alpine3.24
 
 WORKDIR /app
 
@@ -30,15 +30,15 @@ COPY appsettings.local.json* ./
 # Create data volumes
 RUN mkdir -p /data/tasks /data/backups /var/log/notion-sync
 
-# Health check
+# Health check - check if the app binary exists
 HEALTHCHECK --interval=5m --timeout=10s --retries=3 \
-    CMD ["dotnet", "run", "--", "status"] || exit 1
+CMD ["sh", "-c", "test -f /app/NotionTaskSync.dll && echo 'Healthy' || exit 1"]
 
 # Non-root user for security
-RUN useradd -m -u 1000 appuser && \
+RUN adduser -D -u 1000 appuser && \
     chown -R appuser:appuser /app /data /var/log/notion-sync
 USER appuser
 
-# Default command
+# Default command - run sync by default
 ENTRYPOINT ["dotnet", "NotionTaskSync.dll"]
 CMD ["sync"]

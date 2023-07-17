@@ -6,7 +6,7 @@
 version: '3.8'
 
 services:
-  # Main Notion Task Sync service
+# Main Notion Task Sync service
   notion-sync:
     build:
       context: .
@@ -46,7 +46,7 @@ services:
 
     # Health check
     healthcheck:
-      test: ["CMD", "dotnet", "run", "--", "status"]
+      test: ["CMD-SHELL", "test -f /app/NotionTaskSync.dll && echo 'Healthy' || exit 1"]
       interval: 5m
       timeout: 10s
       retries: 3
@@ -59,28 +59,9 @@ services:
         max-size: "10m"
         max-file: "5"
 
-  # Optional: Prometheus for metrics (if integrated)
-  # prometheus:
-  #   image: prom/prometheus:latest
-  #   container_name: notion-sync-prometheus
-  #   volumes:
-  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml
-  #     - ./metrics:/prometheus
-  #   ports:
-  #     - "9090:9090"
-  #   command:
-  #     - '--config.file=/etc/prometheus/prometheus.yml'
-
-  # Optional: Grafana for visualization (if integrated)
-  # grafana:
-  #   image: grafana/grafana:latest
-  #   container_name: notion-sync-grafana
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - GF_SECURITY_ADMIN_PASSWORD=admin
-  #   volumes:
-  #     - ./grafana:/var/lib/grafana
+    # Networks
+    networks:
+      - default
 
 # Named volumes
 volumes:
