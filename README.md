@@ -182,6 +182,7 @@ The Docker setup includes:
 - Resource limits (0.5 CPU, 512MB memory)
 - Persistent volumes for tasks, backups, and logs
 - Environment variable configuration via `.env` file
+- Exposes port 8080
 
 **Required Environment Variables:**
 - `NotionApi__ApiKey` - Your Notion integration API token

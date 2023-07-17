@@ -40,5 +40,6 @@ RUN adduser -D -u 1000 appuser && \
 USER appuser
 
 # Default command - run sync by default
+EXPOSE 8080
 ENTRYPOINT ["dotnet", "NotionTaskSync.dll"]
 CMD ["sync"]
