@@ -251,7 +251,7 @@ public sealed class NotionApiService
     /// <summary>
     /// Deletes or archives a page in Notion.
     /// </summary>
-    public async Task ArchivePageAsync(string pageId)
+    public async System.Threading.Tasks.Task ArchivePageAsync(string pageId)
     {
         if (string.IsNullOrEmpty(pageId))
             throw new ValidationException("Page ID cannot be empty");
