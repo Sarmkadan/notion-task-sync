@@ -19,7 +19,7 @@ using System.Linq;
 /// Orchestrates bidirectional sync between Notion and local file system.
 /// Coordinates change detection, conflict resolution, and data propagation.
 /// </summary>
-public class SyncService
+public sealed class SyncService
 {
     private readonly ChangeDetectionService _changeDetectionService;
     private readonly ConflictResolutionService _conflictResolutionService;
@@ -133,7 +133,7 @@ public class SyncService
     /// Applies changes from one source to the other based on sync direction.
     /// Returns counts of (created, updated, deleted) operations performed.
     /// </summary>
-    private async global::System.Threading.Tasks.Task<(int Created, int Updated, int Deleted)> ApplyChangesAsync(List<Task> localTasks, List<NotionPage> notionPages, SyncConfig config)
+    private async Task<(int Created, int Updated, int Deleted)> ApplyChangesAsync(List<Task> localTasks, List<NotionPage> notionPages, SyncConfig config)
     {
         int created = 0, updated = 0, deleted = 0;
 

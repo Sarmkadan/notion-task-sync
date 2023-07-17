@@ -13,7 +13,7 @@ using System.ComponentModel.DataAnnotations;
 /// Represents a task entity that can be synced between Notion and local files.
 /// Tracks both local and remote identifiers, status, and metadata.
 /// </summary>
-public class Task
+public sealed class Task
 {
     public Guid Id { get; set; }
 

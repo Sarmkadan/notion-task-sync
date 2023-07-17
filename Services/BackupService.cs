@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 /// Manages task file backups and restoration.
 /// Provides automated and manual backup functionality with retention policies.
 /// </summary>
-public class BackupService
+public sealed class BackupService
 {
     private readonly string _backupDirectory;
     private readonly int _maxBackupFiles;

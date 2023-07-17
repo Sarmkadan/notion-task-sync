@@ -16,7 +16,7 @@ using System.Linq;
 /// Provides integration with the Notion API for reading and writing task data.
 /// Handles authentication, pagination, error handling, and data transformation.
 /// </summary>
-public class NotionApiService
+public sealed class NotionApiService
 {
     private readonly string? _apiKey;
     private readonly HttpClient _httpClient;
@@ -251,7 +251,7 @@ public class NotionApiService
     /// <summary>
     /// Deletes or archives a page in Notion.
     /// </summary>
-    public async global::System.Threading.Tasks.Task ArchivePageAsync(string pageId)
+    public async Task ArchivePageAsync(string pageId)
     {
         if (string.IsNullOrEmpty(pageId))
             throw new ValidationException("Page ID cannot be empty");
