@@ -83,3 +83,5 @@ TestResults/
 
 # Playwright
 .playwright/
+BenchmarkDotNet.Artifacts/
+.aider*
