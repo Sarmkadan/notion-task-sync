@@ -15,6 +15,9 @@ using FluentAssertions;
 using Moq;
 using Xunit;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
+using Task = System.Threading.Tasks.Task;
+using DomainTask = NotionTaskSync.Domain.Models.Task;
 
 public class SyncServiceTests
 {
@@ -55,10 +58,10 @@ public class SyncServiceTests
             Direction = SyncDirection.Bidirectional
         };
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task>());
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask>());
         _mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<NotionPage>());
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
@@ -71,7 +74,7 @@ public class SyncServiceTests
         // Assert
         result.Status.Should().Be(SyncStatus.Completed);
         result.ConfigId.Should().Be(config.Id);
-        result.StartedAt.Should().BeLessThanOrEqualTo(DateTime.UtcNow);
+        result.StartedAt.Should().BeOnOrBefore(DateTime.UtcNow);
     }
 
     [Fact]
@@ -93,10 +96,10 @@ public class SyncServiceTests
             LastSyncAt = null
         };
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task>());
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask>());
         _mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<NotionPage>());
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
@@ -121,10 +124,10 @@ public class SyncServiceTests
             LastSyncAt = lastSyncTime
         };
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task>());
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask>());
         _mockNotionApiService.Setup(a => a.FetchPagesSinceAsync(It.IsAny<string>(), It.IsAny<DateTime>()))
             .ReturnsAsync(new List<NotionPage>());
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
@@ -149,10 +152,10 @@ public class SyncServiceTests
             new() { TaskId = Guid.NewGuid(), Status = ResolutionStatus.Pending }
         };
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task>());
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask>());
         _mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<NotionPage>());
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
@@ -182,10 +185,10 @@ public class SyncServiceTests
         // Arrange
         var config = new SyncConfig("test-sync", "550e8400-e29b-41d4-a716-446655440000", "/tmp/tasks");
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task>());
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask>());
         _mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<NotionPage>());
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
@@ -230,10 +233,10 @@ public class SyncServiceTests
         var config = new SyncConfig("test-sync", "550e8400-e29b-41d4-a716-446655440000", "/tmp/tasks");
         var originalLastSync = config.LastSyncAt;
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task>());
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask>());
         _mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<NotionPage>());
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
@@ -255,10 +258,10 @@ public class SyncServiceTests
         var beforeSync = DateTime.UtcNow;
         var config = new SyncConfig("test-sync", "550e8400-e29b-41d4-a716-446655440000", "/tmp/tasks");
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task>());
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask>());
         _mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<NotionPage>());
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
@@ -270,9 +273,9 @@ public class SyncServiceTests
         var afterSync = DateTime.UtcNow;
 
         // Assert
-        result.StartedAt.Should().BeGreaterThanOrEqualTo(beforeSync);
-        result.CompletedAt.Should().BeGreaterThanOrEqualTo(result.StartedAt);
-        result.CompletedAt.Should().BeLessThanOrEqualTo(afterSync);
+        result.StartedAt.Should().BeOnOrAfter(beforeSync);
+        result.CompletedAt.Should().BeOnOrAfter(result.StartedAt);
+        result.CompletedAt.Should().BeOnOrBefore(afterSync);
     }
 
     [Fact]
@@ -281,7 +284,7 @@ public class SyncServiceTests
         // Arrange
         var taskId = Guid.NewGuid();
         var pageId = "page123";
-        var task = new Task
+        var task = new DomainTask
         {
             Id = taskId,
             Title = "Updated Task",
@@ -294,10 +297,10 @@ public class SyncServiceTests
             Direction = SyncDirection.Bidirectional
         };
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task> { task });
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask> { task });
         _mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<NotionPage>());
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());

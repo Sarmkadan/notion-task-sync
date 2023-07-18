@@ -11,7 +11,11 @@ using NotionTaskSync.Domain.Models;
 using NotionTaskSync.Domain.Exceptions;
 using FluentAssertions;
 using Moq;
+using Moq.Protected;
 using Xunit;
+using System.Threading.Tasks;
+using Task = System.Threading.Tasks.Task;
+using DomainTask = NotionTaskSync.Domain.Models.Task;
 
 public class NotionApiServiceTests
 {
@@ -285,7 +289,7 @@ public class NotionApiServiceTests
     {
         // Arrange
         var databaseId = "550e8400-e29b-41d4-a716-446655440000";
-        var task = new Task
+        var task = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "New Task",
@@ -319,7 +323,7 @@ public class NotionApiServiceTests
     {
         // Arrange
         var pageId = "page123";
-        var task = new Task
+        var task = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Updated Task",
@@ -352,7 +356,7 @@ public class NotionApiServiceTests
     public async Task CreatePageAsync_WithEmptyDatabaseId_ThrowsValidationException()
     {
         // Arrange
-        var task = new Task
+        var task = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "New Task",
@@ -369,7 +373,7 @@ public class NotionApiServiceTests
     public async Task UpdatePageAsync_WithEmptyPageId_ThrowsValidationException()
     {
         // Arrange
-        var task = new Task
+        var task = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Updated Task",

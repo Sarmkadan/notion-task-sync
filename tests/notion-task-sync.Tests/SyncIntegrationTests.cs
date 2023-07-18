@@ -14,6 +14,9 @@ using FluentAssertions;
 using Moq;
 using Xunit;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
+using Task = System.Threading.Tasks.Task;
+using DomainTask = NotionTaskSync.Domain.Models.Task;
 
 public class SyncIntegrationTests : IDisposable
 {
@@ -56,7 +59,7 @@ public class SyncIntegrationTests : IDisposable
     public async Task FullSyncWorkflow_CreatingNewTask_SyncsToNotion()
     {
         // Arrange - Create a local task
-        var localTask = new Task
+        var localTask = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "New Feature Request",
@@ -75,7 +78,7 @@ public class SyncIntegrationTests : IDisposable
         savedTask!.Title.Should().Be("New Feature Request");
 
         // Setup sync mocks - Task repo returns our local task
-        var localTasks = new List<Task> { localTask };
+        var localTasks = new List<DomainTask> { localTask };
         _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(localTasks);
         _mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<NotionPage>());
@@ -88,7 +91,7 @@ public class SyncIntegrationTests : IDisposable
             Source = ChangeSource.Local,
             Timestamp = DateTime.UtcNow
         };
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog> { changeLog });
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
@@ -115,10 +118,10 @@ public class SyncIntegrationTests : IDisposable
     public async Task FullSyncWorkflow_MultipleLocalTasks_SyncsAllTasks()
     {
         // Arrange - Create multiple local tasks
-        var tasks = new List<Task>();
+        var tasks = new List<DomainTask>();
         for (int i = 1; i <= 5; i++)
         {
-            var task = new Task
+            var task = new DomainTask
             {
                 Id = Guid.NewGuid(),
                 Title = $"Task {i}",
@@ -147,7 +150,7 @@ public class SyncIntegrationTests : IDisposable
             Timestamp = DateTime.UtcNow
         }).ToList();
 
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(changeLogs);
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
@@ -173,7 +176,7 @@ public class SyncIntegrationTests : IDisposable
     {
         // Arrange
         var taskId = Guid.NewGuid();
-        var task = new Task
+        var task = new DomainTask
         {
             Id = taskId,
             Title = "Conflicted Task",
@@ -182,12 +185,10 @@ public class SyncIntegrationTests : IDisposable
             UpdatedAt = DateTime.UtcNow.AddMinutes(-30)
         };
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task> { task });
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask> { task });
 
-        var notionPage = new NotionPage
+        var notionPage = new NotionPage("notion_page_123", "550e8400-e29b-41d4-a716-446655440000", "Conflicted Task - Notion Version")
         {
-            PageId = "notion_page_123",
-            Title = "Conflicted Task - Notion Version",
             LastEditedTime = DateTime.UtcNow.AddMinutes(-15)
         };
 
@@ -207,7 +208,7 @@ public class SyncIntegrationTests : IDisposable
             Status = ResolutionStatus.Pending
         };
 
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog> { localChange });
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog> { notionChange });
@@ -259,7 +260,7 @@ public class SyncIntegrationTests : IDisposable
         try
         {
             // Create a task to backup
-            var task = new Task
+            var task = new DomainTask
             {
                 Id = Guid.NewGuid(),
                 Title = "Task to Backup",
@@ -300,8 +301,8 @@ public class SyncIntegrationTests : IDisposable
             "550e8400-e29b-41d4-a716-446655440000",
             _localTasksDirectory);
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task>());
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask>());
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
@@ -334,7 +335,7 @@ public class SyncIntegrationTests : IDisposable
     public async Task FullSyncWorkflow_SyncDirectionLocalToNotion_OnlyPushesChanges()
     {
         // Arrange
-        var task = new Task
+        var task = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Local Only Task",
@@ -342,12 +343,12 @@ public class SyncIntegrationTests : IDisposable
             UpdatedAt = DateTime.UtcNow.AddMinutes(-30)
         };
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task> { task });
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask> { task });
         _mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<NotionPage>());
 
         var changeLog = new ChangeLog { TaskId = task.Id, ChangeType = "Created", Source = ChangeSource.Local };
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog> { changeLog });
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
@@ -376,20 +377,18 @@ public class SyncIntegrationTests : IDisposable
     public async Task FullSyncWorkflow_SyncDirectionNotionToLocal_OnlyPullsChanges()
     {
         // Arrange
-        var notionPage = new NotionPage
+        var notionPage = new NotionPage("page_456", "550e8400-e29b-41d4-a716-446655440000", "Notion Only Task")
         {
-            PageId = "page_456",
-            Title = "Notion Only Task",
             CreatedTime = DateTime.UtcNow.AddHours(-2),
             LastEditedTime = DateTime.UtcNow.AddMinutes(-30)
         };
 
-        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Task>());
+        _mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask>());
         _mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<NotionPage> { notionPage });
 
-        var changeLog = new ChangeLog { ChangeType = "Created", Source = ChangeSource.Notion };
-        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Task>>(), It.IsAny<DateTime>()))
+        var changeLog = new ChangeLog { TaskId = Guid.NewGuid(), ChangeType = "Created", Source = ChangeSource.Notion };
+        _mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog>());
         _mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
             .Returns(new List<ChangeLog> { changeLog });

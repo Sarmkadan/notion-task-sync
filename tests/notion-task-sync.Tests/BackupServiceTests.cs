@@ -11,6 +11,8 @@ using NotionTaskSync.Domain.Models;
 using FluentAssertions;
 using Moq;
 using Xunit;
+using System.Threading.Tasks;
+using Task = System.Threading.Tasks.Task;
 
 public class BackupServiceTests : IDisposable
 {
@@ -197,8 +199,8 @@ public class BackupServiceTests : IDisposable
         var afterCall = DateTime.UtcNow;
 
         // Assert
-        backup.CreatedAt.Should().BeGreaterThanOrEqualTo(beforeCall);
-        backup.CreatedAt.Should().BeLessThanOrEqualTo(afterCall.AddSeconds(1));
+        backup.CreatedAt.Should().BeOnOrAfter(beforeCall);
+        backup.CreatedAt.Should().BeOnOrBefore(afterCall.AddSeconds(1));
     }
 
     [Fact]
@@ -231,8 +233,8 @@ public class BackupServiceTests : IDisposable
 
         // Assert
         backups.Should().HaveCount(3);
-        backups[0].CreatedAt.Should().BeGreaterThan(backups[1].CreatedAt);
-        backups[1].CreatedAt.Should().BeGreaterThan(backups[2].CreatedAt);
+        backups[0].CreatedAt.Should().BeAfter(backups[1].CreatedAt);
+        backups[1].CreatedAt.Should().BeAfter(backups[2].CreatedAt);
     }
 
     [Fact]

@@ -11,6 +11,9 @@ using NotionTaskSync.Services;
 using NotionTaskSync.Domain.Exceptions;
 using FluentAssertions;
 using Xunit;
+using System.Threading.Tasks;
+using Task = System.Threading.Tasks.Task;
+using DomainTask = NotionTaskSync.Domain.Models.Task;
 
 public class LocalFileServiceTests : IDisposable
 {
@@ -48,7 +51,7 @@ public class LocalFileServiceTests : IDisposable
     public async Task SaveTaskAsync_WithValidTask_CreatesFileWithTaskContent()
     {
         // Arrange
-        var task = new Task
+        var task = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Test Task",
@@ -73,7 +76,7 @@ public class LocalFileServiceTests : IDisposable
     public async Task SaveTaskAsync_WithMultipleTasks_CreatesSeparateFiles()
     {
         // Arrange
-        var task1 = new Task
+        var task1 = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Task One",
@@ -81,7 +84,7 @@ public class LocalFileServiceTests : IDisposable
             UpdatedAt = DateTime.UtcNow
         };
 
-        var task2 = new Task
+        var task2 = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Task Two",
@@ -102,7 +105,7 @@ public class LocalFileServiceTests : IDisposable
     public async Task SaveTaskAsync_WithInvalidTask_ThrowsValidationException()
     {
         // Arrange
-        var invalidTask = new Task
+        var invalidTask = new DomainTask
         {
             Id = Guid.Empty, // Invalid: empty ID
             Title = string.Empty, // Invalid: empty title
@@ -118,7 +121,7 @@ public class LocalFileServiceTests : IDisposable
     public async Task SaveTaskAsync_WithSpecialCharactersInTitle_SanitizesFileName()
     {
         // Arrange
-        var task = new Task
+        var task = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Task / With \\ Special : Characters",
@@ -142,7 +145,7 @@ public class LocalFileServiceTests : IDisposable
     public async Task LoadTaskAsync_WithValidFilePath_ReturnsTask()
     {
         // Arrange
-        var originalTask = new Task
+        var originalTask = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Load Test Task",
@@ -202,21 +205,21 @@ public class LocalFileServiceTests : IDisposable
         // Arrange
         var tasks = new[]
         {
-            new Task
+            new DomainTask
             {
                 Id = Guid.NewGuid(),
                 Title = "Task 1",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
-            new Task
+            new DomainTask
             {
                 Id = Guid.NewGuid(),
                 Title = "Task 2",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
-            new Task
+            new DomainTask
             {
                 Id = Guid.NewGuid(),
                 Title = "Task 3",
@@ -264,7 +267,7 @@ public class LocalFileServiceTests : IDisposable
     public async Task SaveTaskAsync_WithSameTitle_OverwritesExistingFile()
     {
         // Arrange
-        var task1 = new Task
+        var task1 = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Same Title",
@@ -273,7 +276,7 @@ public class LocalFileServiceTests : IDisposable
             UpdatedAt = DateTime.UtcNow
         };
 
-        var task2 = new Task
+        var task2 = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Same Title",
@@ -299,7 +302,7 @@ public class LocalFileServiceTests : IDisposable
     public async Task SaveTaskAsync_UpdatesLocalFilePathProperty()
     {
         // Arrange
-        var task = new Task
+        var task = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Path Update Task",
@@ -336,7 +339,7 @@ public class LocalFileServiceTests : IDisposable
         var nonExistentPath = Path.Combine(Path.GetTempPath(), $"new_dir_{Guid.NewGuid()}");
         var service = new LocalFileService(nonExistentPath);
 
-        var task = new Task
+        var task = new DomainTask
         {
             Id = Guid.NewGuid(),
             Title = "Test",

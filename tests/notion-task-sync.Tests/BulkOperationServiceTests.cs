@@ -15,6 +15,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
+using Task = System.Threading.Tasks.Task;
+using DomainTask = NotionTaskSync.Domain.Models.Task;
+using TaskStatus = NotionTaskSync.Domain.Models.TaskStatus;
 
 /// <summary>
 /// Unit tests for <see cref="BulkOperationService"/>.

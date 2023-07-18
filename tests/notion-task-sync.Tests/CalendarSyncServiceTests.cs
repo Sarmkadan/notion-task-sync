@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using Task = System.Threading.Tasks.Task;
 
 /// <summary>
 /// Unit tests for <see cref="CalendarSyncService"/>.
