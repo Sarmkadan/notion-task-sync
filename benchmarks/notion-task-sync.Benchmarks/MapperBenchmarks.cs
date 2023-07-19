@@ -3,14 +3,27 @@ using NotionTaskSync.Data.Mappers;
 using NotionTaskSync.Domain.Models;
 using System.Collections.Generic;
 
+/// <summary>
+/// Benchmark class for mapper performance.
+/// </summary>
 namespace NotionTaskSync.Benchmarks;
 
 [MemoryDiagnoser]
 public class MapperBenchmarks
 {
+    /// <summary>
+    /// Sample Notion page for benchmarking.
+    /// </summary>
     private NotionPage? _samplePage;
+
+    /// <summary>
+    /// Sample rich text for benchmarking.
+    /// </summary>
     private Dictionary<string, object?>? _sampleRichText;
 
+    /// <summary>
+    /// Sets up the benchmark environment.
+    /// </summary>
     [GlobalSetup]
     public void Setup()
     {
@@ -31,6 +44,10 @@ public class MapperBenchmarks
         };
     }
 
+    /// <summary>
+    /// Normalizes a list of rich text for comparison.
+    /// </summary>
+    /// <returns>The normalized rich text.</returns>
     [Benchmark]
     public string NormalizeRichText()
     {
@@ -42,6 +59,10 @@ public class MapperBenchmarks
         return NotionMapper.NormalizeRichTextForComparison(richTextList);
     }
 
+    /// <summary>
+    /// Maps a Notion page to a Task model.
+    /// </summary>
+    /// <returns>The mapped Task model.</returns>
     [Benchmark]
     public NotionTaskSync.Domain.Models.Task MapFromNotionPageBenchmark()
     {
