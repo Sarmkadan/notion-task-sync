@@ -17,7 +17,7 @@ using Xunit;
 public class ValidationHelperTests
 {
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidNotionId"/> returns true for a valid UUID format without dashes.
+    /// Verifies that <see cref="ValidationHelper.IsValidNotionId"/> returns <c>true</c> for a valid UUID format without dashes.
     /// </summary>
     [Fact]
     public void IsValidNotionId_WithValidUuidFormat_ReturnsTrue()
@@ -33,7 +33,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidNotionId"/> returns true for a valid UUID format with dashes.
+    /// Verifies that <see cref="ValidationHelper.IsValidNotionId"/> returns <c>true</c> for a valid UUID format that includes dashes.
     /// </summary>
     [Fact]
     public void IsValidNotionId_WithValidUuidFormatWithDashes_ReturnsTrue()
@@ -49,7 +49,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidNotionId"/> returns false when passed a null value.
+    /// Verifies that <see cref="ValidationHelper.IsValidNotionId"/> returns <c>false</c> when the input is <c>null</c>.
     /// </summary>
     [Fact]
     public void IsValidNotionId_WithNullValue_ReturnsFalse()
@@ -59,7 +59,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidNotionId"/> returns false when passed an empty string.
+    /// Verifies that <see cref="ValidationHelper.IsValidNotionId"/> returns <c>false</c> when the input is an empty string.
     /// </summary>
     [Fact]
     public void IsValidNotionId_WithEmptyString_ReturnsFalse()
@@ -69,7 +69,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidNotionId"/> returns false when passed a value that is too short.
+    /// Verifies that <see cref="ValidationHelper.IsValidNotionId"/> returns <c>false</c> for a value that is too short.
     /// </summary>
     [Fact]
     public void IsValidNotionId_WithTooShortValue_ReturnsFalse()
@@ -85,7 +85,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidNotionId"/> returns false when passed a value that is too long.
+    /// Verifies that <see cref="ValidationHelper.IsValidNotionId"/> returns <c>false</c> for a value that is too long.
     /// </summary>
     [Fact]
     public void IsValidNotionId_WithTooLongValue_ReturnsFalse()
@@ -101,7 +101,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidNotionId"/> returns false when passed a value with invalid characters.
+    /// Verifies that <see cref="ValidationHelper.IsValidNotionId"/> returns <c>false</c> when the value contains invalid characters.
     /// </summary>
     [Fact]
     public void IsValidNotionId_WithInvalidCharacters_ReturnsFalse()
@@ -117,7 +117,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidEmail"/> returns true for a valid email address.
+    /// Verifies that <see cref="ValidationHelper.IsValidEmail"/> returns <c>true</c> for a standard valid email address.
     /// </summary>
     [Fact]
     public void IsValidEmail_WithValidEmailAddress_ReturnsTrue()
@@ -133,7 +133,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidEmail"/> returns true for multiple valid email formats including subdomains and plus addressing.
+    /// Verifies that <see cref="ValidationHelper.IsValidEmail"/> returns <c>true</c> for several valid email formats, including subdomains and plus addressing.
     /// </summary>
     [Fact]
     public void IsValidEmail_WithMultipleValidFormats_ReturnsTrue()
@@ -152,7 +152,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidEmail"/> returns false when passed a null value.
+    /// Verifies that <see cref="ValidationHelper.IsValidEmail"/> returns <c>false</c> when the input is <c>null</c>.
     /// </summary>
     [Fact]
     public void IsValidEmail_WithNullValue_ReturnsFalse()
@@ -162,7 +162,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidEmail"/> returns false when passed an empty string.
+    /// Verifies that <see cref="ValidationHelper.IsValidEmail"/> returns <c>false</c> when the input is an empty string.
     /// </summary>
     [Fact]
     public void IsValidEmail_WithEmptyString_ReturnsFalse()
@@ -172,7 +172,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidEmail"/> returns false for various invalid email formats including missing domains, missing local parts, and spaces.
+    /// Verifies that <see cref="ValidationHelper.IsValidEmail"/> returns <c>false</c> for a variety of malformed email strings.
     /// </summary>
     [Fact]
     public void IsValidEmail_WithInvalidFormat_ReturnsFalse()
@@ -193,7 +193,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidFilePath"/> returns true for a valid file path.
+    /// Verifies that <see cref="ValidationHelper.IsValidFilePath"/> returns <c>true</c> for a valid file path.
     /// </summary>
     [Fact]
     public void IsValidFilePath_WithValidPath_ReturnsTrue()
@@ -209,7 +209,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidFilePath"/> returns false when passed a null value.
+    /// Verifies that <see cref="ValidationHelper.IsValidFilePath"/> returns <c>false</c> when the input is <c>null</c>.
     /// </summary>
     [Fact]
     public void IsValidFilePath_WithNullValue_ReturnsFalse()
@@ -219,7 +219,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidFilePath"/> returns false when passed an empty string.
+    /// Verifies that <see cref="ValidationHelper.IsValidFilePath"/> returns <c>false</c> when the input is an empty string.
     /// </summary>
     [Fact]
     public void IsValidFilePath_WithEmptyString_ReturnsFalse()
@@ -228,6 +228,9 @@ public class ValidationHelperTests
         ValidationHelper.IsValidFilePath(string.Empty).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.IsValidFilePath"/> returns <c>false</c> when the input consists only of whitespace.
+    /// </summary>
     [Fact]
     public void IsValidFilePath_WithWhitespaceOnly_ReturnsFalse()
     {
@@ -236,7 +239,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidDirectoryPath"/> returns true for a valid directory path.
+    /// Verifies that <see cref="ValidationHelper.IsValidDirectoryPath"/> returns <c>true</c> for a valid directory path.
     /// </summary>
     [Fact]
     public void IsValidDirectoryPath_WithValidPath_ReturnsTrue()
@@ -252,7 +255,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidDirectoryPath"/> returns false when passed a null value.
+    /// Verifies that <see cref="ValidationHelper.IsValidDirectoryPath"/> returns <c>false</c> when the input is <c>null</c>.
     /// </summary>
     [Fact]
     public void IsValidDirectoryPath_WithNullValue_ReturnsFalse()
@@ -262,7 +265,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidDirectoryPath"/> returns false when passed an empty string.
+    /// Verifies that <see cref="ValidationHelper.IsValidDirectoryPath"/> returns <c>false</c> when the input is an empty string.
     /// </summary>
     [Fact]
     public void IsValidDirectoryPath_WithEmptyString_ReturnsFalse()
@@ -272,7 +275,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidApiKey"/> returns true for a valid API key with exactly 32 characters.
+    /// Verifies that <see cref="ValidationHelper.IsValidApiKey"/> returns <c>true</c> for a key of exactly 32 characters.
     /// </summary>
     [Fact]
     public void IsValidApiKey_WithValidLength_ReturnsTrue()
@@ -288,7 +291,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidApiKey"/> returns true for a valid API key with exactly 20 characters (minimum valid length).
+    /// Verifies that <see cref="ValidationHelper.IsValidApiKey"/> returns <c>true</c> for a key of exactly 20 characters, the minimum valid length.
     /// </summary>
     [Fact]
     public void IsValidApiKey_WithMinimumValidLength_ReturnsTrue()
@@ -304,7 +307,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidApiKey"/> returns false when passed a null value.
+    /// Verifies that <see cref="ValidationHelper.IsValidApiKey"/> returns <c>false</c> when the input is <c>null</c>.
     /// </summary>
     [Fact]
     public void IsValidApiKey_WithNullValue_ReturnsFalse()
@@ -314,7 +317,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidApiKey"/> returns false when passed an API key that is too short (less than 20 characters).
+    /// Verifies that <see cref="ValidationHelper.IsValidApiKey"/> returns <c>false</c> for a key shorter than the minimum length of 20 characters.
     /// </summary>
     [Fact]
     public void IsValidApiKey_WithTooShortValue_ReturnsFalse()
@@ -330,7 +333,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidPriority"/> returns true for various valid priority values within the range 0-100.
+    /// Verifies that <see cref="ValidationHelper.IsValidPriority"/> returns <c>true</c> for a set of valid priority values within the 0‑100 range.
     /// </summary>
     [Fact]
     public void IsValidPriority_WithValidRange_ReturnsTrue()
@@ -344,7 +347,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidPriority"/> returns true for boundary values 0 and 100.
+    /// Verifies that <see cref="ValidationHelper.IsValidPriority"/> returns <c>true</c> for the boundary values 0 and 100.
     /// </summary>
     [Fact]
     public void IsValidPriority_WithBoundaryValues_ReturnsTrue()
@@ -355,7 +358,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsValidPriority"/> returns false for values outside the valid range of 0-100.
+    /// Verifies that <see cref="ValidationHelper.IsValidPriority"/> returns <c>false</c> for values outside the 0‑100 range.
     /// </summary>
     [Fact]
     public void IsValidPriority_WithOutOfRangeValues_ReturnsFalse()
@@ -368,7 +371,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsInRange"/> returns true for values within the specified range, including boundary values.
+    /// Verifies that <see cref="ValidationHelper.IsInRange"/> returns <c>true</c> for values that lie within the specified inclusive range.
     /// </summary>
     [Fact]
     public void IsInRange_WithValueInRange_ReturnsTrue()
@@ -380,7 +383,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsInRange"/> returns false for values outside the specified range.
+    /// Verifies that <see cref="ValidationHelper.IsInRange"/> returns <c>false</c> for values outside the specified inclusive range.
     /// </summary>
     [Fact]
     public void IsInRange_WithValueOutOfRange_ReturnsFalse()
@@ -391,7 +394,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsLengthValid"/> returns true for strings with lengths within the specified minimum and maximum bounds.
+    /// Verifies that <see cref="ValidationHelper.IsLengthValid"/> returns <c>true</c> when the string length falls within the provided minimum and maximum bounds.
     /// </summary>
     [Fact]
     public void IsLengthValid_WithValidLength_ReturnsTrue()
@@ -403,7 +406,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsLengthValid"/> returns false when the string is shorter than the minimum required length.
+    /// Verifies that <see cref="ValidationHelper.IsLengthValid"/> returns <c>false</c> when the string is shorter than the minimum required length.
     /// </summary>
     [Fact]
     public void IsLengthValid_WithTooShortString_ReturnsFalse()
@@ -413,7 +416,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsLengthValid"/> returns false when the string is longer than the maximum allowed length.
+    /// Verifies that <see cref="ValidationHelper.IsLengthValid"/> returns <c>false</c> when the string exceeds the maximum allowed length.
     /// </summary>
     [Fact]
     public void IsLengthValid_WithTooLongString_ReturnsFalse()
@@ -423,7 +426,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsLengthValid"/> returns true for an empty string when the minimum length is 0.
+    /// Verifies that <see cref="ValidationHelper.IsLengthValid"/> returns <c>true</c> for an empty string when the minimum length is zero.
     /// </summary>
     [Fact]
     public void IsLengthValid_WithEmptyStringAndMinZero_ReturnsTrue()
@@ -433,7 +436,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsLengthValid"/> returns true for a null string when the minimum length is 0.
+    /// Verifies that <see cref="ValidationHelper.IsLengthValid"/> returns <c>true</c> for a <c>null</c> string when the minimum length is zero.
     /// </summary>
     [Fact]
     public void IsLengthValid_WithNullStringAndMinZero_ReturnsTrue()
@@ -443,7 +446,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.IsLengthValid"/> returns false for a null string when the minimum length is greater than 0.
+    /// Verifies that <see cref="ValidationHelper.IsLengthValid"/> returns <c>false</c> for a <c>null</c> string when the minimum length is greater than zero.
     /// </summary>
     [Fact]
     public void IsLengthValid_WithNullStringAndMinGreaterThanZero_ReturnsFalse()
@@ -453,7 +456,7 @@ public class ValidationHelperTests
     }
 
     /// <summary>
-    /// Tests that <see cref="ValidationHelper.SanitizeString"/> removes control characters from the input string.
+    /// Verifies that <see cref="ValidationHelper.SanitizeString"/> removes control characters from the input string.
     /// </summary>
     [Fact]
     public void SanitizeString_WithControlCharacters_RemovesControlCharacters()
@@ -468,6 +471,9 @@ public class ValidationHelperTests
         result.Should().Be("HelloWorldTest");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.SanitizeString"/> trims leading and trailing whitespace.
+    /// </summary>
     [Fact]
     public void SanitizeString_WithWhitespaceEdges_TrimsWhitespace()
     {
@@ -483,6 +489,9 @@ public class ValidationHelperTests
         result.Should().NotEndWith(" ");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.SanitizeString"/> returns an empty string when the input is <c>null</c>.
+    /// </summary>
     [Fact]
     public void SanitizeString_WithNullValue_ReturnsEmpty()
     {
@@ -493,6 +502,9 @@ public class ValidationHelperTests
         result.Should().Be(string.Empty);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.SanitizeString"/> returns an empty string when the input is an empty string.
+    /// </summary>
     [Fact]
     public void SanitizeString_WithEmptyString_ReturnsEmpty()
     {
@@ -503,6 +515,9 @@ public class ValidationHelperTests
         result.Should().Be(string.Empty);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.IsValidIdentifierName"/> returns <c>true</c> for valid C# identifier names.
+    /// </summary>
     [Fact]
     public void IsValidIdentifierName_WithValidCSharpIdentifier_ReturnsTrue()
     {
@@ -514,6 +529,9 @@ public class ValidationHelperTests
         }
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.IsValidIdentifierName"/> returns <c>false</c> for invalid identifier names.
+    /// </summary>
     [Fact]
     public void IsValidIdentifierName_WithInvalidIdentifier_ReturnsFalse()
     {
@@ -525,6 +543,9 @@ public class ValidationHelperTests
         }
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.IsValidIdentifierName"/> returns <c>false</c> when the input is <c>null</c>.
+    /// </summary>
     [Fact]
     public void IsValidIdentifierName_WithNullValue_ReturnsFalse()
     {
@@ -532,6 +553,9 @@ public class ValidationHelperTests
         ValidationHelper.IsValidIdentifierName(null).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.IsValidUrl"/> returns <c>true</c> for a simple HTTP URL.
+    /// </summary>
     [Fact]
     public void IsValidUrl_WithHttpUrl_ReturnsTrue()
     {
@@ -539,6 +563,9 @@ public class ValidationHelperTests
         ValidationHelper.IsValidUrl("http://example.com").Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.IsValidUrl"/> returns <c>true</c> for a simple HTTPS URL.
+    /// </summary>
     [Fact]
     public void IsValidUrl_WithHttpsUrl_ReturnsTrue()
     {
@@ -546,6 +573,9 @@ public class ValidationHelperTests
         ValidationHelper.IsValidUrl("https://example.com").Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.IsValidUrl"/> returns <c>true</c> for more complex URLs, including paths, ports, queries, and subdomains.
+    /// </summary>
     [Fact]
     public void IsValidUrl_WithComplexUrl_ReturnsTrue()
     {
@@ -562,6 +592,9 @@ public class ValidationHelperTests
         }
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.IsValidUrl"/> returns <c>false</c> for URLs that are not HTTP/HTTPS or are malformed.
+    /// </summary>
     [Fact]
     public void IsValidUrl_WithInvalidUrl_ReturnsFalse()
     {
@@ -573,6 +606,9 @@ public class ValidationHelperTests
         }
     }
 
+    /// <summary>
+    /// Verifies that <see cref="ValidationHelper.IsValidUrl"/> returns <c>false</c> when the input is <c>null</c>.
+    /// </summary>
     [Fact]
     public void IsValidUrl_WithNullValue_ReturnsFalse()
     {
