@@ -15,11 +15,26 @@ using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
 using DomainTask = NotionTaskSync.Domain.Models.Task;
 
+/// <summary>
+/// Unit tests for the <see cref="LocalFileService"/> class that verify file system operations for task persistence.
+/// Tests cover saving, loading, and managing task files in the local file system.
+/// </summary>
 public class LocalFileServiceTests : IDisposable
 {
+    /// <summary>
+    /// The temporary directory used for testing file operations.
+    /// </summary>
     private readonly string _testDirectory;
+
+    /// <summary>
+    /// The <see cref="LocalFileService"/> instance under test.
+    /// </summary>
     private readonly LocalFileService _fileService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LocalFileServiceTests"/> class.
+    /// Sets up a temporary directory for testing and creates a <see cref="LocalFileService"/> instance.
+    /// </summary>
     public LocalFileServiceTests()
     {
         _testDirectory = Path.Combine(Path.GetTempPath(), $"test_sync_{Guid.NewGuid()}");
@@ -33,6 +48,9 @@ public class LocalFileServiceTests : IDisposable
             Directory.Delete(_testDirectory, recursive: true);
     }
 
+    /// <summary>
+    /// Tests that the <see cref="LocalFileService"/> constructor throws an <see cref="ArgumentNullException"/> when provided with a null base path.
+    /// </summary>
     [Fact]
     public void Constructor_WithNullBasePath_ThrowsArgumentNullException()
     {
@@ -40,6 +58,9 @@ public class LocalFileServiceTests : IDisposable
         Assert.Throws<ArgumentNullException>(() => new LocalFileService(null!));
     }
 
+    /// <summary>
+    /// Tests that the <see cref="LocalFileService"/> constructor throws an <see cref="ArgumentNullException"/> when provided with an empty base path.
+    /// </summary>
     [Fact]
     public void Constructor_WithEmptyBasePath_ThrowsArgumentNullException()
     {
@@ -47,6 +68,9 @@ public class LocalFileServiceTests : IDisposable
         Assert.Throws<ArgumentNullException>(() => new LocalFileService(string.Empty));
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.SaveTaskAsync"/> creates a markdown file with the task's title as the filename and contains the task's title and description.
+    /// </summary>
     [Fact]
     public async Task SaveTaskAsync_WithValidTask_CreatesFileWithTaskContent()
     {
@@ -72,6 +96,9 @@ public class LocalFileServiceTests : IDisposable
         content.Should().Contain("Test Description");
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.SaveTaskAsync"/> creates separate files for multiple tasks with different titles.
+    /// </summary>
     [Fact]
     public async Task SaveTaskAsync_WithMultipleTasks_CreatesSeparateFiles()
     {
@@ -101,6 +128,9 @@ public class LocalFileServiceTests : IDisposable
         files.Should().HaveCount(2);
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.SaveTaskAsync"/> throws a <see cref="ValidationException"/> when the task has invalid properties (empty ID or empty title).
+    /// </summary>
     [Fact]
     public async Task SaveTaskAsync_WithInvalidTask_ThrowsValidationException()
     {
@@ -117,6 +147,9 @@ public class LocalFileServiceTests : IDisposable
         await Assert.ThrowsAsync<ValidationException>(() => _fileService.SaveTaskAsync(invalidTask));
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.SaveTaskAsync"/> sanitizes the task title to create a valid filename by removing special characters like slashes, backslashes, and colons.
+    /// </summary>
     [Fact]
     public async Task SaveTaskAsync_WithSpecialCharactersInTitle_SanitizesFileName()
     {
@@ -141,6 +174,9 @@ public class LocalFileServiceTests : IDisposable
         fileName.Should().NotContain(":");
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.LoadTaskAsync"/> successfully loads a task from a file when given a valid file path.
+    /// </summary>
     [Fact]
     public async Task LoadTaskAsync_WithValidFilePath_ReturnsTask()
     {
@@ -166,6 +202,9 @@ public class LocalFileServiceTests : IDisposable
         loadedTask.Description.Should().Contain("Test loading");
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.LoadTaskAsync"/> returns null when attempting to load a task from a non-existent file path.
+    /// </summary>
     [Fact]
     public async Task LoadTaskAsync_WithNonExistentFile_ReturnsNull()
     {
@@ -179,6 +218,9 @@ public class LocalFileServiceTests : IDisposable
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.LoadTaskAsync"/> returns null when provided with a null file path.
+    /// </summary>
     [Fact]
     public async Task LoadTaskAsync_WithNullFilePath_ReturnsNull()
     {
@@ -189,6 +231,9 @@ public class LocalFileServiceTests : IDisposable
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.LoadTaskAsync"/> returns null when provided with an empty file path.
+    /// </summary>
     [Fact]
     public async Task LoadTaskAsync_WithEmptyFilePath_ReturnsNull()
     {
@@ -239,6 +284,9 @@ public class LocalFileServiceTests : IDisposable
         loadedTasks.Select(t => t.Title).Should().Contain(new[] { "Task 1", "Task 2", "Task 3" });
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.LoadAllTasksAsync"/> returns an empty list when the directory contains no task files.
+    /// </summary>
     [Fact]
     public async Task LoadAllTasksAsync_WithEmptyDirectory_ReturnsEmptyList()
     {
@@ -249,6 +297,9 @@ public class LocalFileServiceTests : IDisposable
         result.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.LoadAllTasksAsync"/> returns an empty list when attempting to load tasks from a non-existent directory.
+    /// </summary>
     [Fact]
     public async Task LoadAllTasksAsync_WithNonExistentDirectory_ReturnsEmptyList()
     {
@@ -263,6 +314,9 @@ public class LocalFileServiceTests : IDisposable
         result.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.SaveTaskAsync"/> overwrites an existing file when saving a task with the same title as a previously saved task.
+    /// </summary>
     [Fact]
     public async Task SaveTaskAsync_WithSameTitle_OverwritesExistingFile()
     {
@@ -298,6 +352,9 @@ public class LocalFileServiceTests : IDisposable
         content.Should().NotContain("Version 1");
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.SaveTaskAsync"/> updates the task's LocalFilePath property with the full path to the created markdown file.
+    /// </summary>
     [Fact]
     public async Task SaveTaskAsync_UpdatesLocalFilePathProperty()
     {
@@ -321,6 +378,9 @@ public class LocalFileServiceTests : IDisposable
         File.Exists(task.LocalFilePath!).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.LoadTaskAsync"/> throws a <see cref="LocalFileException"/> when attempting to load a file with invalid markdown format that cannot be parsed.
+    /// </summary>
     [Fact]
     public async Task LoadTaskAsync_WithInvalidMarkdownFormat_ThrowsLocalFileException()
     {
@@ -332,6 +392,9 @@ public class LocalFileServiceTests : IDisposable
         await Assert.ThrowsAsync<LocalFileException>(() => _fileService.LoadTaskAsync(filePath));
     }
 
+    /// <summary>
+    /// Tests that <see cref="LocalFileService.SaveTaskAsync"/> creates the base directory if it does not exist before saving a task.
+    /// </summary>
     [Fact]
     public async Task SaveTaskAsync_WhenDirectoryDoesNotExist_CreatesDirectory()
     {
