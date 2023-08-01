@@ -13,8 +13,14 @@ using FluentAssertions;
 using Moq;
 using Xunit;
 
+/// <summary>
+/// Tests for conflict resolution functionality.
+/// </summary>
 public class ConflictResolutionTests
 {
+    /// <summary>
+    /// Tests that the Resolve method sets the resolved status and method correctly.
+    /// </summary>
     [Fact]
     public void Resolve_WhenCalled_SetsResolvedStatusAndMethod()
     {
@@ -37,6 +43,9 @@ public class ConflictResolutionTests
         conflict.ResolvedAt.Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Tests that the MarkForManualReview method sets the pending review status with a reason.
+    /// </summary>
     [Fact]
     public void MarkForManualReview_WhenCalled_SetsPendingReviewStatusWithReason()
     {
@@ -56,6 +65,11 @@ public class ConflictResolutionTests
         conflict.ResolutionNotes.Should().Contain("manual inspection needed");
     }
 
+    /// <summary>
+    /// Tests that the GetResolutionStats method returns the correct resolution rate.
+    /// </summary>
+    /// <param name="conflicts">A list of conflicts with mixed statuses.</param>
+    /// <returns>A tuple containing the total number of conflicts, the number of resolved conflicts, and the resolution rate.</returns>
     [Fact]
     public void GetResolutionStats_WithMixedConflictStatuses_ReturnsCorrectResolutionRate()
     {
@@ -81,6 +95,11 @@ public class ConflictResolutionTests
         stats.ResolutionRate.Should().Be(0.5);
     }
 
+    /// <summary>
+    /// Tests that the GetPendingConflicts method excludes resolved conflicts.
+    /// </summary>
+    /// <param name="conflicts">A list of conflicts with mixed statuses.</param>
+    /// <returns>A list of pending conflicts.</returns>
     [Fact]
     public void GetPendingConflicts_WithMixedConflictStatuses_ExcludesResolvedConflicts()
     {
@@ -104,6 +123,9 @@ public class ConflictResolutionTests
         pending.Should().OnlyContain(c => c.IsPending());
     }
 
+    /// <summary>
+    /// Tests that the MergeConflicts method marks a conflict for manual review when both sides have modified the same property with different values.
+    /// </summary>
     [Fact]
     public void MergeConflicts_WhenBothSidesModifiedSamePropertyWithDifferentValues_MarksForManualReview()
     {
@@ -129,6 +151,9 @@ public class ConflictResolutionTests
         result.IsPending().Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that the MergeConflicts method resolves a conflict with the merged method when both sides have identical values.
+    /// </summary>
     [Fact]
     public void MergeConflicts_WhenBothSidesHaveIdenticalValues_ResolvesWithMergedMethod()
     {
