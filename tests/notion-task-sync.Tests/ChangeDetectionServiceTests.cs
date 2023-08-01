@@ -13,8 +13,14 @@ using FluentAssertions;
 using Moq;
 using Xunit;
 
+/// <summary>
+/// Tests for the ChangeDetectionService class.
+/// </summary>
 public class ChangeDetectionServiceTests
 {
+    /// <summary>
+    /// Tests the DetectLocalChanges method when a new task is created after the since timestamp.
+    /// </summary>
     [Fact]
     public void DetectLocalChanges_NewTaskCreatedAfterSinceTimestamp_ReturnsCreatedChangeLog()
     {
@@ -45,6 +51,9 @@ public class ChangeDetectionServiceTests
         changes[0].Source.Should().Be(ChangeSource.Local);
     }
 
+    /// <summary>
+    /// Tests the DetectLocalChanges method when a task is modified after the since timestamp.
+    /// </summary>
     [Fact]
     public void DetectLocalChanges_ModifiedTaskAfterSinceTimestamp_ReturnsUpdatedChangeLog()
     {
@@ -76,6 +85,9 @@ public class ChangeDetectionServiceTests
         changes[0].Source.Should().Be(ChangeSource.Local);
     }
 
+    /// <summary>
+    /// Tests the GetLastChange method when the repository has changes.
+    /// </summary>
     [Fact]
     public void GetLastChange_WhenRepositoryHasChanges_ReturnsFirstEntry()
     {
