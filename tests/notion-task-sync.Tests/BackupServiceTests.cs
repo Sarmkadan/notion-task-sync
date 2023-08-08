@@ -14,13 +14,36 @@ using Xunit;
 using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
 
+/// <summary>
+/// Contains unit tests for the <see cref="BackupService"/> class.
+/// Tests various scenarios for backup creation, retrieval, and error handling.
+/// </summary>
 public class BackupServiceTests : IDisposable
 {
+    /// <summary>
+    /// Temporary directory path used for storing backup files during tests.
+    /// </summary>
     private readonly string _backupDirectory;
+
+    /// <summary>
+    /// Temporary directory path used for storing task files during tests.
+    /// </summary>
     private readonly string _tasksDirectory;
+
+    /// <summary>
+    /// Mock implementation of <see cref="LocalFileService"/> for testing backup operations.
+    /// </summary>
     private readonly Mock<LocalFileService> _mockFileService;
+
+    /// <summary>
+    /// Instance of <see cref="BackupService"/> being tested.
+    /// </summary>
     private readonly BackupService _backupService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BackupServiceTests"/> class.
+    /// Sets up temporary directories and mock services for testing backup functionality.
+    /// </summary>
     public BackupServiceTests()
     {
         _backupDirectory = Path.Combine(Path.GetTempPath(), $"backup_{Guid.NewGuid()}");
@@ -40,6 +63,11 @@ public class BackupServiceTests : IDisposable
             Directory.Delete(_tasksDirectory, recursive: true);
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.CreateBackupAsync()"/> creates a backup directory with valid input.
+    /// Verifies that the returned backup object is not null and contains expected properties.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task CreateBackupAsync_WithValidInput_CreatesBackupDirectory()
     {
@@ -57,6 +85,11 @@ public class BackupServiceTests : IDisposable
         backup.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.CreateBackupAsync(string)"/> includes the provided label in the backup information.
+    /// Verifies that the backup object contains the correct label value.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task CreateBackupAsync_WithLabel_IncludesLabelInBackupInfo()
     {
@@ -73,6 +106,11 @@ public class BackupServiceTests : IDisposable
         backup.Label.Should().Be(label);
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.CreateBackupAsync()"/> uses "auto" as the default label when no label is provided.
+    /// Verifies that the backup object contains the default "auto" label.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task CreateBackupAsync_WithoutLabel_UsesDefaultAutoLabel()
     {
@@ -88,6 +126,10 @@ public class BackupServiceTests : IDisposable
         backup.Label.Should().Be("auto");
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.GetAvailableBackups()"/> returns all available backups when multiple backups exist.
+    /// Verifies that the returned list contains all created backups and is ordered by creation date in descending order.
+    /// </summary>
     [Fact]
     public void GetAvailableBackups_WithMultipleBackups_ReturnsAllBackups()
     {
@@ -112,6 +154,10 @@ public class BackupServiceTests : IDisposable
         backups.Should().BeInDescendingOrder(b => b.CreatedAt);
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.GetAvailableBackups()"/> returns an empty list when the backup directory is empty.
+    /// Verifies that no backups are returned when no backup directories exist.
+    /// </summary>
     [Fact]
     public void GetAvailableBackups_WithEmptyBackupDirectory_ReturnsEmptyList()
     {
@@ -122,6 +168,10 @@ public class BackupServiceTests : IDisposable
         backups.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.GetAvailableBackups()"/> includes the correct file count for each backup.
+    /// Verifies that each backup object in the returned list contains the accurate count of files in its directory.
+    /// </summary>
     [Fact]
     public void GetAvailableBackups_IncludesFileCountForEachBackup()
     {
@@ -141,6 +191,10 @@ public class BackupServiceTests : IDisposable
         backups[0].FileCount.Should().Be(3);
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.GetAvailableBackups()"/> returns an empty list when the backup directory does not exist.
+    /// Verifies that the service handles non-existent directories gracefully without throwing exceptions.
+    /// </summary>
     [Fact]
     public void GetAvailableBackups_WithNonExistentBackupDirectory_ReturnsEmptyList()
     {
@@ -155,6 +209,11 @@ public class BackupServiceTests : IDisposable
         backups.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.CreateBackupAsync()"/> invokes the backup tasks method on the file service.
+    /// Verifies that the <see cref="LocalFileService.BackupTasksAsync(string)"/> method is called exactly once during backup creation.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task CreateBackupAsync_InvokesBackupTasksOnFileService()
     {
@@ -172,6 +231,11 @@ public class BackupServiceTests : IDisposable
             Times.Once);
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.CreateBackupAsync()"/> throws a <see cref="SyncException"/> when the file service throws an exception.
+    /// Verifies that IO exceptions from the file service are properly wrapped and rethrown as <see cref="SyncException"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task CreateBackupAsync_WithFileServiceThrowingException_ThrowsSyncException()
     {
@@ -185,6 +249,11 @@ public class BackupServiceTests : IDisposable
             () => _backupService.CreateBackupAsync());
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.CreateBackupAsync()"/> creates a backup with the correct timestamp.
+    /// Verifies that the backup's CreatedAt property falls within the expected time range around the method call.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task CreateBackupAsync_CreatesBackupWithCorrectTimestamp()
     {
@@ -203,6 +272,10 @@ public class BackupServiceTests : IDisposable
         backup.CreatedAt.Should().BeOnOrBefore(afterCall.AddSeconds(1));
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.GetAvailableBackups()"/> orders backups by creation date in descending order.
+    /// Verifies that the most recently created backups appear first in the returned list.
+    /// </summary>
     [Fact]
     public void GetAvailableBackups_OrdersByCreationDateDescending()
     {
@@ -237,6 +310,11 @@ public class BackupServiceTests : IDisposable
         backups[1].CreatedAt.Should().BeAfter(backups[2].CreatedAt);
     }
 
+    /// <summary>
+    /// Tests that <see cref="BackupService.CreateBackupAsync()"/> populates backup information with correct data.
+    /// Verifies that the returned backup object contains accurate Id, Path, CreatedAt, Label, and FileCount properties.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task CreateBackupAsync_PopulatesBackupInfoWithCorrectData()
     {
