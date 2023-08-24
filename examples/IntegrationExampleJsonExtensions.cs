@@ -1,0 +1,88 @@
+#nullable enable
+
+// =============================================================================
+// Author: Vladyslav Zaiets | https://sarmkadan.com
+// CTO & Software Architect
+// =====================================================================
+
+using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+/// <summary>
+/// System.Text.Json serialization extensions for IntegrationExample type.
+/// Provides methods for converting IntegrationExample instances to/from JSON.
+/// </summary>
+public static class IntegrationExampleJsonExtensions
+{
+    /// <summary>
+    /// JSON serialization options with camelCase naming policy.
+    /// </summary>
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+
+    /// <summary>
+    /// Converts an IntegrationExample instance to its JSON representation.
+    /// </summary>
+    /// <param name="value">The IntegrationExample instance to serialize.</param>
+    /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
+    /// <returns>A JSON string representation of the IntegrationExample.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
+    public static string ToJson(this IntegrationExample value, bool indented = false)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+
+        var options = indented
+            ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
+            : _jsonOptions;
+
+        return JsonSerializer.Serialize(value, options);
+    }
+
+    /// <summary>
+    /// Deserializes an IntegrationExample instance from JSON.
+    /// </summary>
+    /// <param name="json">The JSON string to deserialize.</param>
+    /// <returns>An IntegrationExample instance, or null if the JSON is empty or whitespace.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
+    public static IntegrationExample? FromJson(string json)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(json);
+
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<IntegrationExample>(json, _jsonOptions);
+    }
+
+    /// <summary>
+    /// Attempts to deserialize an IntegrationExample instance from JSON.
+    /// </summary>
+    /// <param name="json">The JSON string to deserialize.</param>
+    /// <param name="value">Receives the deserialized IntegrationExample instance if successful.</param>
+    /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+    public static bool TryFromJson(string json, out IntegrationExample? value)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(json);
+
+        value = default;
+
+        try
+        {
+            value = JsonSerializer.Deserialize<IntegrationExample>(json, _jsonOptions);
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+}
