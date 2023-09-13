@@ -18,10 +18,10 @@ using System.Linq;
 /// </summary>
 public sealed class NotionApiService
 {
-    private readonly string? _apiKey;
-    private readonly HttpClient _httpClient;
-    private const string NotionApiBaseUrl = "https://api.notion.com/v1";
-    private const string NotionApiVersion = "2022-06-28";
+    internal readonly string? _apiKey;
+    internal readonly HttpClient _httpClient;
+    internal const string NotionApiBaseUrl = "https://api.notion.com/v1";
+    internal const string NotionApiVersion = "2022-06-28";
 
     public NotionApiService(string? apiKey, HttpClient? httpClient = null)
     {
