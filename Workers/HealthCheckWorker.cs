@@ -1,4 +1,5 @@
 #nullable enable
+
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -24,6 +25,10 @@ public class HealthCheckWorker : IDisposable
     private CancellationTokenSource? _cancellationTokenSource;
     private Task? _workerTask;
     private bool _isRunning;
+    private long _memoryUsageMb;
+    private int _threadCount;
+    private long _uptimeSeconds;
+    private DateTime _checkedAt;
 
     public HealthCheckWorker(ILogger<HealthCheckWorker> logger, int checkIntervalSeconds = 300)
     {
@@ -110,11 +115,17 @@ public class HealthCheckWorker : IDisposable
     /// </summary>
     private async Task PerformHealthChecksAsync()
     {
+        var process = System.Diagnostics.Process.GetCurrentProcess();
+        _memoryUsageMb = process.WorkingSet64 / (1024 * 1024);
+        _threadCount = process.Threads.Count;
+        _uptimeSeconds = (long)(DateTime.UtcNow - process.StartTime.ToUniversalTime()).TotalSeconds;
+        _checkedAt = DateTime.UtcNow;
+
         // Check memory usage
-        CheckMemoryUsage();
+        CheckMemoryUsage(_memoryUsageMb);
 
         // Check thread count
-        CheckThreadCount();
+        CheckThreadCount(_threadCount);
 
         // Check connectivity (would require actual implementation)
         await CheckConnectivityAsync();
@@ -125,10 +136,9 @@ public class HealthCheckWorker : IDisposable
     /// <summary>
     /// Checks current memory usage and logs warnings if too high.
     /// </summary>
-    private void CheckMemoryUsage()
+    /// <param name="memoryMb">The memory usage in megabytes.</param>
+    private void CheckMemoryUsage(long memoryMb)
     {
-        var process = System.Diagnostics.Process.GetCurrentProcess();
-        var memoryMb = process.WorkingSet64 / (1024 * 1024);
         const long maxMemoryMb = 500; // 500 MB threshold
 
         if (memoryMb > maxMemoryMb)
@@ -144,9 +154,9 @@ public class HealthCheckWorker : IDisposable
     /// <summary>
     /// Checks thread count and logs if excessive.
     /// </summary>
-    private void CheckThreadCount()
+    /// <param name="threadCount">The thread count to check.</param>
+    private void CheckThreadCount(int threadCount)
     {
-        var threadCount = System.Diagnostics.Process.GetCurrentProcess().Threads.Count;
         const int maxThreads = 50; // Threshold for warnings
 
         if (threadCount > maxThreads)
@@ -181,20 +191,44 @@ public class HealthCheckWorker : IDisposable
     /// </summary>
     public HealthStatus GetStatus()
     {
-        var process = System.Diagnostics.Process.GetCurrentProcess();
-        var memoryMb = process.WorkingSet64 / (1024 * 1024);
-        var threadCount = process.Threads.Count;
-
         return new HealthStatus
         {
-            IsHealthy = memoryMb < 500 && threadCount < 50,
-            MemoryUsageMb = memoryMb,
-            ThreadCount = threadCount,
-            UptimeSeconds = (long)(DateTime.UtcNow - process.StartTime.ToUniversalTime()).TotalSeconds,
-            CheckedAt = DateTime.UtcNow
+            IsHealthy = _memoryUsageMb < 500 && _threadCount < 50,
+            MemoryUsageMb = _memoryUsageMb,
+            ThreadCount = _threadCount,
+            UptimeSeconds = _uptimeSeconds,
+            CheckedAt = _checkedAt
         };
     }
 
+    /// <summary>
+    /// Gets whether the application is currently healthy.
+    /// </summary>
+    public bool IsHealthy => GetStatus().IsHealthy;
+
+    /// <summary>
+    /// Gets the current memory usage in megabytes.
+    /// </summary>
+    public long MemoryUsageMb => _memoryUsageMb;
+
+    /// <summary>
+    /// Gets the current thread count.
+    /// </summary>
+    public int ThreadCount => _threadCount;
+
+    /// <summary>
+    /// Gets the current uptime in seconds.
+    /// </summary>
+    public long UptimeSeconds => _uptimeSeconds;
+
+    /// <summary>
+    /// Gets the timestamp when health was last checked.
+    /// </summary>
+    public DateTime CheckedAt => _checkedAt;
+
+    /// <summary>
+    /// Gets whether the worker is currently running.
+    /// </summary>
     public bool IsRunning => _isRunning;
 
     public void Dispose()
@@ -218,9 +252,9 @@ public class HealthStatus
     {
         var status = IsHealthy ? "✓ Healthy" : "✗ Unhealthy";
         return $@"{status}
-  Memory: {MemoryUsageMb}MB
-  Threads: {ThreadCount}
-  Uptime: {UptimeSeconds}s
-  Checked: {CheckedAt:g}";
+Memory: {MemoryUsageMb}MB
+Threads: {ThreadCount}
+Uptime: {UptimeSeconds}s
+Checked: {CheckedAt:g}";
     }
 }
