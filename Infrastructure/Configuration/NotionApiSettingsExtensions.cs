@@ -14,9 +14,11 @@ public static class NotionApiSettingsExtensions
     /// </summary>
     /// <param name="settings">The Notion API settings.</param>
     /// <returns>True if the API key is set and not empty; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="settings"/> is <see langword="null"/>.</exception>
     public static bool HasValidApiKey(this NotionApiSettings settings)
     {
-        return !string.IsNullOrWhiteSpace(settings?.ApiKey);
+        ArgumentNullException.ThrowIfNull(settings);
+        return !string.IsNullOrWhiteSpace(settings.ApiKey);
     }
 
     /// <summary>
@@ -24,11 +26,10 @@ public static class NotionApiSettingsExtensions
     /// </summary>
     /// <param name="settings">The Notion API settings.</param>
     /// <returns>The base URL with a trailing slash.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="settings"/> is <see langword="null"/>.</exception>
     public static string GetNormalizedBaseUrl(this NotionApiSettings settings)
     {
-        if (settings?.BaseUrl == null)
-            return "https://api.notion.com/v1/";
-
+        ArgumentNullException.ThrowIfNull(settings);
         return settings.BaseUrl.TrimEnd('/') + '/';
     }
 
@@ -37,9 +38,11 @@ public static class NotionApiSettingsExtensions
     /// </summary>
     /// <param name="settings">The Notion API settings.</param>
     /// <returns>The API version string.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="settings"/> is <see langword="null"/>.</exception>
     public static string GetEffectiveApiVersion(this NotionApiSettings settings)
     {
-        return settings?.ApiVersion ?? "2022-06-28";
+        ArgumentNullException.ThrowIfNull(settings);
+        return settings.ApiVersion ?? "2022-06-28";
     }
 
     /// <summary>
@@ -47,9 +50,11 @@ public static class NotionApiSettingsExtensions
     /// </summary>
     /// <param name="settings">The Notion API settings.</param>
     /// <returns>True if rate limiting should be respected; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="settings"/> is <see langword="null"/>.</exception>
     public static bool ShouldRespectRateLimits(this NotionApiSettings settings)
     {
-        return settings?.RespectRateLimits ?? true;
+        ArgumentNullException.ThrowIfNull(settings);
+        return settings.RespectRateLimits;
     }
 
     /// <summary>
@@ -57,11 +62,10 @@ public static class NotionApiSettingsExtensions
     /// </summary>
     /// <param name="settings">The Notion API settings.</param>
     /// <returns>The effective page size.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="settings"/> is <see langword="null"/>.</exception>
     public static int GetEffectivePageSize(this NotionApiSettings settings)
     {
-        if (settings == null)
-            return 100;
-
+        ArgumentNullException.ThrowIfNull(settings);
         return Math.Min(settings.DefaultPageSize, settings.MaxPageSize);
     }
 }
