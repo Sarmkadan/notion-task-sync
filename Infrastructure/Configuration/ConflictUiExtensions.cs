@@ -23,9 +23,12 @@ public static class ConflictUiExtensions
     /// </summary>
     /// <param name="services">The service collection to configure.</param>
     /// <returns>The same <paramref name="services"/> instance to support chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> is <see langword="null"/>.</exception>
     public static IServiceCollection AddConflictResolutionUi(
         this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         services.AddSingleton<ConflictDiffService>();
         return services;
     }
