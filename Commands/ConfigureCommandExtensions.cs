@@ -10,10 +10,11 @@ namespace NotionTaskSync.Commands;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Extension methods for ConfigureCommand providing additional functionality
+/// Extension methods for <see cref="ConfigureCommand"/> providing additional functionality
 /// for configuration validation, settings inspection, and file operations.
 /// </summary>
 public static class ConfigureCommandExtensions
@@ -21,20 +22,17 @@ public static class ConfigureCommandExtensions
     /// <summary>
     /// Validates that the current configuration can be loaded from appsettings.json
     /// </summary>
-    /// <param name="command">The ConfigureCommand instance</param>
+    /// <param name="command">The <see cref="ConfigureCommand"/> instance</param>
+    /// <exception cref="ArgumentNullException"><paramref name="command"/> is <see langword="null"/></exception>
     /// <returns>True if configuration is valid and can be loaded, false otherwise</returns>
     public static bool ValidateConfigurationFile(this ConfigureCommand command)
     {
+        ArgumentNullException.ThrowIfNull(command);
+
         try
         {
-            var appSettingsPath = "appsettings.json";
-            if (!File.Exists(appSettingsPath))
-            {
-                return false;
-            }
-
-            var content = File.ReadAllText(appSettingsPath);
-            return !string.IsNullOrWhiteSpace(content);
+            const string appSettingsPath = "appsettings.json";
+            return File.Exists(appSettingsPath) && !string.IsNullOrWhiteSpace(File.ReadAllText(appSettingsPath));
         }
         catch
         {
@@ -45,13 +43,16 @@ public static class ConfigureCommandExtensions
     /// <summary>
     /// Gets the current Notion API key from configuration
     /// </summary>
-    /// <param name="command">The ConfigureCommand instance</param>
+    /// <param name="command">The <see cref="ConfigureCommand"/> instance</param>
+    /// <exception cref="ArgumentNullException"><paramref name="command"/> is <see langword="null"/></exception>
     /// <returns>The API key if available, null otherwise</returns>
     public static string? GetApiKey(this ConfigureCommand command)
     {
+        ArgumentNullException.ThrowIfNull(command);
+
         try
         {
-            var appSettingsPath = "appsettings.json";
+            const string appSettingsPath = "appsettings.json";
             if (!File.Exists(appSettingsPath))
             {
                 return null;
@@ -63,16 +64,11 @@ public static class ConfigureCommandExtensions
                 return null;
             }
 
-            // Simple parsing to extract API key
-            var keyStart = content.IndexOf("\"ApiKey\":");
-            if (keyStart >= 0)
+            using var document = JsonDocument.Parse(content);
+            if (document.RootElement.TryGetProperty("NotionApi", out var notionApi) &&
+                notionApi.TryGetProperty("ApiKey", out var apiKey))
             {
-                var valueStart = content.IndexOf('"', keyStart + 9) + 1;
-                var valueEnd = content.IndexOf('"', valueStart);
-                if (valueEnd > valueStart)
-                {
-                    return content[valueStart..valueEnd];
-                }
+                return apiKey.GetString();
             }
 
             return null;
@@ -86,13 +82,16 @@ public static class ConfigureCommandExtensions
     /// <summary>
     /// Gets the current database ID from configuration
     /// </summary>
-    /// <param name="command">The ConfigureCommand instance</param>
+    /// <param name="command">The <see cref="ConfigureCommand"/> instance</param>
+    /// <exception cref="ArgumentNullException"><paramref name="command"/> is <see langword="null"/></exception>
     /// <returns>The database ID if available, null otherwise</returns>
     public static string? GetDatabaseId(this ConfigureCommand command)
     {
+        ArgumentNullException.ThrowIfNull(command);
+
         try
         {
-            var appSettingsPath = "appsettings.json";
+            const string appSettingsPath = "appsettings.json";
             if (!File.Exists(appSettingsPath))
             {
                 return null;
@@ -104,22 +103,12 @@ public static class ConfigureCommandExtensions
                 return null;
             }
 
-            // Simple parsing to extract database ID
-            var dbStart = content.IndexOf("\"DatabaseIds\":");
-            if (dbStart >= 0)
+            using var document = JsonDocument.Parse(content);
+            if (document.RootElement.TryGetProperty("NotionApi", out var notionApi) &&
+                notionApi.TryGetProperty("DatabaseIds", out var databaseIds) &&
+                databaseIds.GetArrayLength() > 0)
             {
-                var arrayStart = content.IndexOf('[', dbStart);
-                var arrayEnd = content.IndexOf(']', arrayStart);
-                if (arrayStart > 0 && arrayEnd > arrayStart)
-                {
-                    var contentBetween = content[arrayStart..arrayEnd];
-                    var quoteStart = contentBetween.IndexOf('"');
-                    var quoteEnd = contentBetween.LastIndexOf('"');
-                    if (quoteStart >= 0 && quoteEnd > quoteStart)
-                    {
-                        return contentBetween[(quoteStart + 1)..quoteEnd];
-                    }
-                }
+                return databaseIds[0].GetString();
             }
 
             return null;
@@ -133,13 +122,16 @@ public static class ConfigureCommandExtensions
     /// <summary>
     /// Gets the current sync interval from configuration
     /// </summary>
-    /// <param name="command">The ConfigureCommand instance</param>
+    /// <param name="command">The <see cref="ConfigureCommand"/> instance</param>
+    /// <exception cref="ArgumentNullException"><paramref name="command"/> is <see langword="null"/></exception>
     /// <returns>The sync interval in seconds if available, 300 (default) otherwise</returns>
     public static int GetSyncIntervalSeconds(this ConfigureCommand command)
     {
+        ArgumentNullException.ThrowIfNull(command);
+
         try
         {
-            var appSettingsPath = "appsettings.json";
+            const string appSettingsPath = "appsettings.json";
             if (!File.Exists(appSettingsPath))
             {
                 return 300;
@@ -151,16 +143,12 @@ public static class ConfigureCommandExtensions
                 return 300;
             }
 
-            // Simple parsing to extract sync interval
-            var intervalStart = content.IndexOf("\"DefaultSyncIntervalSeconds\":");
-            if (intervalStart >= 0)
+            using var document = JsonDocument.Parse(content);
+            if (document.RootElement.TryGetProperty("AppSettings", out var appSettings) &&
+                appSettings.TryGetProperty("DefaultSyncIntervalSeconds", out var interval) &&
+                interval.TryGetInt32(out var seconds))
             {
-                var valueStart = intervalStart + 32; // length of "\"DefaultSyncIntervalSeconds\":"
-                var valueEnd = content.IndexOfAny(new[] { ',', '}', '\n', '\r' }, valueStart);
-                if (valueEnd > valueStart && int.TryParse(content[valueStart..valueEnd], out var interval))
-                {
-                    return interval;
-                }
+                return seconds;
             }
 
             return 300;
@@ -174,13 +162,16 @@ public static class ConfigureCommandExtensions
     /// <summary>
     /// Gets the current conflict strategy from configuration
     /// </summary>
-    /// <param name="command">The ConfigureCommand instance</param>
+    /// <param name="command">The <see cref="ConfigureCommand"/> instance</param>
+    /// <exception cref="ArgumentNullException"><paramref name="command"/> is <see langword="null"/></exception>
     /// <returns>The conflict strategy if available, "last-write" (default) otherwise</returns>
     public static string GetConflictStrategy(this ConfigureCommand command)
     {
+        ArgumentNullException.ThrowIfNull(command);
+
         try
         {
-            var appSettingsPath = "appsettings.json";
+            const string appSettingsPath = "appsettings.json";
             if (!File.Exists(appSettingsPath))
             {
                 return "last-write";
@@ -192,20 +183,12 @@ public static class ConfigureCommandExtensions
                 return "last-write";
             }
 
-            // Simple parsing to extract conflict strategy
-            var strategyStart = content.IndexOf("\"DefaultConflictStrategy\":");
-            if (strategyStart >= 0)
+            using var document = JsonDocument.Parse(content);
+            if (document.RootElement.TryGetProperty("AppSettings", out var appSettings) &&
+                appSettings.TryGetProperty("DefaultConflictStrategy", out var strategy))
             {
-                var valueStart = strategyStart + 27; // length of "\"DefaultConflictStrategy\":"
-                var valueEnd = content.IndexOfAny(new[] { ',', '}', '\n', '\r' }, valueStart);
-                if (valueEnd > valueStart)
-                {
-                    var strategy = content[valueStart..valueEnd].Trim(' ', '"', '\n', '\r');
-                    if (!string.IsNullOrWhiteSpace(strategy))
-                    {
-                        return strategy;
-                    }
-                }
+                var strategyValue = strategy.GetString();
+                return !string.IsNullOrWhiteSpace(strategyValue) ? strategyValue : "last-write";
             }
 
             return "last-write";
