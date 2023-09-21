@@ -11,7 +11,8 @@ using System;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Extension methods for ErrorHandlingMiddleware to provide fluent API and common patterns.
+/// Extension methods for <see cref="ErrorHandlingMiddleware"/> to provide fluent API and common patterns
+/// for error handling and retry operations.
 /// </summary>
 public static class ErrorHandlingMiddlewareExtensions
 {
@@ -19,29 +20,19 @@ public static class ErrorHandlingMiddlewareExtensions
     /// Safely executes an operation and returns a boolean indicating success/failure.
     /// Useful for fire-and-forget scenarios where exceptions should not propagate.
     /// </summary>
-    /// <param name="middleware">The middleware instance</param>
-    /// <param name="operationName">Name of the operation for logging</param>
-    /// <param name="operation">The async operation to execute</param>
-    /// <returns>Tuple with success flag and error message (null if successful)</returns>
+    /// <param name="middleware">The middleware instance.</param>
+    /// <param name="operationName">Name of the operation for logging.</param>
+    /// <param name="operation">The async operation to execute.</param>
+    /// <returns>Tuple with success flag and error message (null if successful).</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="middleware"/>, <paramref name="operationName"/>, or <paramref name="operation"/> is null.</exception>
     public static async Task<(bool success, string? error)> SafeExecuteAsync(
         this ErrorHandlingMiddleware middleware,
         string operationName,
         Func<Task> operation)
     {
-        if (middleware == null)
-        {
-            throw new ArgumentNullException(nameof(middleware));
-        }
-
-        if (operationName == null)
-        {
-            throw new ArgumentNullException(nameof(operationName));
-        }
-
-        if (operation == null)
-        {
-            throw new ArgumentNullException(nameof(operation));
-        }
+        ArgumentNullException.ThrowIfNull(middleware);
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(operation);
 
         try
         {
@@ -62,36 +53,23 @@ public static class ErrorHandlingMiddlewareExtensions
     /// Safely executes an operation with retry logic for transient errors.
     /// Attempts the operation up to the specified number of times.
     /// </summary>
-    /// <param name="middleware">The middleware instance</param>
-    /// <param name="operationName">Name of the operation for logging</param>
-    /// <param name="operation">The async operation to execute</param>
-    /// <param name="maxRetries">Maximum number of retry attempts</param>
-    /// <returns>Tuple with result, success flag, and error message</returns>
+    /// <param name="middleware">The middleware instance.</param>
+    /// <param name="operationName">Name of the operation for logging.</param>
+    /// <param name="operation">The async operation to execute.</param>
+    /// <param name="maxRetries">Maximum number of retry attempts.</param>
+    /// <returns>Tuple with result, success flag, and error message.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="middleware"/>, <paramref name="operationName"/>, or <paramref name="operation"/> is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="maxRetries"/> is negative.</exception>
     public static async Task<(T? result, bool success, string? error)> ExecuteWithRetryAsync<T>(
         this ErrorHandlingMiddleware middleware,
         string operationName,
         Func<Task<T>> operation,
         int maxRetries = 3)
     {
-        if (middleware == null)
-        {
-            throw new ArgumentNullException(nameof(middleware));
-        }
-
-        if (operationName == null)
-        {
-            throw new ArgumentNullException(nameof(operationName));
-        }
-
-        if (operation == null)
-        {
-            throw new ArgumentNullException(nameof(operation));
-        }
-
-        if (maxRetries < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(maxRetries), "Max retries must be non-negative");
-        }
+        ArgumentNullException.ThrowIfNull(middleware);
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentOutOfRangeException.ThrowIfNegative(maxRetries);
 
         int attempt = 0;
         Exception? lastException = null;
@@ -114,6 +92,7 @@ public static class ErrorHandlingMiddlewareExtensions
             }
 
             // Wait before retry - exponential backoff would be better in real implementation
+            // Using simple linear backoff for now as a placeholder
             if (attempt <= maxRetries)
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(100 * attempt));
@@ -127,34 +106,23 @@ public static class ErrorHandlingMiddlewareExtensions
     /// Executes an operation with automatic status code mapping based on exception type.
     /// Returns a tuple with result, status code, and error message.
     /// </summary>
-    /// <param name="middleware">The middleware instance</param>
-    /// <param name="operationName">Name of the operation for logging</param>
-    /// <param name="operation">The async operation to execute</param>
-    /// <returns>Tuple with result, status code, and error message</returns>
+    /// <param name="middleware">The middleware instance.</param>
+    /// <param name="operationName">Name of the operation for logging.</param>
+    /// <param name="operation">The async operation to execute.</param>
+    /// <returns>Tuple with result, status code, and error message.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="middleware"/>, <paramref name="operationName"/>, or <paramref name="operation"/> is null.</exception>
     public static async Task<(T? result, int statusCode, string? error)> ExecuteWithStatusAsync<T>(
         this ErrorHandlingMiddleware middleware,
         string operationName,
         Func<Task<T>> operation)
     {
-        if (middleware == null)
-        {
-            throw new ArgumentNullException(nameof(middleware));
-        }
-
-        if (operationName == null)
-        {
-            throw new ArgumentNullException(nameof(operationName));
-        }
-
-        if (operation == null)
-        {
-            throw new ArgumentNullException(nameof(operation));
-        }
+        ArgumentNullException.ThrowIfNull(middleware);
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(operation);
 
         var (result, success, error) = await middleware.TryExecuteAsync(operationName, operation);
 
         var statusCode = success ? 200 : middleware.GetStatusCode(new Exception(error));
-
         return (result, statusCode, error);
     }
 
@@ -162,33 +130,27 @@ public static class ErrorHandlingMiddlewareExtensions
     /// Executes an operation with automatic status code mapping based on exception type.
     /// Synchronous version that returns appropriate status code and error message.
     /// </summary>
-    /// <param name="middleware">The middleware instance</param>
-    /// <param name="operationName">Name of the operation for logging</param>
-    /// <param name="operation">The sync operation to execute</param>
-    /// <returns>Tuple with result, status code, and error message</returns>
+    /// <param name="middleware">The middleware instance.</param>
+    /// <param name="operationName">Name of the operation for logging.</param>
+    /// <param name="operation">The sync operation to execute.</param>
+    /// <returns>Tuple with result, status code, and error message.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="middleware"/>, <paramref name="operationName"/>, or <paramref name="operation"/> is null.</exception>
     public static (T? result, int statusCode, string? error) ExecuteWithStatus<T>(
         this ErrorHandlingMiddleware middleware,
         string operationName,
         Func<T> operation)
     {
-        if (middleware == null)
-        {
-            throw new ArgumentNullException(nameof(middleware));
-        }
-
-        if (operationName == null)
-        {
-            throw new ArgumentNullException(nameof(operationName));
-        }
-
-        if (operation == null)
-        {
-            throw new ArgumentNullException(nameof(operation));
-        }
+        ArgumentNullException.ThrowIfNull(middleware);
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(operation);
 
         var (result, success, error) = middleware.TryExecute(operationName, operation);
 
-        var statusCode = success ? 200 : middleware.GetStatusCode(new Exception(error ?? "Unknown error"));
+        var statusCode = success
+            ? 200
+            : middleware.GetStatusCode(string.IsNullOrEmpty(error)
+                ? new Exception("Unknown error")
+                : new Exception(error));
 
         return (result, statusCode, error);
     }
