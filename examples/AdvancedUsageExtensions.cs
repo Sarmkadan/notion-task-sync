@@ -30,8 +30,11 @@ public static class AdvancedUsageExtensions
     /// <param name="config">The sync configuration to validate</param>
     /// <param name="logger">Optional logger for validation messages</param>
     /// <returns>Validation report with issues and recommendations</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="config"/> is null.</exception>
     public static SyncConfigValidationReport ValidateConfiguration(this SyncConfig config, ILogger? logger = null)
     {
+        ArgumentNullException.ThrowIfNull(config);
+
         var report = new SyncConfigValidationReport
         {
             IsValid = true,
@@ -117,12 +120,17 @@ public static class AdvancedUsageExtensions
     /// <param name="localFolderPath">Local folder path</param>
     /// <param name="logger">Optional logger for configuration messages</param>
     /// <returns>Optimized SyncConfig instance</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> or <paramref name="notionDatabaseId"/> or <paramref name="localFolderPath"/> is null.</exception>
     public static SyncConfig CreateOptimizedConfiguration(
         this string name,
         string notionDatabaseId,
         string localFolderPath,
         ILogger? logger = null)
     {
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(notionDatabaseId);
+        ArgumentNullException.ThrowIfNull(localFolderPath);
+
         logger?.LogInformation("Creating optimized configuration for {Name}", name);
 
         var config = new SyncConfig(name, notionDatabaseId, localFolderPath)
@@ -176,8 +184,11 @@ public static class AdvancedUsageExtensions
     /// <param name="result">Sync result to analyze</param>
     /// <param name="logger">Optional logger for analysis messages</param>
     /// <returns>Analysis report with performance metrics</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
     public static SyncAnalysisReport AnalyzeResults(this SyncService.SyncResult result, ILogger? logger = null)
     {
+        ArgumentNullException.ThrowIfNull(result);
+
         var report = new SyncAnalysisReport
         {
             TotalTasks = result.LocalTaskCount,
@@ -201,23 +212,14 @@ public static class AdvancedUsageExtensions
             ? (double)result.ConflictsDetected / result.LocalTaskCount * 100
             : 0;
 
-        // Determine sync efficiency rating
-        if (report.TasksPerSecond > 10)
+        // Determine sync efficiency rating using pattern matching
+        report.EfficiencyRating = report.TasksPerSecond switch
         {
-            report.EfficiencyRating = "Excellent";
-        }
-        else if (report.TasksPerSecond > 5)
-        {
-            report.EfficiencyRating = "Good";
-        }
-        else if (report.TasksPerSecond > 2)
-        {
-            report.EfficiencyRating = "Fair";
-        }
-        else
-        {
-            report.EfficiencyRating = "Poor";
-        }
+            > 10 => "Excellent",
+            > 5 => "Good",
+            > 2 => "Fair",
+            _ => "Poor"
+        };
 
         // Log analysis results
         logger?.LogInformation("📊 Sync Analysis: {Rating} efficiency ({TasksPerSecond:F2} tasks/sec)",
@@ -226,9 +228,9 @@ public static class AdvancedUsageExtensions
         logger?.LogInformation("📈 Success rate: {SuccessRate:F1}% | Conflict rate: {ConflictRate:F1}%",
             report.SuccessRate, report.ConflictRate);
 
-        if (report.ConflictsDetected > 0)
+        if (report.Conflicts > 0)
         {
-            logger?.LogWarning("⚠️ {Conflicts} conflicts detected - review recommended", report.ConflictsDetected);
+            logger?.LogWarning("⚠️ {Conflicts} conflicts detected - review recommended", report.Conflicts);
         }
 
         return report;
@@ -243,6 +245,8 @@ public static class AdvancedUsageExtensions
     /// <param name="retryDelayMs">Delay between retries in milliseconds</param>
     /// <param name="logger">Optional logger for retry messages</param>
     /// <returns>Sync result with retry information</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="syncService"/> or <paramref name="config"/> is null.</exception>
+    /// <exception cref="SyncFailedException">Thrown when all retry attempts fail.</exception>
     public static async Task<SyncService.SyncResult> ExecuteWithRetryAsync(
         this SyncService syncService,
         SyncConfig config,
@@ -250,6 +254,12 @@ public static class AdvancedUsageExtensions
         int retryDelayMs = 2000,
         ILogger? logger = null)
     {
+        ArgumentNullException.ThrowIfNull(syncService);
+        ArgumentNullException.ThrowIfNull(config);
+
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxRetries, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(retryDelayMs, 0);
+
         SyncService.SyncResult result = null!;
         int retryCount = 0;
         Exception? lastException = null;
@@ -292,8 +302,12 @@ public static class AdvancedUsageExtensions
     /// <summary>
     /// Determines if an exception represents a transient/retriable error.
     /// </summary>
+    /// <param name="ex">Exception to check</param>
+    /// <returns>True if the exception is transient; otherwise false.</returns>
     private static bool IsTransientError(Exception ex)
     {
+        ArgumentNullException.ThrowIfNull(ex);
+
         return ex is NotionApiException apiEx && apiEx.StatusCode >= 500
             || ex is TimeoutException
             || ex is OperationCanceledException
