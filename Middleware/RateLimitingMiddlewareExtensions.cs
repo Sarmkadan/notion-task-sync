@@ -3,11 +3,12 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 namespace NotionTaskSync.Middleware;
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
@@ -20,12 +21,16 @@ public static class RateLimitingMiddlewareExtensions
     /// Executes an operation with automatic retry when rate limit is exceeded.
     /// Retries with exponential backoff until successful or timeout occurs.
     /// </summary>
-    /// <param name="middleware">The rate limiting middleware instance</param>
-    /// <param name="operation">The operation to execute</param>
-    /// <param name="apiService">Name of the API service being called</param>
-    /// <param name="maxRetries">Maximum number of retry attempts (default: 3)</param>
-    /// <param name="timeoutSeconds">Maximum time to wait in seconds (default: 30)</param>
-    /// <returns>The result of the operation</returns>
+    /// <typeparam name="T">The type of result returned by the operation.</typeparam>
+    /// <param name="middleware">The rate limiting middleware instance.</param>
+    /// <param name="operation">The operation to execute.</param>
+    /// <param name="apiService">Name of the API service being called.</param>
+    /// <param name="maxRetries">Maximum number of retry attempts. Must be non-negative.</param>
+    /// <param name="timeoutSeconds">Maximum time to wait in seconds. Must be positive.</param>
+    /// <returns>The result of the operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="middleware"/> or <paramref name="operation"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="maxRetries"/> is negative or <paramref name="timeoutSeconds"/> is not positive.</exception>
+    /// <exception cref="RateLimitExceededException">Thrown when rate limit is exceeded after all retries.</exception>
     public static async Task<T> ExecuteWithRetryAsync<T>(
         this RateLimitingMiddleware middleware,
         Func<Task<T>> operation,
@@ -33,27 +38,21 @@ public static class RateLimitingMiddlewareExtensions
         int maxRetries = 3,
         int timeoutSeconds = 30)
     {
-        if (middleware == null)
-            throw new ArgumentNullException(nameof(middleware));
+        ArgumentNullException.ThrowIfNull(middleware);
+        ArgumentNullException.ThrowIfNull(operation);
 
-        if (operation == null)
-            throw new ArgumentNullException(nameof(operation));
+        ArgumentOutOfRangeException.ThrowIfNegative(maxRetries);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(timeoutSeconds, 0);
 
-        if (maxRetries < 0)
-            throw new ArgumentException("Max retries must be non-negative", nameof(maxRetries));
-
-        if (timeoutSeconds <= 0)
-            throw new ArgumentException("Timeout must be positive", nameof(timeoutSeconds));
-
-        var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
         var retryCount = 0;
-        var lastException = (Exception?)null;
+        Exception? lastException = null;
 
         while (!cancellationTokenSource.IsCancellationRequested)
         {
             try
             {
-                return await middleware.ExecuteWithRateLimitAsync(operation, apiService);
+                return await middleware.ExecuteWithRateLimitAsync(operation, apiService).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -63,9 +62,10 @@ public static class RateLimitingMiddlewareExtensions
                 if (retryCount >= maxRetries)
                     break;
 
-                // Exponential backoff: 1s, 2s, 4s, etc.
+                // Exponential backoff: 1s, 2s, 4s, etc. with jitter
                 var delayMs = Math.Min(1000 * (int)Math.Pow(2, retryCount - 1), 10000);
-                await Task.Delay(delayMs, cancellationTokenSource.Token);
+                var jitter = Random.Shared.Next(0, 200);
+                await Task.Delay(delayMs + jitter, cancellationTokenSource.Token).ConfigureAwait(false);
             }
         }
 
@@ -77,12 +77,16 @@ public static class RateLimitingMiddlewareExtensions
     /// <summary>
     /// Executes an operation with automatic retry when rate limit is exceeded (synchronous version).
     /// </summary>
-    /// <param name="middleware">The rate limiting middleware instance</param>
-    /// <param name="operation">The operation to execute</param>
-    /// <param name="apiService">Name of the API service being called</param>
-    /// <param name="maxRetries">Maximum number of retry attempts (default: 3)</param>
-    /// <param name="timeoutSeconds">Maximum time to wait in seconds (default: 30)</param>
-    /// <returns>The result of the operation</returns>
+    /// <typeparam name="T">The type of result returned by the operation.</typeparam>
+    /// <param name="middleware">The rate limiting middleware instance.</param>
+    /// <param name="operation">The operation to execute.</param>
+    /// <param name="apiService">Name of the API service being called.</param>
+    /// <param name="maxRetries">Maximum number of retry attempts. Must be non-negative.</param>
+    /// <param name="timeoutSeconds">Maximum time to wait in seconds. Must be positive.</param>
+    /// <returns>The result of the operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="middleware"/> or <paramref name="operation"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="maxRetries"/> is negative or <paramref name="timeoutSeconds"/> is not positive.</exception>
+    /// <exception cref="RateLimitExceededException">Thrown when rate limit is exceeded after all retries.</exception>
     public static T ExecuteWithRetry<T>(
         this RateLimitingMiddleware middleware,
         Func<T> operation,
@@ -90,21 +94,15 @@ public static class RateLimitingMiddlewareExtensions
         int maxRetries = 3,
         int timeoutSeconds = 30)
     {
-        if (middleware == null)
-            throw new ArgumentNullException(nameof(middleware));
+        ArgumentNullException.ThrowIfNull(middleware);
+        ArgumentNullException.ThrowIfNull(operation);
 
-        if (operation == null)
-            throw new ArgumentNullException(nameof(operation));
-
-        if (maxRetries < 0)
-            throw new ArgumentException("Max retries must be non-negative", nameof(maxRetries));
-
-        if (timeoutSeconds <= 0)
-            throw new ArgumentException("Timeout must be positive", nameof(timeoutSeconds));
+        ArgumentOutOfRangeException.ThrowIfNegative(maxRetries);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(timeoutSeconds, 0);
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var retryCount = 0;
-        var lastException = (Exception?)null;
+        Exception? lastException = null;
 
         while (stopwatch.Elapsed.TotalSeconds < timeoutSeconds)
         {
@@ -120,9 +118,10 @@ public static class RateLimitingMiddlewareExtensions
                 if (retryCount >= maxRetries)
                     break;
 
-                // Exponential backoff: 1s, 2s, 4s, etc.
+                // Exponential backoff: 1s, 2s, 4s, etc. with jitter
                 var delayMs = Math.Min(1000 * (int)Math.Pow(2, retryCount - 1), 10000);
-                System.Threading.Thread.Sleep(delayMs);
+                var jitter = Random.Shared.Next(0, 200);
+                Thread.Sleep(delayMs + jitter);
             }
         }
 
@@ -134,12 +133,12 @@ public static class RateLimitingMiddlewareExtensions
     /// <summary>
     /// Checks if the rate limit has been exceeded.
     /// </summary>
-    /// <param name="middleware">The rate limiting middleware instance</param>
-    /// <returns>True if rate limit has been exceeded; otherwise false</returns>
+    /// <param name="middleware">The rate limiting middleware instance.</param>
+    /// <returns>True if rate limit has been exceeded; otherwise false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="middleware"/> is <see langword="null"/>.</exception>
     public static bool IsRateLimitExceeded(this RateLimitingMiddleware middleware)
     {
-        if (middleware == null)
-            throw new ArgumentNullException(nameof(middleware));
+        ArgumentNullException.ThrowIfNull(middleware);
 
         var status = middleware.GetStatus();
         return status.RequestsUsed >= status.LimitPerMinute;
@@ -148,44 +147,40 @@ public static class RateLimitingMiddlewareExtensions
     /// <summary>
     /// Gets the estimated time remaining until the rate limit resets in seconds.
     /// </summary>
-    /// <param name="middleware">The rate limiting middleware instance</param>
-    /// <returns>Time remaining in seconds, or 0 if rate limit has not been exceeded</returns>
+    /// <param name="middleware">The rate limiting middleware instance.</param>
+    /// <returns>Time remaining in seconds, or 0 if rate limit has not been exceeded.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="middleware"/> is <see langword="null"/>.</exception>
     public static double GetTimeUntilReset(this RateLimitingMiddleware middleware)
     {
-        if (middleware == null)
-            throw new ArgumentNullException(nameof(middleware));
+        ArgumentNullException.ThrowIfNull(middleware);
 
         var status = middleware.GetStatus();
         var now = DateTime.UtcNow;
 
-        if (status.RequestsUsed >= status.LimitPerMinute && status.WindowResetAt > now)
-        {
-            return (status.WindowResetAt - now).TotalSeconds;
-        }
-
-        return 0;
+        return status.RequestsUsed >= status.LimitPerMinute && status.WindowResetAt > now
+            ? (status.WindowResetAt - now).TotalSeconds
+            : 0;
     }
 
     /// <summary>
     /// Executes an operation only if the rate limit has not been exceeded.
     /// Returns a boolean indicating whether the operation was executed.
     /// </summary>
-    /// <param name="middleware">The rate limiting middleware instance</param>
-    /// <param name="operation">The operation to execute</param>
-    /// <param name="result">The result of the operation if executed</param>
-    /// <param name="apiService">Name of the API service being called</param>
-    /// <returns>True if operation was executed; false if rate limit was exceeded</returns>
+    /// <typeparam name="T">The type of result returned by the operation.</typeparam>
+    /// <param name="middleware">The rate limiting middleware instance.</param>
+    /// <param name="operation">The operation to execute.</param>
+    /// <param name="result">The result of the operation if executed.</param>
+    /// <param name="apiService">Name of the API service being called.</param>
+    /// <returns>True if operation was executed; false if rate limit was exceeded.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="middleware"/> or <paramref name="operation"/> is <see langword="null"/>.</exception>
     public static bool TryExecuteWithRateLimit<T>(
         this RateLimitingMiddleware middleware,
         Func<T> operation,
         out T result,
         string apiService = "Unknown")
     {
-        if (middleware == null)
-            throw new ArgumentNullException(nameof(middleware));
-
-        if (operation == null)
-            throw new ArgumentNullException(nameof(operation));
+        ArgumentNullException.ThrowIfNull(middleware);
+        ArgumentNullException.ThrowIfNull(operation);
 
         if (middleware.IsRateLimitExceeded())
         {
@@ -201,8 +196,13 @@ public static class RateLimitingMiddlewareExtensions
 /// <summary>
 /// Exception thrown when rate limit is exceeded after retries.
 /// </summary>
-public class RateLimitExceededException : Exception
+public sealed class RateLimitExceededException : Exception
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RateLimitExceededException"/> class.
+    /// </summary>
+    /// <param name="message">The error message.</param>
+    /// <param name="innerException">The inner exception.</param>
     public RateLimitExceededException(string message, Exception? innerException = null)
         : base(message, innerException) { }
 }
