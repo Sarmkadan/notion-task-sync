@@ -10,7 +10,6 @@ namespace NotionTaskSync.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using NotionTaskSync.Domain.Enums;
 
 /// <summary>
@@ -24,8 +23,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="result">The sync result instance.</param>
     /// <returns>True if the sync completed successfully; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> is <see langword="null"/>.</exception>
     public static bool IsSuccessful(this SyncService.SyncResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
         return result.Status == SyncStatus.Completed && result.ErrorMessage is null;
     }
 
@@ -34,8 +35,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="result">The sync result instance.</param>
     /// <returns>The time span representing the sync duration, or null if not completed.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> is <see langword="null"/>.</exception>
     public static TimeSpan? GetDuration(this SyncService.SyncResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
         return result.Duration;
     }
 
@@ -44,8 +47,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="result">The sync result instance.</param>
     /// <returns>The total number of changes detected (local + Notion).</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> is <see langword="null"/>.</exception>
     public static int GetTotalChangesDetected(this SyncService.SyncResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
         return result.LocalChangesDetected + result.NotionChangesDetected;
     }
 
@@ -54,8 +59,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="result">The sync result instance.</param>
     /// <returns>A formatted string containing key sync statistics.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> is <see langword="null"/>.</exception>
     public static string GetSummary(this SyncService.SyncResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
         var durationSec = result.Duration.HasValue ? result.Duration.Value.TotalSeconds.ToString("F1") : "?";
 
         return $"Sync completed: {result.Created} created, {result.Updated} updated, {result.Deleted} deleted, " +
@@ -67,8 +74,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="result">The sync result instance.</param>
     /// <returns>True if conflicts are pending review; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> is <see langword="null"/>.</exception>
     public static bool HasPendingConflicts(this SyncService.SyncResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
         return result.ConflictsPendingReview > 0;
     }
 
@@ -77,8 +86,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="result">The sync result instance.</param>
     /// <returns>A percentage value (0-100) representing sync completion, or 0 if no changes detected.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> is <see langword="null"/>.</exception>
     public static int GetCompletionPercentage(this SyncService.SyncResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
         var totalChanges = result.GetTotalChangesDetected();
 
         if (totalChanges == 0)
@@ -99,8 +110,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="result">The sync result instance.</param>
     /// <returns>The error message if sync failed; otherwise, null.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> is <see langword="null"/>.</exception>
     public static string? GetErrorMessage(this SyncService.SyncResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
         return result.Status == SyncStatus.Failed ? result.ErrorMessage : null;
     }
 
@@ -110,8 +123,12 @@ public static class SyncServiceExtensions
     /// <param name="result">The sync result instance.</param>
     /// <param name="threshold">The minimum number of changes to consider as significant (default: 10).</param>
     /// <returns>True if changes exceed the threshold; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="threshold"/> is negative.</exception>
     public static bool HasSignificantChanges(this SyncService.SyncResult result, int threshold = 10)
     {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentOutOfRangeException.ThrowIfNegative(threshold);
         return result.GetTotalChangesDetected() >= threshold;
     }
 
@@ -120,8 +137,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="result">The sync result instance.</param>
     /// <returns>A formatted string containing detailed sync statistics.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> is <see langword="null"/>.</exception>
     public static string GetDetailedSummary(this SyncService.SyncResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
         var durationText = result.Duration.HasValue ? $"{result.Duration.Value.TotalSeconds:F1}s" : "pending";
 
         return $"Sync Summary [Config: {result.ConfigId}]\n" +
@@ -140,8 +159,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="results">The list of sync results.</param>
     /// <returns>A filtered list containing only successful sync results.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="results"/> is <see langword="null"/>.</exception>
     public static IEnumerable<SyncService.SyncResult> WhereSuccessful(this IEnumerable<SyncService.SyncResult> results)
     {
+        ArgumentNullException.ThrowIfNull(results);
         return results.Where(r => r.IsSuccessful());
     }
 
@@ -150,8 +171,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="results">The list of sync results.</param>
     /// <returns>A filtered list containing only failed sync results.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="results"/> is <see langword="null"/>.</exception>
     public static IEnumerable<SyncService.SyncResult> WhereFailed(this IEnumerable<SyncService.SyncResult> results)
     {
+        ArgumentNullException.ThrowIfNull(results);
         return results.Where(r => r.Status == SyncStatus.Failed);
     }
 
@@ -160,8 +183,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="results">The list of sync results.</param>
     /// <returns>An ordered list of sync results.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="results"/> is <see langword="null"/>.</exception>
     public static IOrderedEnumerable<SyncService.SyncResult> OrderByCompletion(this IEnumerable<SyncService.SyncResult> results)
     {
+        ArgumentNullException.ThrowIfNull(results);
         return results.OrderByDescending(r => r.CompletedAt ?? r.StartedAt);
     }
 
@@ -170,8 +195,10 @@ public static class SyncServiceExtensions
     /// </summary>
     /// <param name="results">The list of sync results.</param>
     /// <returns>The most recent sync result, or null if the collection is empty.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="results"/> is <see langword="null"/>.</exception>
     public static SyncService.SyncResult? GetMostRecent(this IEnumerable<SyncService.SyncResult> results)
     {
+        ArgumentNullException.ThrowIfNull(results);
         return results.OrderByCompletion().FirstOrDefault();
     }
 }
