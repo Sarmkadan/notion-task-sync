@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
-/// Extension methods for TaskRepository providing additional convenience operations.
+/// Extension methods for <see cref="TaskRepository"/> providing additional convenience operations for querying tasks.
 /// </summary>
 public static class TaskRepositoryExtensions
 {
@@ -20,22 +20,21 @@ public static class TaskRepositoryExtensions
     /// Gets all tasks that are due within a specified time window.
     /// </summary>
     /// <param name="repository">The task repository.</param>
-    /// <param name="fromDate">The start date of the window.</param>
-    /// <param name="toDate">The end date of the window.</param>
+    /// <param name="fromDate">The start date of the window (inclusive).</param>
+    /// <param name="toDate">The end date of the window (inclusive).</param>
     /// <returns>A list of tasks due within the specified window.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is <see langword="null"/>.</exception>
     public static async Task<List<Task>> GetDueWithinAsync(this TaskRepository repository, DateTime fromDate, DateTime toDate)
     {
-        if (repository is null)
-            throw new ArgumentNullException(nameof(repository));
+        ArgumentNullException.ThrowIfNull(repository);
 
-        return await System.Threading.Tasks.Task.FromResult(
-            (await repository.GetAllAsync())
-                .Where(t =>
-                    t.DueDate.HasValue &&
-                    t.DueDate.Value >= fromDate &&
-                    t.DueDate.Value <= toDate &&
-                    t.Status != TaskStatus.Done)
-                .ToList());
+        var allTasks = await repository.GetAllAsync();
+        return allTasks
+            .Where(t => t.DueDate.HasValue
+                && t.DueDate.Value >= fromDate
+                && t.DueDate.Value <= toDate
+                && t.Status != TaskStatus.Done)
+            .ToList();
     }
 
     /// <summary>
@@ -45,21 +44,19 @@ public static class TaskRepositoryExtensions
     /// <param name="assignee">The user to filter by.</param>
     /// <param name="currentDate">The current date for overdue calculation.</param>
     /// <returns>A list of overdue tasks for the specified assignee.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="assignee"/> is <see langword="null"/>, empty, or consists only of whitespace.</exception>
     public static async Task<List<Task>> GetAssignedOverdueAsync(this TaskRepository repository, string assignee, DateTime currentDate)
     {
-        if (repository is null)
-            throw new ArgumentNullException(nameof(repository));
+        ArgumentNullException.ThrowIfNull(repository);
+        ArgumentException.ThrowIfNullOrWhiteSpace(assignee);
 
-        if (string.IsNullOrEmpty(assignee))
-            return new List<Task>();
-
-        return await System.Threading.Tasks.Task.FromResult(
-            (await repository.GetAssignedToAsync(assignee))
-                .Where(t =>
-                    t.DueDate.HasValue &&
-                    t.DueDate.Value < currentDate &&
-                    t.Status != TaskStatus.Done)
-                .ToList());
+        var assignedTasks = await repository.GetAssignedToAsync(assignee);
+        return assignedTasks
+            .Where(t => t.DueDate.HasValue
+                && t.DueDate.Value < currentDate
+                && t.Status != TaskStatus.Done)
+            .ToList();
     }
 
     /// <summary>
@@ -68,37 +65,38 @@ public static class TaskRepositoryExtensions
     /// <param name="repository">The task repository.</param>
     /// <param name="priority">The priority level to filter by (0-100).</param>
     /// <returns>A list of tasks with the specified priority.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="priority"/> is not between 0 and 100.</exception>
     public static async Task<List<Task>> GetByPriorityAsync(this TaskRepository repository, int priority)
     {
-        if (repository is null)
-            throw new ArgumentNullException(nameof(repository));
+        ArgumentNullException.ThrowIfNull(repository);
 
-        if (priority < 0 || priority > 100)
-            throw new ArgumentOutOfRangeException(nameof(priority), "Priority must be between 0 and 100");
+        if (priority is < 0 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(nameof(priority), priority, "Priority must be between 0 and 100");
+        }
 
-        return await System.Threading.Tasks.Task.FromResult(
-            (await repository.GetAllAsync())
-                .Where(t => t.Priority == priority)
-                .ToList());
+        var allTasks = await repository.GetAllAsync();
+        return allTasks
+            .Where(t => t.Priority == priority)
+            .ToList();
     }
 
     /// <summary>
-    /// Gets all tasks that match multiple criteria using a predicate builder pattern.
+    /// Gets all tasks that match the specified predicate.
     /// </summary>
     /// <param name="repository">The task repository.</param>
     /// <param name="predicate">The predicate to filter tasks.</param>
     /// <returns>A list of tasks matching the predicate criteria.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> or <paramref name="predicate"/> is <see langword="null"/>.</exception>
     public static async Task<List<Task>> GetWhereAsync(this TaskRepository repository, Func<Task, bool> predicate)
     {
-        if (repository is null)
-            throw new ArgumentNullException(nameof(repository));
+        ArgumentNullException.ThrowIfNull(repository);
+        ArgumentNullException.ThrowIfNull(predicate);
 
-        if (predicate is null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        return await System.Threading.Tasks.Task.FromResult(
-            (await repository.GetAllAsync())
-                .Where(predicate)
-                .ToList());
+        var allTasks = await repository.GetAllAsync();
+        return allTasks
+            .Where(predicate)
+            .ToList();
     }
 }
