@@ -18,39 +18,32 @@ using System.Text.RegularExpressions;
 public static class StringExtensions
 {
     /// <summary>
-    /// Determines if a string is null, empty, or contains only whitespace.
-    /// Preferred over string.IsNullOrWhiteSpace for fluent syntax.
-    /// </summary>
-    public static bool IsNullOrEmpty(this string? str)
-    {
-        return string.IsNullOrWhiteSpace(str);
-    }
-
-    /// <summary>
-    /// Determines if a string has meaningful content (not null, empty, or whitespace).
-    /// Logical opposite of IsNullOrEmpty for better readability.
-    /// </summary>
-    public static bool HasContent(this string? str)
-    {
-        return !string.IsNullOrWhiteSpace(str);
-    }
-
-    /// <summary>
     /// Truncates a string to a maximum length with optional ellipsis suffix.
     /// Used for displaying long titles or descriptions in truncated form.
     /// </summary>
+    /// <param name="str">The string to truncate.</param>
+    /// <param name="maxLength">The maximum length of the resulting string.</param>
+    /// <param name="suffix">The suffix to append when truncating. Defaults to "...".</param>
+    /// <returns>The truncated string, or the original string if it's shorter than maxLength.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="str"/> is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxLength"/> is less than 0.</exception>
     public static string Truncate(this string str, int maxLength, string suffix = "...")
     {
-        if (str is null || str.Length <= maxLength)
+        ArgumentNullException.ThrowIfNull(str);
+        ArgumentOutOfRangeException.ThrowIfNegative(maxLength);
+
+        if (str.Length <= maxLength)
             return str;
 
-        return str.Substring(0, maxLength - suffix.Length) + suffix;
+        return str[..Math.Min(maxLength, str.Length - suffix.Length)] + suffix;
     }
 
     /// <summary>
     /// Sanitizes a string by removing or replacing invalid filesystem characters.
     /// Critical for converting task titles to valid file names.
     /// </summary>
+    /// <param name="str">The string to sanitize.</param>
+    /// <returns>A sanitized filename-safe string. Returns "untitled" if input is null or whitespace.</returns>
     public static string SanitizeForFilename(this string str)
     {
         if (string.IsNullOrWhiteSpace(str))
@@ -76,6 +69,8 @@ public static class StringExtensions
     /// Validates if a string is a valid email address format.
     /// Used for assignee validation in sync operations.
     /// </summary>
+    /// <param name="str">The string to validate.</param>
+    /// <returns>True if the string is a valid email address; otherwise, false.</returns>
     public static bool IsValidEmail(this string str)
     {
         if (string.IsNullOrWhiteSpace(str))
@@ -96,6 +91,8 @@ public static class StringExtensions
     /// Validates if a string matches a UUID/GUID format.
     /// Used to verify Notion page IDs and other database identifiers.
     /// </summary>
+    /// <param name="str">The string to validate.</param>
+    /// <returns>True if the string is a valid GUID/UUID; otherwise, false.</returns>
     public static bool IsValidGuid(this string str)
     {
         return Guid.TryParse(str, out _);
@@ -105,19 +102,26 @@ public static class StringExtensions
     /// Converts a string to PascalCase (first letter uppercase, word boundaries at capitals).
     /// Useful for converting API responses to proper naming conventions.
     /// </summary>
+    /// <param name="str">The string to convert.</param>
+    /// <returns>The PascalCase string, or the original string if conversion is not possible.</returns>
     public static string ToPascalCase(this string str)
     {
         if (string.IsNullOrWhiteSpace(str))
             return str;
 
-        var words = str.Split(' ', '-', '_');
-        return string.Concat(words.Select(w => char.ToUpper(w[0]) + w.Substring(1).ToLower()));
+        var words = str.Split(new[] {' ', '-', '_'}, StringSplitOptions.RemoveEmptyEntries);
+        return string.Concat(words.Select(w =>
+            w.Length > 0
+                ? char.ToUpperInvariant(w[0]) + w[1..].ToLowerInvariant()
+                : string.Empty));
     }
 
     /// <summary>
     /// Converts a string to snake_case (lowercase with underscores).
     /// Standard format for configuration keys and database field names.
     /// </summary>
+    /// <param name="str">The string to convert.</param>
+    /// <returns>The snake_case string, or the original string if it's null or whitespace.</returns>
     public static string ToSnakeCase(this string str)
     {
         if (string.IsNullOrWhiteSpace(str))
@@ -135,36 +139,45 @@ public static class StringExtensions
     /// Extracts the portion of a string after the last occurrence of a delimiter.
     /// Useful for path manipulation and extracting file names from full paths.
     /// </summary>
+    /// <param name="str">The source string.</param>
+    /// <param name="delimiter">The delimiter to search for.</param>
+    /// <returns>The substring after the last delimiter, or the original string if delimiter is not found.</returns>
     public static string AfterLast(this string str, string delimiter)
     {
-        if (string.IsNullOrEmpty(str) || string.IsNullOrEmpty(delimiter))
-            return str;
+        ArgumentNullException.ThrowIfNull(str);
+        ArgumentNullException.ThrowIfNull(delimiter);
 
-        var index = str.LastIndexOf(delimiter);
-        return index >= 0 ? str.Substring(index + delimiter.Length) : str;
+        var index = str.LastIndexOf(delimiter, StringComparison.Ordinal);
+        return index >= 0 ? str[(index + delimiter.Length)..] : str;
     }
 
     /// <summary>
     /// Extracts the portion of a string before the last occurrence of a delimiter.
     /// Complements AfterLast for splitting strings at boundaries.
     /// </summary>
+    /// <param name="str">The source string.</param>
+    /// <param name="delimiter">The delimiter to search for.</param>
+    /// <returns>The substring before the last delimiter, or the original string if delimiter is not found.</returns>
     public static string BeforeLast(this string str, string delimiter)
     {
-        if (string.IsNullOrEmpty(str) || string.IsNullOrEmpty(delimiter))
-            return str;
+        ArgumentNullException.ThrowIfNull(str);
+        ArgumentNullException.ThrowIfNull(delimiter);
 
-        var index = str.LastIndexOf(delimiter);
-        return index >= 0 ? str.Substring(0, index) : str;
+        var index = str.LastIndexOf(delimiter, StringComparison.Ordinal);
+        return index >= 0 ? str[..index] : str;
     }
 
     /// <summary>
     /// Determines if a string contains another string case-insensitively.
     /// More explicit than Contains(StringComparison.OrdinalIgnoreCase).
     /// </summary>
+    /// <param name="str">The source string.</param>
+    /// <param name="value">The value to search for.</param>
+    /// <returns>True if the value is found case-insensitively; otherwise, false.</returns>
     public static bool ContainsIgnoreCase(this string str, string value)
     {
-        if (string.IsNullOrEmpty(str) || string.IsNullOrEmpty(value))
-            return false;
+        ArgumentNullException.ThrowIfNull(str);
+        ArgumentNullException.ThrowIfNull(value);
 
         return str.Contains(value, StringComparison.OrdinalIgnoreCase);
     }
@@ -173,6 +186,8 @@ public static class StringExtensions
     /// Normalizes line endings to a consistent format (Unix style \n).
     /// Prevents line-ending-based change detection false positives.
     /// </summary>
+    /// <param name="str">The string with potentially mixed line endings.</param>
+    /// <returns>A string with normalized line endings, or the original string if it's null or empty.</returns>
     public static string NormalizeLineEndings(this string str)
     {
         if (string.IsNullOrEmpty(str))
@@ -185,6 +200,8 @@ public static class StringExtensions
     /// Generates a slug from a string suitable for URLs or identifiers.
     /// Combines lowercasing, removing special characters, and replacing spaces with hyphens.
     /// </summary>
+    /// <param name="str">The string to convert to a slug.</param>
+    /// <returns>A URL-safe slug string. Returns "untitled" if input is null or whitespace.</returns>
     public static string ToSlug(this string str)
     {
         if (string.IsNullOrWhiteSpace(str))
