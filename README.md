@@ -619,6 +619,54 @@ dotnet run -- history \
   --since "2024-01-01"
 ```
 
+## NotionApiSettingsExtensions
+
+The `NotionApiSettingsExtensions` class provides utility extension methods for `NotionApiSettings` that simplify common configuration checks and transformations. These methods help ensure consistent API behavior across different parts of the application by normalizing URLs, validating configuration, and applying sensible defaults.
+
+### Usage Examples
+
+```csharp
+// Configure Notion API settings
+var settings = new NotionApiSettings
+{
+    ApiKey = "secret_xxxxxxxxxxxxxxxx",
+    DatabaseId = "12345678-abcd-efgh-ijkl-mnopqrstuvwx",
+    BaseUrl = "https://api.notion.com/v1",
+    ApiVersion = "2022-06-28",
+    RespectRateLimits = true,
+    DefaultPageSize = 100,
+    MaxPageSize = 100
+};
+
+// Validate API key
+if (!settings.HasValidApiKey())
+{
+    Console.WriteLine("Notion API key is not configured!");
+    return;
+}
+
+// Get normalized base URL (ensures trailing slash)
+var baseUrl = settings.GetNormalizedBaseUrl();
+Console.WriteLine($"API base URL: {baseUrl}");
+// Output: API base URL: https://api.notion.com/v1/
+
+// Get effective API version with fallback
+var apiVersion = settings.GetEffectiveApiVersion();
+Console.WriteLine($"Using API version: {apiVersion}");
+// Output: Using API version: 2022-06-28
+
+// Check if rate limiting should be respected
+if (settings.ShouldRespectRateLimits())
+{
+    Console.WriteLine("Rate limiting is enabled");
+}
+
+// Get effective page size (bounded by max)
+var pageSize = settings.GetEffectivePageSize();
+Console.WriteLine($"Effective page size: {pageSize}");
+// Output: Effective page size: 100
+```
+
 ## Configuration
 
 ### appsettings.json Structure
