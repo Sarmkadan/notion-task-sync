@@ -33,4 +33,51 @@ NotionApiServiceTestsExtensions.SetupThrows(httpClient, "some-endpoint", new Exc
 
 These extensions can significantly simplify testing of Notion API interactions by providing a controlled environment for simulating API responses.
 
+## HttpClientFactoryExtensions
+
+`HttpClientFactoryExtensions` offers a collection of helper methods for creating `HttpClient` instances that are pre‑configured for common scenarios such as JSON APIs, authenticated requests, custom headers, and Notion‑specific versioning. It also includes async convenience methods for sending GET and POST requests that automatically handle JSON payloads and response strings.
+
+### Usage Example
+
+```csharp
+using Integration;
+
+// Create a client that automatically sends JSON and includes an API key header
+var client = HttpClientFactoryExtensions.CreateAuthenticatedJsonApiClient(
+    baseAddress: new Uri("https://api.example.com/"),
+    apiKey: "my-secret-key");
+
+// Perform a simple GET request and read the response as a string
+string getResult = await HttpClientFactoryExtensions.GetStringAsync(
+    client,
+    "/v1/items");
+
+// Post a JSON payload and obtain the response string
+var payload = new { Name = "New Item", Quantity = 5 };
+string postResult = await HttpClientFactoryExtensions.PostJsonAsync(
+    client,
+    "/v1/items",
+    payload);
+
+// If you need a client with custom headers only
+var customClient = HttpClientFactoryExtensions.CreateCustomHeadersClient(
+    baseAddress: new Uri("https://api.custom.com/"),
+    headers: new Dictionary<string, string>
+    {
+        { "X-Custom-Header", "value" },
+        { "User-Agent", "TaskFactory/1.0" }
+    });
+
+// For Notion API calls that require a specific Notion version header
+var notionClient = HttpClientFactoryExtensions.CreateNotionClientWithVersion(
+    baseAddress: new Uri("https://api.notion.com/v1/"),
+    notionVersion: "2022-06-28");
+
+// Or a plain JSON API client without authentication
+var jsonClient = HttpClientFactoryExtensions.CreateJsonApiClient(
+    baseAddress: new Uri("https://public-api.example.com/"));
+```
+
+These extensions reduce boilerplate when configuring `HttpClient` instances and make async HTTP interactions concise and type‑safe.
+
 // ... existing content ...
