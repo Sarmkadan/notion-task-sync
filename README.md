@@ -29,5 +29,53 @@ class Program
         Console.WriteLine($"Conflict Strategy: {conflictStrategy}");
     }
 }
+```
+
+## TaskPropertyExtensions
+
+`TaskPropertyExtensions` provides a collection of helper methods for working with `TaskProperty` objects. It enables safe retrieval of strongly‑typed values, comparison of property values, cloning of properties, and formatting of property values for display.
+
+### Usage Example
+
+```csharp
+using System;
+using Domain.Models;   // Adjust the namespace if necessary
+
+class Program
+{
+    static void Main()
+    {
+        // Assume we have a TaskProperty instance (populated elsewhere)
+        TaskProperty original = new TaskProperty
+        {
+            // Property initialization here
+        };
+
+        // Retrieve a strongly‑typed value (e.g., int) from the property
+        int? intValue = TaskPropertyExtensions.GetTypedValueInvariant<int>(original);
+
+        // Safely update the property's value; returns true if the update succeeded
+        bool wasUpdated = TaskPropertyExtensions.SafeUpdateValue(original, "New Value");
+
+        // Compare the original property with another instance
+        TaskProperty other = new TaskProperty
+        {
+            // Property initialization here
+        };
+        bool areEqual = TaskPropertyExtensions.ValueEquals(original, other);
+
+        // Create a deep copy of the property
+        TaskProperty clone = TaskPropertyExtensions.Clone(original);
+
+        // Get a human‑readable formatted representation of the property's value
+        string formatted = TaskPropertyExtensions.GetFormattedValue(original);
+
+        Console.WriteLine($"Typed int value: {intValue}");
+        Console.WriteLine($"Was updated: {wasUpdated}");
+        Console.WriteLine($"Properties equal: {areEqual}");
+        Console.WriteLine($"Formatted value: {formatted}");
+    }
+}
+```
 
 // ... existing content ...
