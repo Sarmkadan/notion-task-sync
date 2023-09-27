@@ -45,6 +45,19 @@ class Program
         }
     }
 }
+
+## RateLimitingMiddlewareExtensions
+
+The `RateLimitingMiddlewareExtensions` class provides utilities for handling rate limiting in task synchronization workflows. It includes methods to execute actions with retry logic, check if the rate limit has been exceeded, and get the time until the rate limit resets. 
+
+Here's an example of how to use `RateLimitingMiddlewareExtensions` to execute an action with retry logic:
+```csharp
+var result = await RateLimitingMiddlewareExtensions.ExecuteWithRetryAsync<string>(() => 
+{
+    // Code to execute with retry logic
+    return "Success";
+});
+Console.WriteLine(result);
 ```
 
 // ... existing content ...
