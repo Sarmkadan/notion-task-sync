@@ -1,40 +1,48 @@
 // ... existing content ...
 
-## TaskExtensions
+## AdvancedUsageExtensions
 
-The `TaskExtensions` class provides utility methods for evaluating task status, priority, and tags. It includes methods to check if a task is overdue, determine priority levels, and inspect tags.
+The `AdvancedUsageExtensions` class provides advanced utilities for validating, optimizing, and analyzing task synchronization workflows. It includes methods to validate configuration, optimize sync settings, execute syncs with retry logic, and analyze performance metrics.
 
 ### Usage Example
 
 ```csharp
 using Domain.Models;
+using SyncService;
 
 class Program
 {
-    static void Main()
+    static async Task Main()
     {
-        // Assume we have a Task instance (populated elsewhere)
-        Task task = new Task
+        // Validate and optimize sync configuration
+        var config = new SyncConfig();
+        var validationReport = AdvancedUsageExtensions.ValidateConfiguration(config);
+
+        if (validationReport.IsValid)
         {
-            // Task initialization here
-        };
+            var optimizedConfig = AdvancedUsageExtensions.CreateOptimizedConfiguration(config);
 
-        // Check task status
-        bool isOverdue = TaskExtensions.IsOverdue(task);
-        bool isHighPriority = TaskExtensions.IsHighPriority(task);
-        bool isBlocked = TaskExtensions.IsBlocked(task);
+            // Execute sync with retry logic
+            var result = await AdvancedUsageExtensions.ExecuteWithRetryAsync(optimizedConfig);
 
-        // Get priority level and age
-        string priorityLevel = TaskExtensions.GetPriorityLevel(task);
-        int ageInDays = TaskExtensions.GetAgeInDays(task);
+            // Analyze results
+            var analysis = AdvancedUsageExtensions.AnalyzeResults(result);
 
-        // Check tags
-        bool hasUrgentTag = TaskExtensions.HasTag(task, "urgent");
-        IEnumerable<string> tags = TaskExtensions.GetTagList(task);
-
-        Console.WriteLine($"Is Overdue: {isOverdue}");
-        Console.WriteLine($"Priority Level: {priorityLevel}");
-        Console.WriteLine($"Has 'urgent' tag: {hasUrgentTag}");
+            // Output key metrics
+            Console.WriteLine($"Total Tasks: {analysis.TotalTasks}");
+            Console.WriteLine($"Synced Tasks: {analysis.SyncedTasks}");
+            Console.WriteLine($"Conflicts: {analysis.Conflicts}");
+            Console.WriteLine($"Success Rate: {analysis.SuccessRate:P}");
+            Console.WriteLine($"Efficiency: {analysis.EfficiencyRating}");
+        }
+        else
+        {
+            Console.WriteLine("Configuration issues found:");
+            foreach (var issue in validationReport.Issues)
+            {
+                Console.WriteLine($"- {issue}");
+            }
+        }
     }
 }
 ```
