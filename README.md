@@ -1,79 +1,40 @@
 // ... existing content ...
 
-## ConfigureCommandExtensions
+## TaskExtensions
 
-The `ConfigureCommandExtensions` class provides a set of utility methods for validating and retrieving configuration settings. These extensions facilitate easy access to configuration values such as API keys, database IDs, and sync intervals.
-
-### Usage Example
-
-```csharp
-using Commands;
-
-class Program
-{
-    static void Main(string[] args)
-    {
-        // Validate configuration file
-        bool isValid = ConfigureCommandExtensions.ValidateConfigurationFile;
-
-        // Get configuration values
-        string? apiKey = ConfigureCommandExtensions.GetApiKey;
-        string? databaseId = ConfigureCommandExtensions.GetDatabaseId;
-        int syncIntervalSeconds = ConfigureCommandExtensions.GetSyncIntervalSeconds;
-        string conflictStrategy = ConfigureCommandExtensions.GetConflictStrategy;
-
-        Console.WriteLine($"Is configuration valid: {isValid}");
-        Console.WriteLine($"API Key: {apiKey}");
-        Console.WriteLine($"Database ID: {databaseId}");
-        Console.WriteLine($"Sync Interval (seconds): {syncIntervalSeconds}");
-        Console.WriteLine($"Conflict Strategy: {conflictStrategy}");
-    }
-}
-```
-
-## TaskPropertyExtensions
-
-`TaskPropertyExtensions` provides a collection of helper methods for working with `TaskProperty` objects. It enables safe retrieval of strongly‑typed values, comparison of property values, cloning of properties, and formatting of property values for display.
+The `TaskExtensions` class provides utility methods for evaluating task status, priority, and tags. It includes methods to check if a task is overdue, determine priority levels, and inspect tags.
 
 ### Usage Example
 
 ```csharp
-using System;
-using Domain.Models;   // Adjust the namespace if necessary
+using Domain.Models;
 
 class Program
 {
     static void Main()
     {
-        // Assume we have a TaskProperty instance (populated elsewhere)
-        TaskProperty original = new TaskProperty
+        // Assume we have a Task instance (populated elsewhere)
+        Task task = new Task
         {
-            // Property initialization here
+            // Task initialization here
         };
 
-        // Retrieve a strongly‑typed value (e.g., int) from the property
-        int? intValue = TaskPropertyExtensions.GetTypedValueInvariant<int>(original);
+        // Check task status
+        bool isOverdue = TaskExtensions.IsOverdue(task);
+        bool isHighPriority = TaskExtensions.IsHighPriority(task);
+        bool isBlocked = TaskExtensions.IsBlocked(task);
 
-        // Safely update the property's value; returns true if the update succeeded
-        bool wasUpdated = TaskPropertyExtensions.SafeUpdateValue(original, "New Value");
+        // Get priority level and age
+        string priorityLevel = TaskExtensions.GetPriorityLevel(task);
+        int ageInDays = TaskExtensions.GetAgeInDays(task);
 
-        // Compare the original property with another instance
-        TaskProperty other = new TaskProperty
-        {
-            // Property initialization here
-        };
-        bool areEqual = TaskPropertyExtensions.ValueEquals(original, other);
+        // Check tags
+        bool hasUrgentTag = TaskExtensions.HasTag(task, "urgent");
+        IEnumerable<string> tags = TaskExtensions.GetTagList(task);
 
-        // Create a deep copy of the property
-        TaskProperty clone = TaskPropertyExtensions.Clone(original);
-
-        // Get a human‑readable formatted representation of the property's value
-        string formatted = TaskPropertyExtensions.GetFormattedValue(original);
-
-        Console.WriteLine($"Typed int value: {intValue}");
-        Console.WriteLine($"Was updated: {wasUpdated}");
-        Console.WriteLine($"Properties equal: {areEqual}");
-        Console.WriteLine($"Formatted value: {formatted}");
+        Console.WriteLine($"Is Overdue: {isOverdue}");
+        Console.WriteLine($"Priority Level: {priorityLevel}");
+        Console.WriteLine($"Has 'urgent' tag: {hasUrgentTag}");
     }
 }
 ```
