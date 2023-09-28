@@ -104,3 +104,48 @@ class Program
     }
 }
 ```
+
+## BackupServiceExtensions
+
+The `BackupServiceExtensions` class provides utilities for managing backup operations, including creating daily backups, querying backup metadata, and retrieving backups by various criteria like labels, age, and file count.
+
+### Usage Example
+
+```csharp
+using Services;
+
+class Program
+{
+    static async Task Main()
+    {
+        var backupService = new BackupService();
+        
+        // Create daily backup
+        var dailyBackup = await BackupServiceExtensions.CreateDailyBackupAsync(backupService);
+        Console.WriteLine($"Created backup with ID: {dailyBackup.Id}");
+        
+        // Check for existing backups
+        if (BackupServiceExtensions.HasBackupWithLabel("critical"))
+        {
+            var latestBackup = BackupServiceExtensions.GetLatestBackup();
+            Console.WriteLine($"Latest backup has {latestBackup.GetTotalFileCount()} files");
+            Console.WriteLine($"Total backup age: {BackupServiceExtensions.GetTotalAge().TotalDays:F1} days");
+        }
+
+        // Find backups by label pattern
+        var patternBackups = BackupServiceExtensions.GetBackupsByLabelPattern("daily-2024");
+        Console.WriteLine($"Found {patternBackups.Count} backups matching pattern");
+        
+        // Get backups sorted by age
+        var sortedBackups = BackupServiceExtensions.GetBackupsByAgeAscending();
+        Console.WriteLine($"\nOldest backup: {sortedBackups.First().CreationTime}");
+        
+        // Get backups in date range
+        var rangeBackups = BackupServiceExtensions.GetBackupsInRange(
+            DateTime.Now.AddDays(-7), 
+            DateTime.Now
+        );
+        Console.WriteLine($"Found {rangeBackups.Count} backups in last 7 days");
+    }
+}
+```
