@@ -10,8 +10,15 @@ using NotionTaskSync.Utils;
 using FluentAssertions;
 using Xunit;
 
+/// <summary>
+/// Tests for the string extension methods defined in <see cref="NotionTaskSync.Utils.StringExtensions"/>.
+/// </summary>
 public class StringExtensionsTests
 {
+    /// <summary>
+    /// Verifies that <see cref="StringExtensions.Truncate(string,int)"/> truncates a string longer than the specified maximum length
+    /// and appends the default suffix ("...") to produce a string of the exact maximum length.
+    /// </summary>
     [Fact]
     public void Truncate_StringLongerThanMaxLength_ReturnsTruncatedWithDefaultSuffix()
     {
@@ -26,6 +33,10 @@ public class StringExtensionsTests
         result.Length.Should().Be(8);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="StringExtensions.SanitizeForFilename(string)"/> returns the string "untitled"
+    /// when the input is an empty string.
+    /// </summary>
     [Fact]
     public void SanitizeForFilename_EmptyString_ReturnsUntitled()
     {
@@ -39,6 +50,10 @@ public class StringExtensionsTests
         result.Should().Be("untitled");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="StringExtensions.SanitizeForFilename(string)"/> replaces spaces with underscores
+    /// while preserving other characters.
+    /// </summary>
     [Fact]
     public void SanitizeForFilename_StringWithSpaces_ReplacesSpacesWithUnderscores()
     {
@@ -53,6 +68,10 @@ public class StringExtensionsTests
         result.Should().NotContain(" ");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="StringExtensions.ToSnakeCase(string)"/> converts a PascalCase string
+    /// into a lowercase snake_case representation.
+    /// </summary>
     [Fact]
     public void ToSnakeCase_PascalCaseString_ReturnsLowercaseWithUnderscores()
     {
@@ -66,6 +85,10 @@ public class StringExtensionsTests
         result.Should().Be("notion_task_sync");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="StringExtensions.ToSlug(string)"/> removes punctuation, replaces spaces with hyphens,
+    /// and returns a lowercase slug that matches the regex pattern ^[a-z0-9\-]+$.
+    /// </summary>
     [Fact]
     public void ToSlug_StringWithPunctuationAndSpaces_ReturnsCleanHyphenatedSlug()
     {
