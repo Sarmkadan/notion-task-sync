@@ -18,17 +18,57 @@ using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
 using DomainTask = NotionTaskSync.Domain.Models.Task;
 
+/// <summary>
+/// Integration tests for the complete sync workflow between local tasks and Notion.
+/// Tests end-to-end synchronization scenarios including change detection, conflict resolution,
+/// and different sync directions.
+/// </summary>
 public class SyncIntegrationTests : IDisposable
 {
+    /// <summary>
+    /// Temporary directory for storing test task files.
+    /// </summary>
     private readonly string _localTasksDirectory;
+
+    /// <summary>
+    /// Service for reading/writing local task files during tests.
+    /// </summary>
     private readonly LocalFileService _localFileService;
+
+    /// <summary>
+    /// Mock repository for task data operations.
+    /// </summary>
     private readonly Mock<ITaskRepository> _mockTaskRepository;
+
+    /// <summary>
+    /// Mock repository for change log operations.
+    /// </summary>
     private readonly Mock<IChangeLogRepository> _mockChangeLogRepository;
+
+    /// <summary>
+    /// Mock service for Notion API communication.
+    /// </summary>
     private readonly Mock<NotionApiService> _mockNotionApiService;
+
+    /// <summary>
+    /// Mock service for detecting changes between local and Notion data.
+    /// </summary>
     private readonly Mock<ChangeDetectionService> _mockChangeDetectionService;
+
+    /// <summary>
+    /// Mock service for resolving conflicts between local and Notion changes.
+    /// </summary>
     private readonly Mock<ConflictResolutionService> _mockConflictResolutionService;
+
+    /// <summary>
+    /// Service that orchestrates the complete synchronization workflow.
+    /// </summary>
     private readonly SyncService _syncService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SyncIntegrationTests"/> class.
+    /// Sets up test dependencies including mock repositories, services, and a temporary directory.
+    /// </summary>
     public SyncIntegrationTests()
     {
         _localTasksDirectory = Path.Combine(Path.GetTempPath(), $"sync_test_{Guid.NewGuid()}");
@@ -55,6 +95,10 @@ public class SyncIntegrationTests : IDisposable
             Directory.Delete(_localTasksDirectory, recursive: true);
     }
 
+    /// <summary>
+    /// Tests the complete sync workflow when creating a new task locally.
+    /// Verifies that a new local task is properly synced to Notion.
+    /// </summary>
     [Fact]
     public async Task FullSyncWorkflow_CreatingNewTask_SyncsToNotion()
     {
@@ -114,6 +158,10 @@ public class SyncIntegrationTests : IDisposable
         _mockTaskRepository.Verify(r => r.SaveAsync(), Times.Once);
     }
 
+    /// <summary>
+    /// Tests the complete sync workflow with multiple local tasks.
+    /// Verifies that all local tasks are properly detected and synced.
+    /// </summary>
     [Fact]
     public async Task FullSyncWorkflow_MultipleLocalTasks_SyncsAllTasks()
     {
@@ -171,6 +219,10 @@ public class SyncIntegrationTests : IDisposable
         syncResult.LocalChangesDetected.Should().Be(5);
     }
 
+    /// <summary>
+    /// Tests the complete sync workflow when a conflict is detected between local and Notion changes.
+    /// Verifies that conflicts are properly detected and resolved according to the configured strategy.
+    /// </summary>
     [Fact]
     public async Task FullSyncWorkflow_ConflictDetected_ResolvesConflict()
     {
@@ -250,6 +302,10 @@ public class SyncIntegrationTests : IDisposable
         syncResult.NotionChangesDetected.Should().Be(1);
     }
 
+    /// <summary>
+    /// Tests backup functionality before performing a sync operation.
+    /// Verifies that a backup archive is created with the correct files and metadata.
+    /// </summary>
     [Fact]
     public async Task FullSyncWorkflow_BackupCreatedBeforeSync()
     {
@@ -292,6 +348,10 @@ public class SyncIntegrationTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// Tests incremental sync functionality that only fetches changed pages from Notion.
+    /// Verifies that the sync service uses the incremental API when a last sync timestamp is available.
+    /// </summary>
     [Fact]
     public async Task FullSyncWorkflow_IncrementalSync_OnlyFetchesChangedPages()
     {
@@ -331,6 +391,10 @@ public class SyncIntegrationTests : IDisposable
         _mockNotionApiService.Verify(a => a.FetchPagesSinceAsync(config.NotionDatabaseId, lastSyncTime), Times.Once);
     }
 
+    /// <summary>
+    /// Tests sync direction from local to Notion only.
+    /// Verifies that when sync direction is set to LocalToNotion, only local changes are pushed to Notion.
+    /// </summary>
     [Fact]
     public async Task FullSyncWorkflow_SyncDirectionLocalToNotion_OnlyPushesChanges()
     {
@@ -373,6 +437,10 @@ public class SyncIntegrationTests : IDisposable
         _mockTaskRepository.Verify(r => r.SaveAsync(), Times.Once);
     }
 
+    /// <summary>
+    /// Tests sync direction from Notion to local only.
+    /// Verifies that when sync direction is set to NotionToLocal, only Notion changes are pulled to local storage.
+    /// </summary>
     [Fact]
     public async Task FullSyncWorkflow_SyncDirectionNotionToLocal_OnlyPullsChanges()
     {
