@@ -160,9 +160,13 @@ public sealed class SyncService
                 else if (task.NotionPageId is null)
                 {
                     var newPage = await _notionApiService.CreatePageAsync(config.NotionDatabaseId, task);
-                    task.NotionPageId = newPage.PageId;
-                    await _taskRepository.UpdateAsync(task);
-                    created++;
+
+                    if (newPage is not null)
+                    {
+                        task.NotionPageId = newPage.PageId;
+                        await _taskRepository.UpdateAsync(task);
+                        created++;
+                    }
                 }
             }
         }

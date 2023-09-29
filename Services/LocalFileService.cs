@@ -157,7 +157,7 @@ public class LocalFileService
     /// <summary>
     /// Backs up all task files to a backup directory.
     /// </summary>
-    public async Task<string> BackupTasksAsync(string backupDir)
+    public virtual async Task<string> BackupTasksAsync(string backupDir)
     {
         try
         {
@@ -274,6 +274,12 @@ public class LocalFileService
     {
         var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
+        if (lines.Length == 0 || !lines[0].TrimStart().StartsWith("#"))
+            throw new LocalFileException($"Malformed task markdown in '{filePath}': missing title heading")
+            {
+                FilePath = filePath
+            };
+
         var task = new Task
         {
             Title = string.Empty,
@@ -283,32 +289,47 @@ public class LocalFileService
         };
 
         // Extract title from first line
-        if (lines.Length > 0)
-        {
-            task.Title = lines[0].TrimStart('#').Trim();
-        }
+        task.Title = lines[0].TrimStart('#').Trim();
 
         // Parse metadata
         var inMetadata = false;
+        var inDescription = false;
+        var descriptionLines = new List<string>();
 
         foreach (var line in lines)
         {
             if (line.Contains("## Metadata"))
             {
                 inMetadata = true;
+                inDescription = false;
+                continue;
+            }
+
+            if (line.Contains("## Description"))
+            {
+                inMetadata = false;
+                inDescription = true;
                 continue;
             }
 
             if (line.StartsWith("##"))
             {
                 inMetadata = false;
+                inDescription = false;
             }
 
             if (inMetadata && line.StartsWith("- **"))
             {
                 ParseMetadataLine(task, line);
             }
+            else if (inDescription)
+            {
+                descriptionLines.Add(line);
+            }
         }
+
+        var description = string.Join("\n", descriptionLines).Trim();
+        task.Description = description == "(No description)" ? null : description;
 
         return task;
     }
@@ -358,7 +379,14 @@ public class LocalFileService
     /// </summary>
     private string SanitizeFileName(string name)
     {
-        var invalidChars = Path.GetInvalidFileNameChars();
+        // Combine the platform's invalid filename characters with a fixed set of
+        // characters that are unsafe across filesystems (e.g. Windows-reserved
+        // characters that Linux's GetInvalidFileNameChars() does not flag).
+        var invalidChars = new HashSet<char>(Path.GetInvalidFileNameChars())
+        {
+            '\\', '/', ':', '*', '?', '"', '<', '>', '|'
+        };
+
         var sanitized = new string(name
             .Where(c => !invalidChars.Contains(c))
             .ToArray());

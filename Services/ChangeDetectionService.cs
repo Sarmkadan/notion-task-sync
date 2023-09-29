@@ -29,7 +29,7 @@ public class ChangeDetectionService
     /// <summary>
     /// Detects all changes made to local tasks since a given timestamp.
     /// </summary>
-    public List<ChangeLog> DetectLocalChanges(List<Task> tasks, DateTime since)
+    public virtual List<ChangeLog> DetectLocalChanges(List<Task> tasks, DateTime since)
     {
         var changes = new List<ChangeLog>();
 
@@ -80,7 +80,7 @@ public class ChangeDetectionService
     /// <summary>
     /// Detects all changes made to Notion pages since a given timestamp.
     /// </summary>
-    public List<ChangeLog> DetectNotionChanges(List<NotionPage> pages, DateTime since)
+    public virtual List<ChangeLog> DetectNotionChanges(List<NotionPage> pages, DateTime since)
     {
         var changes = new List<ChangeLog>();
 
@@ -134,7 +134,7 @@ public class ChangeDetectionService
     /// <summary>
     /// Detects conflicts between local and Notion changes for the same task.
     /// </summary>
-    public List<ConflictResolution> DetectConflicts(List<ChangeLog> localChanges, List<ChangeLog> notionChanges)
+    public virtual List<ConflictResolution> DetectConflicts(List<ChangeLog> localChanges, List<ChangeLog> notionChanges)
     {
         var conflicts = new List<ConflictResolution>();
         var conflictWindow = TimeSpan.FromMinutes(5); // Consider changes within 5 minutes as potential conflicts

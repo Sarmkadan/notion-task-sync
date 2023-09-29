@@ -35,7 +35,8 @@ public static class StringExtensions
         if (str.Length <= maxLength)
             return str;
 
-        return str[..Math.Min(maxLength, str.Length - suffix.Length)] + suffix;
+        var truncatedLength = Math.Max(0, maxLength - suffix.Length);
+        return str[..Math.Min(truncatedLength, str.Length)] + suffix;
     }
 
     /// <summary>

@@ -17,14 +17,19 @@ using System.Text.Json;
 /// Provides integration with the Notion API for reading and writing task data.
 /// Handles authentication, pagination, error handling, and data transformation.
 /// </summary>
-public sealed class NotionApiService
+public class NotionApiService
 {
     internal readonly string? _apiKey;
     internal readonly HttpClient _httpClient;
     internal const string NotionApiBaseUrl = "https://api.notion.com/v1";
     internal const string NotionApiVersion = "2022-06-28";
 
-    public NotionApiService(string? apiKey, HttpClient? httpClient = null)
+    public NotionApiService(string? apiKey)
+        : this(apiKey, null)
+    {
+    }
+
+    public NotionApiService(string? apiKey, HttpClient? httpClient)
     {
         _apiKey = apiKey;
         _httpClient = httpClient ?? new HttpClient();
@@ -48,7 +53,7 @@ public sealed class NotionApiService
     /// <returns>A complete list of <see cref="NotionPage"/> entities from the database.</returns>
     /// <exception cref="ValidationException">Thrown when <paramref name="databaseId"/> is empty.</exception>
     /// <exception cref="NotionApiException">Thrown when the Notion API request fails.</exception>
-    public async Task<List<NotionPage>> FetchPagesAsync(string databaseId, int pageSize = 100)
+    public virtual async Task<List<NotionPage>> FetchPagesAsync(string databaseId, int pageSize = 100)
     {
         if (string.IsNullOrEmpty(databaseId))
             throw new ValidationException("Database ID cannot be empty");
@@ -114,7 +119,7 @@ public sealed class NotionApiService
     /// <returns>Pages whose <c>last_edited_time</c> is strictly after <paramref name="since"/>.</returns>
     /// <exception cref="ValidationException">Thrown when <paramref name="databaseId"/> is empty.</exception>
     /// <exception cref="NotionApiException">Thrown when the Notion API request fails.</exception>
-    public async Task<List<NotionPage>> FetchPagesSinceAsync(
+    public virtual async Task<List<NotionPage>> FetchPagesSinceAsync(
         string databaseId,
         DateTime since,
         int pageSize = 100)
@@ -279,7 +284,7 @@ public sealed class NotionApiService
     /// <summary>
     /// Retrieves a single page from Notion by its ID.
     /// </summary>
-    public async Task<NotionPage> FetchPageAsync(string pageId)
+    public virtual async Task<NotionPage> FetchPageAsync(string pageId)
     {
         if (string.IsNullOrEmpty(pageId))
             throw new ValidationException("Page ID cannot be empty");
@@ -305,7 +310,7 @@ public sealed class NotionApiService
     /// <summary>
     /// Creates a new page in a Notion database from a task.
     /// </summary>
-    public async Task<NotionPage> CreatePageAsync(string databaseId, Task task)
+    public virtual async Task<NotionPage> CreatePageAsync(string databaseId, Task task)
     {
         if (string.IsNullOrEmpty(databaseId))
             throw new ValidationException("Database ID cannot be empty");
@@ -344,7 +349,7 @@ public sealed class NotionApiService
     /// <summary>
     /// Updates an existing page in Notion with task data.
     /// </summary>
-    public async Task<NotionPage> UpdatePageAsync(string pageId, Task task)
+    public virtual async Task<NotionPage> UpdatePageAsync(string pageId, Task task)
     {
         if (string.IsNullOrEmpty(pageId))
             throw new ValidationException("Page ID cannot be empty");
@@ -382,7 +387,7 @@ public sealed class NotionApiService
     /// <summary>
     /// Deletes or archives a page in Notion.
     /// </summary>
-    public async System.Threading.Tasks.Task ArchivePageAsync(string pageId)
+    public virtual async System.Threading.Tasks.Task ArchivePageAsync(string pageId)
     {
         if (string.IsNullOrEmpty(pageId))
             throw new ValidationException("Page ID cannot be empty");
@@ -404,7 +409,7 @@ public sealed class NotionApiService
     /// <summary>
     /// Tests the API connection by verifying the API key is valid.
     /// </summary>
-    public async Task<bool> TestConnectionAsync()
+    public virtual async Task<bool> TestConnectionAsync()
     {
         try
         {

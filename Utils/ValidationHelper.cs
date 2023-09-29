@@ -23,9 +23,11 @@ public static class ValidationHelper
         if (string.IsNullOrEmpty(id))
             return false;
 
-        // Notion IDs are typically 36 characters with dashes (UUID format)
-        return id.Length == AppConstants.MaxPageIdLength &&
-               Regex.IsMatch(id, @"^[a-f0-9\-]{36}$");
+        // Notion IDs are typically 36 characters with dashes (UUID format),
+        // or 32 hex characters without dashes (legacy format)
+        return Regex.IsMatch(id, @"^[a-f0-9]{32}$") ||
+               (id.Length == AppConstants.MaxPageIdLength &&
+                Regex.IsMatch(id, @"^[a-f0-9\-]{36}$"));
     }
 
     /// <summary>
@@ -39,7 +41,14 @@ public static class ValidationHelper
         try
         {
             var addr = new System.Net.Mail.MailAddress(email);
-            return addr.Address == email;
+            if (addr.Address != email)
+                return false;
+
+            // MailAddress accepts domains without a TLD (e.g. "user@domain");
+            // require at least one dot in the domain part for a valid format.
+            var atIndex = email.LastIndexOf('@');
+            var domain = email[(atIndex + 1)..];
+            return domain.Contains('.');
         }
         catch
         {

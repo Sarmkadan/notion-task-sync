@@ -15,7 +15,7 @@ using System.ComponentModel.DataAnnotations;
 /// </summary>
 public class ConflictResolution
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     [Required]
     public required Guid TaskId { get; set; }

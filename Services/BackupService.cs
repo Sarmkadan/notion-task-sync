@@ -52,8 +52,10 @@ public sealed class BackupService
                 Id = Guid.NewGuid(),
                 Path = backupedPath,
                 CreatedAt = DateTime.UtcNow,
-                Label = label,
-                FileCount = Directory.GetFiles(backupedPath).Length
+                Label = backupLabel,
+                FileCount = !string.IsNullOrEmpty(backupedPath) && Directory.Exists(backupedPath)
+                    ? Directory.GetFiles(backupedPath).Length
+                    : 0
             };
 
             await CleanupOldBackupsAsync();
@@ -91,7 +93,7 @@ public sealed class BackupService
                     Path = dir,
                     CreatedAt = createdAt,
                     FileCount = fileCount,
-                    Label = Path.GetFileName(dir)
+                    Label = ExtractLabelFromDirectoryName(Path.GetFileName(dir))
                 });
             }
 
@@ -212,6 +214,29 @@ public sealed class BackupService
         {
             // Silently ignore cleanup errors
         }
+    }
+
+    /// <summary>
+    /// Extracts the label portion from a backup directory name of the form
+    /// "backup_{yyyyMMdd_HHmmss}_{label}". Falls back to the raw directory
+    /// name if it does not match the expected pattern.
+    /// </summary>
+    private static string ExtractLabelFromDirectoryName(string directoryName)
+    {
+        const string prefix = "backup_";
+
+        if (!directoryName.StartsWith(prefix, StringComparison.Ordinal))
+            return directoryName;
+
+        // Format: backup_yyyyMMdd_HHmmss_label -> skip the "backup_" prefix
+        // plus the fixed-width "yyyyMMdd_HHmmss_" timestamp.
+        const int timestampLength = 15; // "yyyyMMdd_HHmmss"
+        var afterPrefix = directoryName[prefix.Length..];
+
+        if (afterPrefix.Length <= timestampLength + 1)
+            return directoryName;
+
+        return afterPrefix[(timestampLength + 1)..];
     }
 
     /// <summary>

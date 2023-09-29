@@ -30,7 +30,7 @@ public class ConflictResolutionService
     /// When local changes are discarded, a warning entry is written to the change log
     /// so edits are never silently lost.
     /// </summary>
-    public async Task<List<ConflictResolution>> ResolveConflictsAsync(
+    public virtual async Task<List<ConflictResolution>> ResolveConflictsAsync(
         List<ConflictResolution> conflicts,
         ConflictResolutionStrategy strategy,
         Dictionary<string, ConflictResolutionStrategy>? fieldStrategies = null)

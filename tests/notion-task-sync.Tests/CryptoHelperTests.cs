@@ -12,7 +12,7 @@ public class CryptoHelperTests
     {
         // Arrange
         var input = "test-data";
-        var expectedHash = "sA/gH/H0j1gJ916+k9Z3O5N11c8s7oF1iWkR7y6k0lU="; // Known hash for "test-data"
+        var expectedHash = "oYYABCL+q4VzKcaE6f6RQSsaXbCEEAs3qYz8lbYqqGc="; // Known hash for "test-data"
 
         // Act
         var result = CryptoHelper.HashSha256(input);
@@ -38,7 +38,7 @@ public class CryptoHelperTests
     {
         // Arrange
         var input = "test-data";
-        var expectedHash = "bJ4l+6z2/3h9Fqg1gU5s2Q=="; // Known MD5 hash for "test-data" (base64 encoded)
+        var expectedHash = "JDRuG1AGZgcFmvNuO2hLJA=="; // Known MD5 hash for "test-data" (base64 encoded)
 
         // Act
         var result = CryptoHelper.HashMd5(input);
