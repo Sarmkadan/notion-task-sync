@@ -5,8 +5,14 @@ using NotionTaskSync.Utils;
 using FluentAssertions;
 using Xunit;
 
+/// <summary>
+/// Tests for the <see cref="CryptoHelper"/> class.
+/// </summary>
 public class CryptoHelperTests
 {
+    /// <summary>
+    /// Verifies that <see cref="CryptoHelper.HashSha256(string)"/> returns the expected hash for a valid input.
+    /// </summary>
     [Fact]
     public void HashSha256_ReturnsExpectedHash_ForValidInput()
     {
@@ -21,6 +27,10 @@ public class CryptoHelperTests
         result.Should().Be(expectedHash);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="CryptoHelper.HashSha256(string)"/> returns an empty string for null or empty input.
+    /// </summary>
+    /// <param name="input">The input to test.</param>
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -33,6 +43,9 @@ public class CryptoHelperTests
         result.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="CryptoHelper.HashMd5(string)"/> returns the expected hash for a valid input.
+    /// </summary>
     [Fact]
     public void HashMd5_ReturnsExpectedHash_ForValidInput()
     {
@@ -47,6 +60,10 @@ public class CryptoHelperTests
         result.Should().Be(expectedHash);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="CryptoHelper.GenerateRandomToken(int)"/> returns a string of the expected length for a valid length.
+    /// </summary>
+    /// <param name="length">The length to test.</param>
     [Theory]
     [InlineData(8)]
     [InlineData(32)]
@@ -68,6 +85,9 @@ public class CryptoHelperTests
         tokenBytes.Length.Should().Be(length);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="CryptoHelper.GenerateRandomToken(int)"/> throws an <see cref="ArgumentException"/> for an invalid length.
+    /// </summary>
     [Fact]
     public void GenerateRandomToken_ThrowsArgumentException_ForInvalidLength()
     {
@@ -79,6 +99,9 @@ public class CryptoHelperTests
            .WithMessage("*Token length must be at least 8*");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="CryptoHelper.VerifyHashSha256(string, string)"/> returns true for a matching hash.
+    /// </summary>
     [Fact]
     public void VerifyHashSha256_ReturnsTrue_ForMatchingHash()
     {
@@ -93,6 +116,9 @@ public class CryptoHelperTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="CryptoHelper.ComputeHmacSha256(string, string)"/> returns the expected signature for a valid input.
+    /// </summary>
     [Fact]
     public void ComputeHmacSha256_ReturnsExpectedSignature_ForValidInput()
     {
