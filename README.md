@@ -149,3 +149,34 @@ class Program
     }
 }
 ```
+
+## LoggerFactory
+
+`LoggerFactory` creates and configures `ILogger` instances for the application, supporting both console and optional file logging. It also provides helpers to validate the log path, rotate oversized log files, and clean up old logs based on a retention policy.
+
+```csharp
+using NotionTaskSync.Infrastructure.Logging;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = new LoggerFactory(
+    logFilePath: "logs/app.log",
+    minLogLevel: LogLevel.Information,
+    enableConsole: true,
+    enableFile: true);
+
+// Create a logger for a specific class
+ILogger logger = loggerFactory.CreateLogger<Program>();
+
+// Verify the configured log file path is accessible
+if (!loggerFactory.ValidateLogPath())
+{
+    logger.LogWarning("LoggerFactory", "Log file path is invalid or not writable.");
+}
+
+// Rotate the log file if it exceeds the default size and clean up old logs
+loggerFactory.RotateLogFile();
+loggerFactory.CleanupOldLogs();
+
+// Retrieve the configured log file path (null if file logging is disabled)
+string? path = loggerFactory.GetLogFilePath();
+```
