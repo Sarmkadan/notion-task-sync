@@ -180,3 +180,51 @@ loggerFactory.CleanupOldLogs();
 // Retrieve the configured log file path (null if file logging is disabled)
 string? path = loggerFactory.GetLogFilePath();
 ```
+
+## NotionApiSettings
+
+The `NotionApiSettings` class provides configuration settings for the Notion API. It includes properties for authentication, endpoints, rate limiting, and caching.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Infrastructure.Configuration;
+
+class Program
+{
+    static void Main()
+    {
+        var settings = new NotionApiSettings
+        {
+            ApiKey = "your-api-key",
+            BaseUrl = "https://api.notion.com/v1",
+            ApiVersion = "2022-06-28",
+            RequestTimeoutSeconds = 30,
+            MaxRetries = 3,
+            RetryDelayMs = 1000,
+            RateLimitPerMinute = 30,
+            RespectRateLimits = true,
+            DefaultPageSize = 100,
+            MaxPageSize = 100,
+            EnableCaching = true,
+            CacheDurationMinutes = 5,
+            DatabaseIds = new List<string> { "database-id-1", "database-id-2" },
+            PropertyMappings = new Dictionary<string, string> { { "property-name", "mapped-property-name" } }
+        };
+
+        // Validate the settings
+        if (settings.Validate())
+        {
+            Console.WriteLine($"Valid settings: {settings}");
+        }
+        else
+        {
+            Console.WriteLine("Invalid settings");
+        }
+
+        // Get the masked API key
+        var maskedApiKey = settings.GetMaskedApiKey();
+        Console.WriteLine($"Masked API key: {maskedApiKey}");
+    }
+}
+```
