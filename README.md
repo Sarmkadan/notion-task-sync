@@ -396,6 +396,74 @@ class Program
 }
 ```
 
+## ConflictResolutionUiTests
+
+The `ConflictResolutionUiTests` class contains unit tests for the conflict resolution UI infrastructure, including `ConflictDiffService` and `ConflictResolutionService`. These tests verify diff generation, rendering, and various conflict resolution strategies including local wins, notion wins, manual review, and per-field overrides.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Tests;
+using NotionTaskSync.Domain.Models;
+using FluentAssertions;
+using Xunit;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Test diff generation for identical values
+        var diffService = new ConflictDiffService();
+        var identicalDiff = await diffService.GenerateDiffForPropertyAsync("hello", "hello", "Title");
+        Console.WriteLine($"Identical: {identicalDiff.IsIdentical}, Added: {identicalDiff.AddedCount}, Removed: {identicalDiff.RemovedCount}");
+        
+        // Test diff generation for different values
+        var differentDiff = await diffService.GenerateDiffForPropertyAsync(
+            "line one\nline two", 
+            "line one\nLINE TWO", 
+            "Description");
+        Console.WriteLine($"Different: Added={differentDiff.AddedCount}, Removed={differentDiff.RemovedCount}");
+        
+        // Test text rendering
+        var rendered = await diffService.RenderAsTextAsync(differentDiff);
+        Console.WriteLine(rendered);
+        
+        // Test batch diff generation
+        var conflicts = new List<ConflictResolution>
+        {
+            new() { TaskId = Guid.NewGuid(), LocalValue = "local1", NotionValue = "notion1", PropertyName = "Title" },
+            new() { TaskId = Guid.NewGuid(), LocalValue = "local2", NotionValue = "notion2", PropertyName = "Status" }
+        };
+        var batchResults = await diffService.GenerateBatchDiffsAsync(conflicts);
+        Console.WriteLine($"Generated {batchResults.Count} diffs");
+        
+        // Test conflict resolution with different strategies
+        var resolutionService = new ConflictResolutionService();
+        var localWinsResolutions = await resolutionService.ResolveConflictsAsync(
+            conflicts,
+            ConflictResolutionStrategy.LocalWins);
+        Console.WriteLine($"Local wins resolved: {localWinsResolutions.Count(r => r.Status == ResolutionStatus.Resolved)}");
+        
+        var manualResolutions = await resolutionService.ResolveConflictsAsync(
+            conflicts,
+            ConflictResolutionStrategy.Manual);
+        Console.WriteLine($"Manual review required: {manualResolutions.Count(r => r.Status == ResolutionStatus.PendingReview)}");
+        
+        // Test per-field override strategy
+        var fieldStrategies = new Dictionary<string, ConflictResolutionStrategy>
+        {
+            { "Title", ConflictResolutionStrategy.LocalWins },
+            { "Status", ConflictResolutionStrategy.NotionWins }
+        };
+        var overrideResolutions = await resolutionService.ResolveConflictsAsync(
+            conflicts,
+            ConflictResolutionStrategy.LastWrite,
+            fieldStrategies);
+        Console.WriteLine($"Field override applied: {overrideResolutions.Count}");
+    }
+}
+```
+
 ## AppSettings
 
 The `AppSettings` class provides application-wide configuration settings loaded from appsettings.json. It includes paths for local task storage, logging configuration, synchronization defaults, and backup settings.
