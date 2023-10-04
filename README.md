@@ -348,6 +348,35 @@ class Program
 }
 ```
 
+## SyncStartedEvent
+
+The `SyncStartedEvent` class represents an event that is published when a synchronization operation is initiated. This event provides essential context about the sync process including configuration details, target database, and start timestamp.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Events;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a sync started event
+        var syncStartedEvent = new SyncStartedEvent
+        {
+            SyncConfigId = "daily-sync-config",
+            DatabaseId = "123e4567-e89b-12d3-a456-426614174000",
+            StartTime = DateTime.UtcNow
+        };
+
+        Console.WriteLine($"Sync started for config: {syncStartedEvent.SyncConfigId}");
+        Console.WriteLine($"Target database: {syncStartedEvent.DatabaseId}");
+        Console.WriteLine($"Start time: {syncStartedEvent.StartTime:u}");
+    }
+}
+```
+
 ## EventBus
 
 The `EventBus` class implements a publish-subscribe pattern for loose coupling between application components. It allows different parts of the application to communicate through events without direct dependencies, enabling better separation of concerns and easier testing.
