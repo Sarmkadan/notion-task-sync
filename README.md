@@ -290,6 +290,52 @@ class Program
 }
 ```
 
+## CollaborationSessionOptions
+
+The `CollaborationSessionOptions` class provides fine-grained configuration for real-time collaboration sessions. It controls participant limits, operation batching, conflict resolution, and session lifecycle settings.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Collaboration;
+using Microsoft.Extensions.Options;
+
+class Program
+{
+    static void Main()
+    {
+        // Configure options from appsettings.json via Options pattern
+        var options = Options.Create(new CollaborationSessionOptions
+        {
+            MaxParticipantsPerSession = 10,
+            OperationLogCapacity = 500,
+            MaxOperationsPerBatch = 25,
+            IdleTimeout = TimeSpan.FromMinutes(15),
+            HeartbeatInterval = TimeSpan.FromSeconds(20),
+            AllowAutomaticTextMerge = true,
+            ScalarConflictPolicy = CollaborationConflictPolicy.LastWriterWins,
+            PersistOperationsToChangeLog = true,
+            AllowObserverEdits = false
+        });
+
+        // Validate configuration
+        if (options.Value.Validate())
+        {
+            Console.WriteLine("Collaboration session options are valid");
+            Console.WriteLine($"Max participants: {options.Value.MaxParticipantsPerSession}");
+            Console.WriteLine($"Operation log capacity: {options.Value.OperationLogCapacity}");
+            Console.WriteLine($"Idle timeout: {options.Value.IdleTimeout.TotalMinutes} minutes");
+            Console.WriteLine($"Heartbeat interval: {options.Value.HeartbeatInterval.TotalSeconds} seconds");
+            Console.WriteLine($"Conflict policy: {options.Value.ScalarConflictPolicy}");
+        }
+        else
+        {
+            Console.WriteLine("Invalid collaboration session options");
+        }
+    }
+}
+```
+
 ## AppSettings
 
 The `AppSettings` class provides application-wide configuration settings loaded from appsettings.json. It includes paths for local task storage, logging configuration, synchronization defaults, and backup settings.
