@@ -336,6 +336,66 @@ class Program
 }
 ```
 
+## ValidationHelperTests
+
+The `ValidationHelperTests` class contains unit tests for the `ValidationHelper` utility class, which provides various validation methods for common data formats including Notion IDs, emails, file paths, API keys, priorities, URLs, and identifier names. These tests verify that validation methods correctly handle valid inputs, edge cases, and invalid inputs.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using FluentAssertions;
+using Xunit;
+
+class Program
+{
+    static void Main()
+    {
+        // Test Notion ID validation
+        var notionIdWithoutDashes = "550e8400e29b41d4a716446655440000";
+        var notionIdWithDashes = "550e8400-e29b-41d4-a716-446655440000";
+        
+        Console.WriteLine($"Notion ID without dashes valid: {ValidationHelper.IsValidNotionId(notionIdWithoutDashes)}");
+        Console.WriteLine($"Notion ID with dashes valid: {ValidationHelper.IsValidNotionId(notionIdWithDashes)}");
+        Console.WriteLine($"Null Notion ID valid: {ValidationHelper.IsValidNotionId(null)}");
+        Console.WriteLine($"Empty Notion ID valid: {ValidationHelper.IsValidNotionId(string.Empty)}");
+        
+        // Test email validation
+        var validEmail = "user@example.com";
+        var invalidEmail = "notanemail";
+        
+        Console.WriteLine($"Valid email: {ValidationHelper.IsValidEmail(validEmail)}");
+        Console.WriteLine($"Invalid email: {ValidationHelper.IsValidEmail(invalidEmail)}");
+        
+        // Test file path validation
+        var validFilePath = "/tmp/test.txt";
+        var validDirectoryPath = "/tmp";
+        
+        Console.WriteLine($"Valid file path: {ValidationHelper.IsValidFilePath(validFilePath)}");
+        Console.WriteLine($"Valid directory path: {ValidationHelper.IsValidDirectoryPath(validDirectoryPath)}");
+        Console.WriteLine($"Null file path valid: {ValidationHelper.IsValidFilePath(null)}");
+        
+        // Test API key validation
+        var validApiKey = new string('a', 32); // 32 characters
+        var shortApiKey = new string('a', 10); // Only 10 characters
+        
+        Console.WriteLine($"Valid API key (32 chars): {ValidationHelper.IsValidApiKey(validApiKey)}");
+        Console.WriteLine($"Short API key (10 chars): {ValidationHelper.IsValidApiKey(shortApiKey)}");
+        
+        // Test priority validation
+        Console.WriteLine($"Valid priority (50): {ValidationHelper.IsValidPriority(50)}");
+        Console.WriteLine($"Invalid priority (-1): {ValidationHelper.IsValidPriority(-1)}");
+        
+        // Test URL validation
+        var validUrl = "https://example.com";
+        var invalidUrl = "ftp://example.com";
+        
+        Console.WriteLine($"Valid URL: {ValidationHelper.IsValidUrl(validUrl)}");
+        Console.WriteLine($"Invalid URL: {ValidationHelper.IsValidUrl(invalidUrl)}");
+    }
+}
+```
+
 ## AppSettings
 
 The `AppSettings` class provides application-wide configuration settings loaded from appsettings.json. It includes paths for local task storage, logging configuration, synchronization defaults, and backup settings.
