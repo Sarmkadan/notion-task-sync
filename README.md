@@ -229,6 +229,67 @@ class Program
 }
 ```
 
+## DependencyInjection
+
+The `DependencyInjection` class provides centralized configuration for the application's dependency injection container. It registers all services, repositories, configuration objects, and HTTP clients required by the application, following the Microsoft.Extensions.DependencyInjection pattern. The class includes methods to add application services, validate configuration, and register HTTP clients.
+
+### Usage Example
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using NotionTaskSync.Infrastructure.Configuration;
+using NotionTaskSync.Services;
+using NotionTaskSync.Data.Repositories;
+
+class Program
+{
+    static void Main()
+    {
+        // Setup configuration
+        var configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .Build();
+
+        // Configure services
+        var services = new ServiceCollection();
+
+        // Validate configuration before registering services
+        try
+        {
+            DependencyInjection.ValidateConfiguration(configuration);
+            Console.WriteLine("Configuration validated successfully");
+        }
+        catch (ConfigurationException ex)
+        {
+            Console.WriteLine($"Configuration error: {ex.Message}");
+            return;
+        }
+
+        // Register application services
+        services.AddApplicationServices(configuration);
+
+        // Register HTTP clients
+        services.AddHttpClients();
+
+        // Build service provider
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Resolve services from DI container
+        var syncService = serviceProvider.GetRequiredService<SyncService>();
+        var notionApiService = serviceProvider.GetRequiredService<NotionApiService>();
+        var taskRepository = serviceProvider.GetRequiredService<ITaskRepository>();
+        var changeLogRepository = serviceProvider.GetRequiredService<IChangeLogRepository>();
+
+        Console.WriteLine("Services registered successfully:");
+        Console.WriteLine($"- SyncService: {syncService.GetType().Name}");
+        Console.WriteLine($"- NotionApiService: {notionApiService.GetType().Name}");
+        Console.WriteLine($"- TaskRepository: {taskRepository.GetType().Name}");
+        Console.WriteLine($"- ChangeLogRepository: {changeLogRepository.GetType().Name}");
+    }
+}
+```
+
 ## AppSettings
 
 The `AppSettings` class provides application-wide configuration settings loaded from appsettings.json. It includes paths for local task storage, logging configuration, synchronization defaults, and backup settings.
