@@ -228,3 +228,61 @@ class Program
     }
 }
 ```
+
+## AppSettings
+
+The `AppSettings` class provides application-wide configuration settings loaded from appsettings.json. It includes paths for local task storage, logging configuration, synchronization defaults, and backup settings.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Infrastructure.Configuration;
+
+class Program
+{
+    static void Main()
+    {
+        var settings = new AppSettings
+        {
+            LocalTasksDirectory = "./my-tasks",
+            LogLevel = "Debug",
+            EnableConsoleLogging = true,
+            LogFilePath = "./logs/app.log",
+            DefaultSyncIntervalSeconds = 60,
+            DefaultConflictStrategy = "Merge",
+            MaxConcurrentSyncs = 2,
+            EnableChangeTracking = true,
+            MaxRetries = 5,
+            ApiTimeoutSeconds = 60,
+            BackupDirectory = "./backups",
+            EnableAutoBackup = true,
+            BackupFrequencyHours = 12,
+            MaxBackupFiles = 20,
+            Version = "2.0.0",
+            Environment = "Production",
+            SyncProfiles = new Dictionary<string, object>
+            {
+                { "daily-sync", new { Interval = 300, MaxConcurrent = 1 } },
+                { "fast-sync", new { Interval = 60, MaxConcurrent = 4 } }
+            }
+        };
+
+        // Validate the settings
+        if (settings.Validate())
+        {
+            Console.WriteLine($"Valid configuration: {settings}");
+        }
+        else
+        {
+            Console.WriteLine("Invalid configuration detected");
+        }
+
+        // Configure logging based on settings
+        Console.WriteLine($"Logging level: {settings.LogLevel}");
+        Console.WriteLine($"Console logging enabled: {settings.EnableConsoleLogging}");
+        Console.WriteLine($"File logging path: {settings.LogFilePath}");
+        Console.WriteLine($"Sync interval: {settings.DefaultSyncIntervalSeconds} seconds");
+        Console.WriteLine($"Environment: {settings.Environment}");
+    }
+}
+```
