@@ -347,3 +347,104 @@ class Program
     }
 }
 ```
+
+## EventBus
+
+The `EventBus` class implements a publish-subscribe pattern for loose coupling between application components. It allows different parts of the application to communicate through events without direct dependencies, enabling better separation of concerns and easier testing.
+
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Events;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Create logger and event bus
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<EventBus>();
+        var eventBus = new EventBus(logger);
+
+        // Define custom event types
+        public class TaskSyncedEvent : ApplicationEvent
+        {
+            public string TaskId { get; set; }
+            public string NotionId { get; set; }
+            public bool IsNew { get; set; }
+        }
+
+        public class TaskCreatedEvent : ApplicationEvent
+        {
+            public string TaskName { get; set; }
+            public string Description { get; set; }
+        }
+
+        // Subscribe to events
+        eventBus.Subscribe<TaskCreatedEvent>(async @event => {
+            Console.WriteLine($"Handler 1: Task created - {@event.TaskName}");
+            await Task.Delay(100); // Simulate async work
+        });
+
+        eventBus.Subscribe<TaskCreatedEvent>(@event => {
+            Console.WriteLine($"Handler 2: Sync task created - {@event.TaskName}");
+        });
+
+        eventBus.Subscribe<TaskSyncedEvent>(async @event => {
+            Console.WriteLine($"Sync handler: Task {@event.TaskId} synced to Notion {@event.NotionId}");
+            await Task.Delay(50);
+        });
+
+        // Check subscriber count
+        Console.WriteLine($"TaskCreatedEvent subscribers: {eventBus.GetSubscriberCount<TaskCreatedEvent>()}");
+        Console.WriteLine($"TaskSyncedEvent subscribers: {eventBus.GetSubscriberCount<TaskSyncedEvent>()}");
+
+        // Publish events
+        var taskCreatedEvent = new TaskCreatedEvent
+        {
+            TaskName = "Implement EventBus documentation",
+            Description = "Add EventBus section to README.md",
+            Source = "Program.Main"
+        };
+
+        await eventBus.PublishAsync(taskCreatedEvent);
+
+        var taskSyncedEvent = new TaskSyncedEvent
+        {
+            TaskId = "task-123",
+            NotionId = "page-456",
+            IsNew = true,
+            Source = "SyncService"
+        };
+
+        await eventBus.PublishAsync(taskSyncedEvent);
+
+        // Get diagnostic information
+        var subscriberInfo = eventBus.GetSubscriberInfo();
+        Console.WriteLine("\nSubscriber info:");
+        foreach (var kvp in subscriberInfo)
+        {
+            Console.WriteLine($"- {kvp.Key}: {kvp.Value} subscribers");
+        }
+
+        // Unsubscribe and clear
+        eventBus.UnsubscribeAll<TaskCreatedEvent>();
+        Console.WriteLine($"\nAfter unsubscribing, TaskCreatedEvent subscribers: {eventBus.GetSubscriberCount<TaskCreatedEvent>()}");
+
+        eventBus.Clear();
+        Console.WriteLine("Event bus cleared");
+    }
+}
+
+// Base ApplicationEvent class
+public abstract class ApplicationEvent
+{
+    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTime Timestamp { get; } = DateTime.UtcNow;
+    public string? Source { get; set; }
+}
+```
