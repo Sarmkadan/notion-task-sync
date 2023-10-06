@@ -783,6 +783,94 @@ public class TaskResult
 }
 ```
 
+## BackupServiceTests
+
+The `BackupServiceTests` class contains unit tests for the `BackupService` class, which provides backup functionality for task synchronization workflows. These tests verify backup creation with labels, retrieval of available backups, proper error handling, and validation of backup metadata including timestamps, file counts, and ordering.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using NotionTaskSync.Domain.Exceptions;
+using FluentAssertions;
+using Moq;
+using Xunit;
+
+class Program
+{
+  static async Task Main()
+  {
+    // Setup temporary directories
+    var backupDirectory = Path.Combine(Path.GetTempPath(), $"backup_test_{Guid.NewGuid()}");
+    var tasksDirectory = Path.Combine(Path.GetTempPath(), $"tasks_{Guid.NewGuid()}");
+    Directory.CreateDirectory(backupDirectory);
+    Directory.CreateDirectory(tasksDirectory);
+
+    try
+    {
+      // Create mock file service and backup service
+      var mockFileService = new Mock<LocalFileService>(tasksDirectory);
+      var backupService = new BackupService(backupDirectory, 5, mockFileService.Object);
+
+      // Example 1: Create a backup with a custom label
+      var labeledBackup = await backupService.CreateBackupAsync("pre-migration");
+      Console.WriteLine($"Created backup with label: {labeledBackup.Label}");
+      Console.WriteLine($"Backup ID: {labeledBackup.Id}");
+      Console.WriteLine($"Backup created at: {labeledBackup.CreatedAt}");
+      Console.WriteLine($"Backup path: {labeledBackup.Path}");
+      Console.WriteLine($"Files in backup: {labeledBackup.FileCount}");
+
+      // Example 2: Create a backup with default "auto" label
+      var autoBackup = await backupService.CreateBackupAsync();
+      Console.WriteLine($"Created backup with default label: {autoBackup.Label}");
+
+      // Example 3: Get all available backups
+      var allBackups = backupService.GetAvailableBackups();
+      Console.WriteLine($"Total backups available: {allBackups.Count}");
+      Console.WriteLine($"Backups ordered by creation date (newest first): {allBackups.Count > 0}");
+
+      // Example 4: Handle file service exceptions
+      mockFileService
+        .Setup(x => x.BackupTasksAsync(It.IsAny<string>()))
+        .ThrowsAsync(new IOException("Disk full"));
+
+      try
+      {
+        await backupService.CreateBackupAsync("test");
+        Console.WriteLine("ERROR: Should have thrown SyncException");
+      }
+      catch (SyncException ex)
+      {
+        Console.WriteLine($"Correctly caught SyncException: {ex.Message}");
+      }
+
+      // Example 5: Verify backup ordering
+      var backup1Dir = Path.Combine(backupDirectory, "backup_20240101_120000_old");
+      var backup2Dir = Path.Combine(backupDirectory, "backup_20240102_120000_new");
+      Directory.CreateDirectory(backup1Dir);
+      Directory.CreateDirectory(backup2Dir);
+
+      var oldTime = DateTime.UtcNow.AddHours(-1);
+      var newTime = DateTime.UtcNow;
+      Directory.SetCreationTimeUtc(backup1Dir, oldTime);
+      Directory.SetCreationTimeUtc(backup2Dir, newTime);
+
+      var orderedBackups = backupService.GetAvailableBackups();
+      Console.WriteLine($"Backups ordered correctly: {orderedBackups[0].CreatedAt > orderedBackups[1].CreatedAt}");
+    }
+    finally
+    {
+      // Cleanup
+      if (Directory.Exists(backupDirectory))
+        Directory.Delete(backupDirectory, recursive: true);
+      if (Directory.Exists(tasksDirectory))
+        Directory.Delete(tasksDirectory, recursive: true);
+    }
+  }
+}
+```
+
 ## AppSettings
 
 The `AppSettings` class provides application-wide configuration settings loaded from appsettings.json. It includes paths for local task storage, logging configuration, synchronization defaults, and backup settings.
