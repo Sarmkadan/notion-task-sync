@@ -590,6 +590,98 @@ class Program
 }
 ```
 
+## RetryHelperTests
+
+The `RetryHelperTests` class contains unit tests for the `RetryHelper` utility, which provides robust retry and circuit breaker patterns for handling transient failures in distributed systems. These tests verify retry behavior with exponential backoff, circuit breaker state transitions, predicate-based retry conditions, and proper error handling.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Example 1: Simple retry with exponential backoff
+        var result1 = await RetryHelper.ExecuteWithRetryAsync<string>(
+            async () => await FetchDataFromUnstableServiceAsync(),
+            maxRetries: 5,
+            initialDelayMs: 100);
+        
+        Console.WriteLine($"Success after retries: {result1}");
+
+        // Example 2: Retry with custom retry predicate
+        var result2 = await RetryHelper.ExecuteWithRetryAsync<TaskResult>(
+            async () => await RiskyOperationAsync(),
+            maxRetries: 3,
+            shouldRetry: ex => ex is TimeoutException || ex is HttpRequestException,
+            initialDelayMs: 200);
+        
+        Console.WriteLine($"Operation completed: {result2.IsSuccess}");
+
+        // Example 3: Circuit breaker pattern
+        var circuitBreakerResult = await RetryHelper.ExecuteWithCircuitBreakerAsync(
+            async () => await ExternalApiCallAsync(),
+            failureThreshold: 3,
+            recoveryTimeoutMs: 5000);
+        
+        Console.WriteLine($"Circuit breaker success: {circuitBreakerResult.Success}, message: {circuitBreakerResult.Message}");
+
+        // Example 4: Synchronous retry
+        var syncResult = RetryHelper.ExecuteWithRetry(
+            () => ComputeValue(),
+            maxRetries: 2);
+        
+        Console.WriteLine($"Sync result: {syncResult}");
+    }
+    
+    static async Task<string> FetchDataFromUnstableServiceAsync()
+    {
+        // Simulate an unstable service that might fail temporarily
+        if (DateTime.UtcNow.Second % 3 == 0)
+        {
+            throw new InvalidOperationException("Service temporarily unavailable");
+        }
+        return "Data fetched successfully";
+    }
+    
+    static async Task<TaskResult> RiskyOperationAsync()
+    {
+        // Simulate an operation that might timeout
+        if (DateTime.UtcNow.Second % 5 == 0)
+        {
+            throw new TimeoutException("Operation timed out");
+        }
+        return new TaskResult { IsSuccess = true };
+    }
+    
+    static async Task<string> ExternalApiCallAsync()
+    {
+        // Simulate external API that might be down
+        if (DateTime.UtcNow.Second % 7 == 0)
+        {
+            throw new HttpRequestException("API unavailable");
+        }
+        return "API response";
+    }
+    
+    static int ComputeValue()
+    {
+        // Simple synchronous computation
+        return 42;
+    }
+}
+
+// Simple result class for demonstration
+public class TaskResult
+{
+    public bool IsSuccess { get; set; }
+}
+```
+
 ## AppSettings
 
 The `AppSettings` class provides application-wide configuration settings loaded from appsettings.json. It includes paths for local task storage, logging configuration, synchronization defaults, and backup settings.
