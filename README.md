@@ -464,6 +464,132 @@ class Program
 }
 ```
 
+## LocalFileServiceTests
+
+The `LocalFileServiceTests` class contains unit tests for the `LocalFileService` class, which provides file system operations for persisting tasks to the local file system. These tests verify saving tasks to markdown files, loading tasks from files, handling edge cases like invalid inputs, and managing task collections.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Domain.Models;
+using NotionTaskSync.Services;
+using System;
+using System.IO;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Create a temporary directory for testing
+        var testDirectory = Path.Combine(Path.GetTempPath(), $"local_file_service_test_{Guid.NewGuid()}");
+        Directory.CreateDirectory(testDirectory);
+        
+        try
+        {
+            // Create LocalFileService instance
+            var fileService = new LocalFileService(testDirectory);
+            
+            // Test 1: Save a valid task
+            var task1 = new Domain.Models.Task
+            {
+                Id = Guid.NewGuid(),
+                Title = "Implement LocalFileService feature",
+                Description = "Create documentation for LocalFileServiceTests",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            
+            await fileService.SaveTaskAsync(task1);
+            Console.WriteLine($"Task saved to: {task1.LocalFilePath}");
+            
+            // Test 2: Save multiple tasks
+            var task2 = new Domain.Models.Task
+            {
+                Id = Guid.NewGuid(),
+                Title = "Test file operations",
+                Description = "Verify file system operations work correctly",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            
+            await fileService.SaveTaskAsync(task2);
+            Console.WriteLine($"Second task saved to: {task2.LocalFilePath}");
+            
+            // Test 3: Load all tasks
+            var allTasks = await fileService.LoadAllTasksAsync();
+            Console.WriteLine($"Loaded {allTasks.Count} tasks from directory");
+            
+            foreach (var task in allTasks)
+            {
+                Console.WriteLine($"- {task.Title}: {task.LocalFilePath}");
+            }
+            
+            // Test 4: Load a specific task
+            if (allTasks.Count > 0)
+            {
+                var loadedTask = await fileService.LoadTaskAsync(allTasks[0].LocalFilePath!);
+                Console.WriteLine($"Loaded task: {loadedTask?.Title}");
+            }
+            
+            // Test 5: Handle invalid task (should throw ValidationException)
+            try
+            {
+                var invalidTask = new Domain.Models.Task
+                {
+                    Id = Guid.Empty,
+                    Title = string.Empty,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                
+                await fileService.SaveTaskAsync(invalidTask);
+                Console.WriteLine("ERROR: Should have thrown ValidationException");
+            }
+            catch (ValidationException ex)
+            {
+                Console.WriteLine($"Correctly caught ValidationException: {ex.Message}");
+            }
+            
+            // Test 6: Handle special characters in title
+            var specialTask = new Domain.Models.Task
+            {
+                Id = Guid.NewGuid(),
+                Title = "Task / With \\ Special : Characters",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            
+            await fileService.SaveTaskAsync(specialTask);
+            var files = Directory.GetFiles(testDirectory);
+            Console.WriteLine($"Special characters sanitized: {Path.GetFileName(files[0])}");
+            
+            // Test 7: Overwrite existing file
+            var overwriteTask = new Domain.Models.Task
+            {
+                Id = Guid.NewGuid(),
+                Title = "Implement LocalFileService feature",
+                Description = "Updated description",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            
+            await fileService.SaveTaskAsync(overwriteTask);
+            var content = await File.ReadAllTextAsync(overwriteTask.LocalFilePath!);
+            Console.WriteLine($"File overwritten, contains updated description: {content.Contains("Updated description")}");
+        }
+        finally
+        {
+            // Clean up
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, recursive: true);
+            }
+        }
+    }
+}
+```
+
 ## AppSettings
 
 The `AppSettings` class provides application-wide configuration settings loaded from appsettings.json. It includes paths for local task storage, logging configuration, synchronization defaults, and backup settings.
