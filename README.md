@@ -590,6 +590,107 @@ class Program
 }
 ```
 
+## ConflictResolutionTests
+
+The `ConflictResolutionTests` class contains unit tests for conflict resolution functionality in task synchronization workflows. These tests verify how conflicts are detected, resolved, and tracked across local and Notion systems, including automatic resolution strategies, manual review workflows, and statistics calculations.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Domain.Models;
+using NotionTaskSync.Data.Repositories;
+using NotionTaskSync.Services;
+using FluentAssertions;
+using Moq;
+using Xunit;
+
+class Program
+{
+    static void Main()
+    {
+        // Create mock repository and service
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var resolutionService = new ConflictResolutionService(mockRepo.Object);
+
+        // Example 1: Resolve a conflict using LocalWins strategy
+        var conflict1 = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local task title",
+            NotionValue = "notion task title",
+            PropertyName = "Title",
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        conflict1.Resolve("local task title", ResolutionMethod.LocalWins, "local changes take precedence");
+        Console.WriteLine($"Conflict resolved: {conflict1.Status}");
+        Console.WriteLine($"Resolved value: {conflict1.ResolvedValue}");
+        Console.WriteLine($"Resolution method: {conflict1.ResolutionMethod}");
+
+        // Example 2: Mark a conflict for manual review
+        var conflict2 = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "in-progress",
+            NotionValue = "completed",
+            PropertyName = "Status",
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        conflict2.MarkForManualReview("Values diverged significantly, manual inspection required");
+        Console.WriteLine($"Conflict marked for review: {conflict2.Status}");
+        Console.WriteLine($"Review reason: {conflict2.ResolutionNotes}");
+
+        // Example 3: Merge conflicts with identical values (auto-resolves)
+        var conflict3 = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "same value",
+            NotionValue = "same value",
+            PropertyName = "Description"
+        };
+
+        var mergedResult = resolutionService.MergeConflicts(conflict3);
+        Console.WriteLine($"Merged conflict status: {mergedResult.Status}");
+        Console.WriteLine($"Merged resolution method: {mergedResult.ResolutionMethod}");
+
+        // Example 4: Get resolution statistics from mixed conflict statuses
+        var conflicts = new List<ConflictResolution>
+        {
+            new() { TaskId = Guid.NewGuid(), Status = ResolutionStatus.Resolved },
+            new() { TaskId = Guid.NewGuid(), Status = ResolutionStatus.Resolved },
+            new() { TaskId = Guid.NewGuid(), Status = ResolutionStatus.Pending },
+            new() { TaskId = Guid.NewGuid(), Status = ResolutionStatus.PendingReview },
+            new() { TaskId = Guid.NewGuid(), Status = ResolutionStatus.Abandoned }
+        };
+
+        var stats = resolutionService.GetResolutionStats(conflicts);
+        Console.WriteLine($"Total conflicts: {stats.TotalConflicts}");
+        Console.WriteLine($"Resolved: {stats.ResolvedCount}");
+        Console.WriteLine($"Pending review: {stats.PendingReviewCount}");
+        Console.WriteLine($"Resolution rate: {stats.ResolutionRate:P}");
+
+        // Example 5: Filter pending conflicts
+        var pendingConflicts = resolutionService.GetPendingConflicts(conflicts);
+        Console.WriteLine($"Pending conflicts count: {pendingConflicts.Count}");
+        Console.WriteLine($"All pending: {pendingConflicts.All(c => c.IsPending())}");
+
+        // Example 6: Merge conflicts with different values (requires manual review)
+        var conflict6 = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local status",
+            NotionValue = "notion status",
+            PropertyName = "Status"
+        };
+
+        var manualReviewResult = resolutionService.MergeConflicts(conflict6);
+        Console.WriteLine($"Manual review required: {manualReviewResult.Status == ResolutionStatus.PendingReview}");
+        Console.WriteLine($"Review reason: {manualReviewResult.ResolutionNotes}");
+    }
+}
+```
+
 ## RetryHelperTests
 
 The `RetryHelperTests` class contains unit tests for the `RetryHelper` utility, which provides robust retry and circuit breaker patterns for handling transient failures in distributed systems. These tests verify retry behavior with exponential backoff, circuit breaker state transitions, predicate-based retry conditions, and proper error handling.
