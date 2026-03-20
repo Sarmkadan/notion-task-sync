@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -53,7 +54,7 @@ public class DatabaseContext : IDisposable
     {
         ThrowIfDisposed();
 
-        if (_connection == null)
+        if (_connection is null)
         {
             _connection = CreateConnection();
         }
@@ -69,7 +70,7 @@ public class DatabaseContext : IDisposable
     /// </summary>
     public async Task CloseAsync()
     {
-        if (_connection != null && _connection.IsOpen)
+        if (_connection is not null && _connection.IsOpen)
         {
             await _connection.CloseAsync();
         }
@@ -82,7 +83,7 @@ public class DatabaseContext : IDisposable
     {
         ThrowIfDisposed();
 
-        if (_currentTransaction != null)
+        if (_currentTransaction is not null)
             throw new InvalidOperationException("A transaction is already active");
 
         _currentTransaction = Connection.BeginTransaction();
@@ -94,7 +95,7 @@ public class DatabaseContext : IDisposable
     /// </summary>
     public async Task CommitAsync()
     {
-        if (_currentTransaction != null && _currentTransaction.IsActive)
+        if (_currentTransaction is not null && _currentTransaction.IsActive)
         {
             await _currentTransaction.CommitAsync();
             _currentTransaction = null;
@@ -106,7 +107,7 @@ public class DatabaseContext : IDisposable
     /// </summary>
     public async Task RollbackAsync()
     {
-        if (_currentTransaction != null && _currentTransaction.IsActive)
+        if (_currentTransaction is not null && _currentTransaction.IsActive)
         {
             await _currentTransaction.RollbackAsync();
             _currentTransaction = null;

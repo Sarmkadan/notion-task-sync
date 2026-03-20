@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -27,7 +28,7 @@ public class ChangeLogRepository : IChangeLogRepository
 
     public async global::System.Threading.Tasks.Task AddAsync(ChangeLog changeLog)
     {
-        if (changeLog == null)
+        if (changeLog is null)
             throw new ArgumentNullException(nameof(changeLog));
 
         if (!changeLog.Validate())

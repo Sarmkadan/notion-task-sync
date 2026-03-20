@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -33,13 +34,13 @@ public static class TaskMapper
         };
 
         // Extract description if available
-        if (page.Properties != null && page.Properties.ContainsKey("Description"))
+        if (page.Properties is not null && page.Properties.ContainsKey("Description"))
         {
             task.Description = page.Properties["Description"]?.ToString();
         }
 
         // Extract status if available
-        if (page.Properties != null && page.Properties.ContainsKey("Status"))
+        if (page.Properties is not null && page.Properties.ContainsKey("Status"))
         {
             var status = page.Properties["Status"]?.ToString();
             if (Enum.TryParse<TaskStatus>(status, out var parsedStatus))
@@ -47,21 +48,21 @@ public static class TaskMapper
         }
 
         // Extract due date if available
-        if (page.Properties != null && page.Properties.ContainsKey("DueDate"))
+        if (page.Properties is not null && page.Properties.ContainsKey("DueDate"))
         {
             if (DateTime.TryParse(page.Properties["DueDate"]?.ToString(), out var dueDate))
                 task.DueDate = dueDate;
         }
 
         // Extract priority if available
-        if (page.Properties != null && page.Properties.ContainsKey("Priority"))
+        if (page.Properties is not null && page.Properties.ContainsKey("Priority"))
         {
             if (int.TryParse(page.Properties["Priority"]?.ToString(), out var priority))
                 task.Priority = priority;
         }
 
         // Extract assigned to if available
-        if (page.Properties != null && page.Properties.ContainsKey("AssignedTo"))
+        if (page.Properties is not null && page.Properties.ContainsKey("AssignedTo"))
         {
             task.AssignedTo = page.Properties["AssignedTo"]?.ToString();
         }
@@ -81,7 +82,7 @@ public static class TaskMapper
         task.UpdatedAt = page.LastEditedTime;
         task.IsDeleted = page.Archived;
 
-        if (page.Properties != null)
+        if (page.Properties is not null)
         {
             if (page.Properties.ContainsKey("Description"))
                 task.Description = page.Properties["Description"]?.ToString();

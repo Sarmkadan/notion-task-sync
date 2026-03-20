@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -119,11 +120,11 @@ public class SyncService
             {
                 var page = notionPages.FirstOrDefault(p => p.PageId == task.NotionPageId);
 
-                if (page != null)
+                if (page is not null)
                 {
                     await _notionApiService.UpdatePageAsync(page.PageId, task);
                 }
-                else if (task.NotionPageId == null)
+                else if (task.NotionPageId is null)
                 {
                     var newPage = await _notionApiService.CreatePageAsync(config.NotionDatabaseId, task);
                     task.NotionPageId = newPage.PageId;
@@ -139,7 +140,7 @@ public class SyncService
             {
                 var task = localTasks.FirstOrDefault(t => t.NotionPageId == page.PageId);
 
-                if (task != null)
+                if (task is not null)
                 {
                     UpdateTaskFromPage(task, page);
                     await _taskRepository.UpdateAsync(task);
@@ -191,7 +192,7 @@ public class SyncService
     /// <summary>
     /// Contains the results and statistics from a sync operation.
     /// </summary>
-    public class SyncResult
+    public sealed class SyncResult
     {
         public Guid ConfigId { get; set; }
         public DateTime StartedAt { get; set; }

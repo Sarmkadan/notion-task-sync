@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -12,7 +13,7 @@ using System.Collections.Generic;
 /// Application-wide settings loaded from appsettings.json.
 /// Contains paths, logging configuration, and sync defaults.
 /// </summary>
-public class AppSettings
+public sealed class AppSettings
 {
     /// <summary>
     /// Gets or sets the root directory for local task files.

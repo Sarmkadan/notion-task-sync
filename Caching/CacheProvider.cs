@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -77,7 +78,7 @@ public class CacheProvider
     public T GetOrSet<T>(string key, Func<T> factory, TimeSpan? expiration = null)
     {
         var cached = Get<T>(key);
-        if (cached != null)
+        if (cached is not null)
             return cached;
 
         _logger.LogDebug("Cache miss: {Key}, computing value", key);
@@ -96,7 +97,7 @@ public class CacheProvider
         TimeSpan? expiration = null)
     {
         var cached = Get<T>(key);
-        if (cached != null)
+        if (cached is not null)
             return cached;
 
         _logger.LogDebug("Cache miss: {Key}, computing value asynchronously", key);

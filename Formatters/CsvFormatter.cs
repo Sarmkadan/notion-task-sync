@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -97,7 +98,7 @@ public class CsvFormatter
                     continue;
 
                 var task = ParseTaskRow(line);
-                if (task != null)
+                if (task is not null)
                     tasks.Add(task);
             }
 

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -22,7 +23,7 @@ public static class CollectionExtensions
     /// </summary>
     public static bool IsNullOrEmpty<T>(this IEnumerable<T>? collection)
     {
-        return collection == null || !collection.Any();
+        return collection is null || !collection.Any();
     }
 
     /// <summary>
@@ -31,7 +32,7 @@ public static class CollectionExtensions
     /// </summary>
     public static bool HasItems<T>(this IEnumerable<T>? collection)
     {
-        return collection != null && collection.Any();
+        return collection is not null && collection.Any();
     }
 
     /// <summary>
@@ -40,7 +41,7 @@ public static class CollectionExtensions
     /// </summary>
     public static T? SafeGetAt<T>(this IList<T> list, int index, T? defaultValue = default)
     {
-        if (list == null || index < 0 || index >= list.Count)
+        if (list is null || index < 0 || index >= list.Count)
             return defaultValue;
 
         return list[index];
@@ -170,7 +171,7 @@ public static class CollectionExtensions
     /// </summary>
     public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T?> items) where T : class
     {
-        return items.Where(x => x != null)!;
+        return items.Where(x => x is not null)!;
     }
 
     /// <summary>
