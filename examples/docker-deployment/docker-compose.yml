@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  notion-task-sync:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    environment:
+      - NotionApi__ApiKey=${NOTION_API_KEY}
+      - NotionApi__DatabaseId=${NOTION_DATABASE_ID}
+      - LocalTasksDirectory=/app/tasks
+    volumes:
+      - ./tasks:/app/tasks
+    ports:
+      - "8080:8080"
