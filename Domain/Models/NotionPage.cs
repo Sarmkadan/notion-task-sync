@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -80,7 +81,7 @@ public class NotionPage
     /// </summary>
     public T? GetProperty<T>(string propertyName)
     {
-        if (Properties == null || !Properties.ContainsKey(propertyName))
+        if (Properties is null || !Properties.ContainsKey(propertyName))
             return default;
 
         var value = Properties[propertyName];

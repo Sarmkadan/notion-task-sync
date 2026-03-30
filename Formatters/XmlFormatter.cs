@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -115,7 +116,7 @@ public class XmlFormatter
                 try
                 {
                     var task = ParseTaskElement(taskElement);
-                    if (task != null)
+                    if (task is not null)
                         tasks.Add(task);
                 }
                 catch (Exception ex)
@@ -138,11 +139,11 @@ public class XmlFormatter
     /// </summary>
     private Task? ParseTaskElement(XElement element)
     {
-        if (element == null)
+        if (element is null)
             return null;
 
         var idAttr = element.Attribute("id");
-        if (idAttr == null || !Guid.TryParse(idAttr.Value, out var id))
+        if (idAttr is null || !Guid.TryParse(idAttr.Value, out var id))
             return null;
 
         var task = new Task

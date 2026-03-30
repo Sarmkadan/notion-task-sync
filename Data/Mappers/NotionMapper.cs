@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -20,7 +21,7 @@ public static class NotionMapper
     /// </summary>
     public static NotionPage ParseFromNotionResponse(Dictionary<string, object?>? response)
     {
-        if (response == null)
+        if (response is null)
             throw new ArgumentNullException(nameof(response));
 
         var pageId = ExtractString(response, "id");
@@ -71,7 +72,7 @@ public static class NotionMapper
             };
         }
 
-        if (page.Properties != null)
+        if (page.Properties is not null)
         {
             foreach (var prop in page.Properties)
             {
@@ -103,7 +104,7 @@ public static class NotionMapper
             };
         }
 
-        if (page.Properties != null)
+        if (page.Properties is not null)
         {
             foreach (var prop in page.Properties)
             {
@@ -120,7 +121,7 @@ public static class NotionMapper
     /// </summary>
     private static string ExtractTitle(Dictionary<string, object?>? response)
     {
-        if (response == null || !response.ContainsKey("properties"))
+        if (response is null || !response.ContainsKey("properties"))
             return "Untitled";
 
         if (response["properties"] is Dictionary<string, object?> props &&
@@ -152,7 +153,7 @@ public static class NotionMapper
     /// </summary>
     private static string ExtractDatabaseId(Dictionary<string, object?>? response)
     {
-        if (response == null || !response.ContainsKey("parent"))
+        if (response is null || !response.ContainsKey("parent"))
             return string.Empty;
 
         if (response["parent"] is Dictionary<string, object?> parent &&
@@ -171,7 +172,7 @@ public static class NotionMapper
     {
         var props = new Dictionary<string, object?>();
 
-        if (response == null || !response.ContainsKey("properties"))
+        if (response is null || !response.ContainsKey("properties"))
             return props;
 
         if (response["properties"] is Dictionary<string, object?> properties)
@@ -190,7 +191,7 @@ public static class NotionMapper
     /// </summary>
     private static object? ExtractPropertyValue(object? propertyObj)
     {
-        if (propertyObj == null)
+        if (propertyObj is null)
             return null;
 
         if (propertyObj is Dictionary<string, object?> propDict)

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -206,7 +207,7 @@ public class NotionApiService
         {
             var url = $"{NotionApiBaseUrl}/users/me";
             var response = await GetAsync(url);
-            return response != null;
+            return response is not null;
         }
         catch
         {

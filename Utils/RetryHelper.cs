@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,7 +15,7 @@ using Microsoft.Extensions.Logging;
 /// Essential for API calls that may temporarily fail due to rate limits or network issues.
 /// Implements industry-standard retry patterns to improve reliability without requiring caller code duplication.
 /// </summary>
-public class RetryHelper
+public sealed class RetryHelper
 {
     private readonly ILogger<RetryHelper> _logger;
 

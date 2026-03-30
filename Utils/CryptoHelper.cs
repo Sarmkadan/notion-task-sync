@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,7 +15,7 @@ using System.Text;
 /// Provides hashing and encryption utilities for sensitive data protection.
 /// Used for API key storage and data integrity verification.
 /// </summary>
-public class CryptoHelper
+public sealed class CryptoHelper
 {
     /// <summary>
     /// Computes a SHA256 hash of a string.
