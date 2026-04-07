@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -35,7 +36,7 @@ public class HttpClientFactory
     /// </summary>
     public HttpClient GetNotionHttpClient()
     {
-        if (_notionHttpClient != null)
+        if (_notionHttpClient is not null)
             return _notionHttpClient;
 
         _notionHttpClient = new HttpClient();

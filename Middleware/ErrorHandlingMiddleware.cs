@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -15,7 +16,7 @@ using Microsoft.Extensions.Logging;
 /// Converts different exception types into appropriate error messages and log levels.
 /// Prevents unhandled exceptions from crashing the application while providing useful feedback.
 /// </summary>
-public class ErrorHandlingMiddleware
+public sealed class ErrorHandlingMiddleware
 {
     private readonly ILogger<ErrorHandlingMiddleware> _logger;
 

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -44,7 +45,7 @@ public class CliArgumentParser
     /// </summary>
     public ParsedCommand? Parse(string[] args)
     {
-        if (args == null || args.Length == 0)
+        if (args is null || args.Length == 0)
         {
             return new ParsedCommand
             {
