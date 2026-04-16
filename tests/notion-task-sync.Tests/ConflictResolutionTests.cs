@@ -103,4 +103,53 @@ public class ConflictResolutionTests
         pending.Should().HaveCount(2);
         pending.Should().OnlyContain(c => c.IsPending());
     }
+
+    [Fact]
+    public void MergeConflicts_WhenBothSidesModifiedSamePropertyWithDifferentValues_MarksForManualReview()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local status value",
+            NotionValue = "notion status value",
+            PropertyName = "Status",
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        // Act
+        var result = service.MergeConflicts(conflict);
+
+        // Assert
+        result.Status.Should().Be(ResolutionStatus.PendingReview);
+        result.ResolutionNotes.Should().Contain("both sides modified Status");
+        result.IsPending().Should().BeTrue();
+    }
+
+    [Fact]
+    public void MergeConflicts_WhenBothSidesHaveIdenticalValues_ResolvesWithMergedMethod()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "same value",
+            NotionValue = "same value",
+            PropertyName = "Title"
+        };
+
+        // Act
+        var result = service.MergeConflicts(conflict);
+
+        // Assert
+        result.Status.Should().Be(ResolutionStatus.Resolved);
+        result.ResolutionMethod.Should().Be(ResolutionMethod.Merged);
+        result.ResolvedValue.Should().Be("same value");
+    }
 }
