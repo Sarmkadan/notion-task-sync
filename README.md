@@ -187,7 +187,7 @@ notion-sync sync
 
 ```bash
 # Download precompiled binary from releases
-wget https://github.com/Sarmkadan/notion-task-sync/releases/download/v1.0.0/notion-task-sync-linux-x64.tar.gz
+wget https://github.com/Sarmkadan/notion-task-sync/releases/download/v2.0.2/notion-task-sync-linux-x64.tar.gz
 
 # Extract
 tar -xzf notion-task-sync-linux-x64.tar.gz
