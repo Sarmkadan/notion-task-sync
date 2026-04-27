@@ -42,6 +42,18 @@ public class ConflictResolution
 
     public ResolutionStatus Status { get; set; } = ResolutionStatus.Pending;
 
+    /// <summary>
+    /// Timestamp of the local modification involved in this conflict.
+    /// Used by last-write-wins strategy to determine which value is authoritative.
+    /// </summary>
+    public DateTime? LocalModifiedAt { get; set; }
+
+    /// <summary>
+    /// Timestamp of the Notion modification involved in this conflict.
+    /// Used by last-write-wins strategy to determine which value is authoritative.
+    /// </summary>
+    public DateTime? NotionModifiedAt { get; set; }
+
     [StringLength(500)]
     public string? ResolutionNotes { get; set; }
 

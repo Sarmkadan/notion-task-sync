@@ -27,16 +27,28 @@ public class ConflictResolutionService
 
     /// <summary>
     /// Resolves all detected conflicts using the specified strategy.
+    /// When local changes are discarded, a warning entry is written to the change log
+    /// so edits are never silently lost.
     /// </summary>
     public async Task<List<ConflictResolution>> ResolveConflictsAsync(
         List<ConflictResolution> conflicts,
-        ConflictResolutionStrategy strategy)
+        ConflictResolutionStrategy strategy,
+        Dictionary<string, ConflictResolutionStrategy>? fieldStrategies = null)
     {
         var resolutions = new List<ConflictResolution>();
 
         foreach (var conflict in conflicts)
         {
-            var resolution = strategy switch
+            var hadLocalValue = !string.IsNullOrEmpty(conflict.LocalValue);
+
+            // Per-field strategy overrides the global strategy when configured
+            var effectiveStrategy = fieldStrategies is not null
+                && !string.IsNullOrEmpty(conflict.PropertyName)
+                && fieldStrategies.TryGetValue(conflict.PropertyName, out var fieldStrategy)
+                    ? fieldStrategy
+                    : strategy;
+
+            var resolution = effectiveStrategy switch
             {
                 ConflictResolutionStrategy.LastWrite => ResolveByLastWrite(conflict),
                 ConflictResolutionStrategy.LocalWins => ResolveLocalWins(conflict),
@@ -45,6 +57,15 @@ public class ConflictResolutionService
                 _ => ResolveByLastWrite(conflict)
             };
 
+            // Log a warning whenever a local edit is discarded so it can be audited or recovered
+            if (hadLocalValue
+                && resolution.Status == ResolutionStatus.Resolved
+                && resolution.ResolutionMethod != ResolutionMethod.LocalWins
+                && resolution.ResolvedValue != resolution.LocalValue)
+            {
+                await LogDiscardedLocalChangeAsync(resolution);
+            }
+
             resolutions.Add(resolution);
         }
 
@@ -52,23 +73,61 @@ public class ConflictResolutionService
     }
 
     /// <summary>
-    /// Resolves conflict by keeping the last written value (newest timestamp).
+    /// Writes a change-log entry recording the discarded local value so it can be
+    /// audited, recovered, or surfaced in a future UI.
+    /// </summary>
+    private async System.Threading.Tasks.Task LogDiscardedLocalChangeAsync(ConflictResolution resolution)
+    {
+        var logEntry = new ChangeLog
+        {
+            Id = Guid.NewGuid(),
+            TaskId = resolution.TaskId,
+            ChangeType = "LocalChangeDiscarded",
+            Source = ChangeSource.System,
+            Timestamp = DateTime.UtcNow,
+            OldValue = resolution.LocalValue,
+            NewValue = resolution.ResolvedValue,
+            PropertyName = resolution.PropertyName,
+            IsConflict = true,
+            ConflictResolutionStrategy = resolution.ResolutionMethod.ToString(),
+            Description = $"Local change discarded during conflict resolution. " +
+                          $"Strategy: {resolution.ResolutionMethod}. " +
+                          $"Discarded value: \"{resolution.LocalValue}\". " +
+                          $"Applied value: \"{resolution.ResolvedValue}\". " +
+                          $"Notes: {resolution.ResolutionNotes}"
+        };
+
+        await _changeLogRepository.AddAsync(logEntry);
+    }
+
+    /// <summary>
+    /// Resolves conflict by keeping the value with the newer modification timestamp.
+    /// Uses <see cref="ConflictResolution.LocalModifiedAt"/> and
+    /// <see cref="ConflictResolution.NotionModifiedAt"/> when available.
+    /// Resolution notes record what was discarded so the decision is fully auditable.
     /// </summary>
     private ConflictResolution ResolveByLastWrite(ConflictResolution conflict)
     {
-        // In real implementation, would fetch actual timestamps from change logs
-        var localTimestamp = DateTime.UtcNow.AddMinutes(-2);
-        var notionTimestamp = DateTime.UtcNow;
+        var localTimestamp = conflict.LocalModifiedAt ?? DateTime.MinValue;
+        var notionTimestamp = conflict.NotionModifiedAt ?? DateTime.MinValue;
 
-        if (notionTimestamp > localTimestamp)
+        if (notionTimestamp >= localTimestamp)
         {
-            conflict.Resolve(conflict.NotionValue ?? string.Empty, ResolutionMethod.LastWrite,
-                "Resolved using last-write-wins: Notion value is newer");
+            conflict.Resolve(
+                conflict.NotionValue ?? string.Empty,
+                ResolutionMethod.LastWrite,
+                $"Resolved using last-write-wins: Notion value is newer " +
+                $"(local: {localTimestamp:O}, notion: {notionTimestamp:O}). " +
+                $"Discarded local value: \"{conflict.LocalValue}\"");
         }
         else
         {
-            conflict.Resolve(conflict.LocalValue ?? string.Empty, ResolutionMethod.LastWrite,
-                "Resolved using last-write-wins: Local value is newer");
+            conflict.Resolve(
+                conflict.LocalValue ?? string.Empty,
+                ResolutionMethod.LastWrite,
+                $"Resolved using last-write-wins: Local value is newer " +
+                $"(local: {localTimestamp:O}, notion: {notionTimestamp:O}). " +
+                $"Discarded Notion value: \"{conflict.NotionValue}\"");
         }
 
         return conflict;
