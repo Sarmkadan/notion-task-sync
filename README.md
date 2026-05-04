@@ -1058,3 +1058,91 @@ public abstract class ApplicationEvent
     public string? Source { get; set; }
 }
 ```
+
+## SyncServiceTests
+
+The `SyncServiceTests` class contains unit tests for the `SyncService` class, which handles synchronization between local task storage and Notion databases. These tests verify synchronization execution, configuration validation, incremental/full sync modes, conflict detection and resolution, error handling, and timing tracking.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Domain.Models;
+using NotionTaskSync.Services;
+using NotionTaskSync.Data.Repositories;
+using FluentAssertions;
+using Moq;
+using Xunit;
+using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup mocks for SyncService dependencies
+        var mockChangeDetectionService = new Mock<ChangeDetectionService>(
+            new Mock<IChangeLogRepository>().Object);
+        var mockConflictResolutionService = new Mock<ConflictResolutionService>(
+            new Mock<IChangeLogRepository>().Object);
+        var mockNotionApiService = new Mock<NotionApiService>(null);
+        var mockTaskRepository = new Mock<ITaskRepository>();
+        var mockChangeLogRepository = new Mock<IChangeLogRepository>();
+        var mockLogger = new Mock<ILogger<SyncService>>();
+
+        // Create SyncService instance with mocked dependencies
+        var syncService = new SyncService(
+            mockChangeDetectionService.Object,
+            mockConflictResolutionService.Object,
+            mockNotionApiService.Object,
+            mockTaskRepository.Object,
+            mockChangeLogRepository.Object,
+            mockLogger.Object);
+
+        // Example 1: Test successful sync with valid configuration
+        var validConfig = new SyncConfig("test-sync", "550e8400-e29b-41d4-a716-446655440000", "/tmp/tasks")
+        {
+            Direction = SyncDirection.Bidirectional
+        };
+
+        mockTaskRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<DomainTask>());
+        mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
+            .ReturnsAsync(new List<NotionPage>());
+        mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<DomainTask>>(), It.IsAny<DateTime>()))
+            .Returns(new List<ChangeLog>());
+        mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
+            .Returns(new List<ChangeLog>());
+        mockChangeDetectionService.Setup(s => s.DetectConflicts(It.IsAny<List<ChangeLog>>(), It.IsAny<List<ChangeLog>>()))
+            .Returns(new List<ConflictResolution>());
+
+        var result = await syncService.ExecuteSyncAsync(validConfig);
+        Console.WriteLine($"Sync status: {result.Status}"); // Should be Completed
+
+        // Example 2: Test sync with invalid configuration (should throw exception)
+        var invalidConfig = new SyncConfig("", "invalid-id", "/tmp");
+        
+        try
+        {
+            await syncService.ExecuteSyncAsync(invalidConfig);
+            Console.WriteLine("ERROR: Should have thrown ConfigurationException");
+        }
+        catch (ConfigurationException ex)
+        {
+            Console.WriteLine($"Correctly caught ConfigurationException: {ex.Message}");
+        }
+
+        // Example 3: Test incremental sync with previous sync time
+        var lastSyncTime = DateTime.UtcNow.AddHours(-1);
+        var incrementalConfig = new SyncConfig("test-sync", "550e8400-e29b-41d4-a716-446655440000", "/tmp/tasks")
+        {
+            LastSyncAt = lastSyncTime
+        };
+
+        mockNotionApiService.Setup(a => a.FetchPagesSinceAsync(It.IsAny<string>(), It.IsAny<DateTime>()))
+            .ReturnsAsync(new List<NotionPage>());
+
+        await syncService.ExecuteSyncAsync(incrementalConfig);
+        mockNotionApiService.Verify(a => a.FetchPagesSinceAsync(
+            incrementalConfig.NotionDatabaseId, lastSyncTime), Times.Once);
+    }
+}
+```
