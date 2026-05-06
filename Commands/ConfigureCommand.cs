@@ -13,7 +13,8 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 /// <summary>
 /// Configures application settings interactively or via command-line options.
@@ -190,22 +191,24 @@ public class ConfigureCommand : CliCommand
             var appSettingsPath = "appsettings.json";
 
             // Read existing settings if they exist
-            dynamic appSettings = new System.Dynamic.ExpandoObject();
+            JsonNode appSettings = new JsonObject();
             if (File.Exists(appSettingsPath))
             {
                 var content = await File.ReadAllTextAsync(appSettingsPath);
-                appSettings = JsonConvert.DeserializeObject<dynamic>(content) ?? appSettings;
+                appSettings = JsonNode.Parse(content) ?? appSettings;
             }
 
             // Update with new values
-            appSettings["NotionApi"]["ApiKey"] = settings.ApiKey;
-            appSettings["NotionApi"]["DatabaseIds"] = new[] { settings.DatabaseId };
-            appSettings["AppSettings"]["LocalTasksDirectory"] = settings.TaskDirectory;
-            appSettings["AppSettings"]["DefaultSyncIntervalSeconds"] = settings.SyncIntervalSeconds;
-            appSettings["AppSettings"]["DefaultConflictStrategy"] = settings.ConflictStrategy;
+            appSettings["NotionApi"]!["ApiKey"] = settings.ApiKey;
+            var dbIds = new JsonArray();
+            dbIds.Add(settings.DatabaseId);
+            appSettings["NotionApi"]!["DatabaseIds"] = dbIds;
+            appSettings["AppSettings"]!["LocalTasksDirectory"] = settings.TaskDirectory;
+            appSettings["AppSettings"]!["DefaultSyncIntervalSeconds"] = settings.SyncIntervalSeconds;
+            appSettings["AppSettings"]!["DefaultConflictStrategy"] = settings.ConflictStrategy;
 
             // Write updated settings
-            var updatedJson = JsonConvert.SerializeObject(appSettings, Formatting.Indented);
+            var updatedJson = appSettings.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(appSettingsPath, updatedJson);
 
             return true;
