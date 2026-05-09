@@ -61,7 +61,7 @@ public class StatusCommand : CliCommand
             var blockedTasks = allTasks.FindAll(t => t.Status == Domain.Models.TaskStatus.Blocked);
 
             // Get recent changes
-            var recentChanges = await _changeLogRepository.GetRecentChangesAsync(30); // Last 30 days
+            var recentChanges = await _changeLogRepository.GetLatestAsync(30); // Last 30 entries
 
             if (outputJson)
             {

@@ -9,7 +9,6 @@ using NotionTaskSync.Domain.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 /// <summary>
 /// In-memory implementation of IChangeLogRepository for managing audit trails.
@@ -26,7 +25,7 @@ public class ChangeLogRepository : IChangeLogRepository
         _hasChanges = false;
     }
 
-    public async Task AddAsync(ChangeLog changeLog)
+    public async global::System.Threading.Tasks.Task AddAsync(ChangeLog changeLog)
     {
         if (changeLog == null)
             throw new ArgumentNullException(nameof(changeLog));
@@ -37,12 +36,12 @@ public class ChangeLogRepository : IChangeLogRepository
         _changeLogs.Add(changeLog);
         _hasChanges = true;
 
-        await Task.CompletedTask;
+        await global::System.Threading.Tasks.Task.CompletedTask;
     }
 
     public async Task<List<ChangeLog>> GetByTaskIdAsync(Guid taskId, int limit = 100)
     {
-        return await Task.FromResult(
+        return await global::System.Threading.Tasks.Task.FromResult(
             _changeLogs
                 .Where(c => c.TaskId == taskId)
                 .OrderByDescending(c => c.Timestamp)
@@ -52,7 +51,7 @@ public class ChangeLogRepository : IChangeLogRepository
 
     public async Task<List<ChangeLog>> GetByDateRangeAsync(DateTime from, DateTime to)
     {
-        return await Task.FromResult(
+        return await global::System.Threading.Tasks.Task.FromResult(
             _changeLogs
                 .Where(c => c.Timestamp >= from && c.Timestamp <= to)
                 .OrderByDescending(c => c.Timestamp)
@@ -61,7 +60,7 @@ public class ChangeLogRepository : IChangeLogRepository
 
     public async Task<List<ChangeLog>> GetBySourceAsync(ChangeSource source)
     {
-        return await Task.FromResult(
+        return await global::System.Threading.Tasks.Task.FromResult(
             _changeLogs
                 .Where(c => c.Source == source)
                 .OrderByDescending(c => c.Timestamp)
@@ -73,7 +72,7 @@ public class ChangeLogRepository : IChangeLogRepository
         if (string.IsNullOrEmpty(changeType))
             return new List<ChangeLog>();
 
-        return await Task.FromResult(
+        return await global::System.Threading.Tasks.Task.FromResult(
             _changeLogs
                 .Where(c => c.ChangeType == changeType)
                 .OrderByDescending(c => c.Timestamp)
@@ -82,7 +81,7 @@ public class ChangeLogRepository : IChangeLogRepository
 
     public async Task<List<ChangeLog>> GetConflictChangesAsync()
     {
-        return await Task.FromResult(
+        return await global::System.Threading.Tasks.Task.FromResult(
             _changeLogs
                 .Where(c => c.IsConflict)
                 .OrderByDescending(c => c.Timestamp)
@@ -91,7 +90,7 @@ public class ChangeLogRepository : IChangeLogRepository
 
     public async Task<List<ChangeLog>> GetLatestAsync(int limit = 50)
     {
-        return await Task.FromResult(
+        return await global::System.Threading.Tasks.Task.FromResult(
             _changeLogs
                 .OrderByDescending(c => c.Timestamp)
                 .Take(limit)
@@ -100,20 +99,20 @@ public class ChangeLogRepository : IChangeLogRepository
 
     public async Task<int> CountAsync()
     {
-        return await Task.FromResult(_changeLogs.Count);
+        return await global::System.Threading.Tasks.Task.FromResult(_changeLogs.Count);
     }
 
     public async Task<int> CountConflictsAsync()
     {
-        return await Task.FromResult(_changeLogs.Count(c => c.IsConflict));
+        return await global::System.Threading.Tasks.Task.FromResult(_changeLogs.Count(c => c.IsConflict));
     }
 
-    public async Task SaveAsync()
+    public async global::System.Threading.Tasks.Task SaveAsync()
     {
         // In-memory implementation: would persist to database here
         _hasChanges = false;
 
-        await Task.CompletedTask;
+        await global::System.Threading.Tasks.Task.CompletedTask;
     }
 
     /// <summary>
@@ -141,7 +140,7 @@ public class ChangeLogRepository : IChangeLogRepository
             DeletedCount = _changeLogs.Count(c => c.ChangeType == "Deleted")
         };
 
-        return await Task.FromResult(stats);
+        return await global::System.Threading.Tasks.Task.FromResult(stats);
     }
 
     /// <summary>

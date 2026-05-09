@@ -37,15 +37,15 @@ public class XmlFormatter
                 new XElement("Description", task.Description ?? ""),
                 new XElement("Status", task.Status.ToString()),
                 new XElement("Priority", task.Priority),
-                new XElement("CreatedAt", task.CreatedAt:O),
-                new XElement("UpdatedAt", task.UpdatedAt:O)
+                new XElement("CreatedAt", task.CreatedAt.ToString("O")),
+                new XElement("UpdatedAt", task.UpdatedAt.ToString("O"))
             );
 
             if (task.DueDate.HasValue)
-                element.Add(new XElement("DueDate", task.DueDate.Value:O));
+                element.Add(new XElement("DueDate", task.DueDate.Value.ToString("O")));
 
             if (task.CompletedAt.HasValue)
-                element.Add(new XElement("CompletedAt", task.CompletedAt.Value:O));
+                element.Add(new XElement("CompletedAt", task.CompletedAt.Value.ToString("O")));
 
             if (!string.IsNullOrEmpty(task.AssignedTo))
                 element.Add(new XElement("AssignedTo", task.AssignedTo));
@@ -78,7 +78,7 @@ public class XmlFormatter
                 new XDeclaration("1.0", "utf-8", "yes"),
                 new XElement("Tasks",
                     new XAttribute("count", tasks.Count),
-                    new XAttribute("generated", DateTime.UtcNow:O),
+                    new XAttribute("generated", DateTime.UtcNow.ToString("O")),
                     tasks.Select(t => FormatTask(t))
                 )
             );

@@ -57,7 +57,7 @@ public class BasicSyncExample
             logger.LogInformation("- Local tasks: {Count}", result.LocalTaskCount);
             logger.LogInformation("- Notion pages: {Count}", result.NotionPageCount);
             logger.LogInformation("- Status: {Status}", result.Status);
-            logger.LogInformation("- Duration: {Duration}ms", result.Duration.TotalMilliseconds);
+            logger.LogInformation("- Duration: {Duration}", result.Duration);
         }
         catch (Exception ex)
         {

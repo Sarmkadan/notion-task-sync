@@ -37,15 +37,15 @@ public class ErrorHandlingMiddleware
             var result = await operation();
             return (result, true, null);
         }
-        catch (SyncException ex)
-        {
-            _logger.LogError(ex, "Sync error in {OperationName}: {Error}", operationName, ex.Message);
-            return (default, false, ex.Message);
-        }
         catch (ConfigurationException ex)
         {
             _logger.LogError(ex, "Configuration error in {OperationName}: {Error}", operationName, ex.Message);
             return (default, false, $"Configuration error: {ex.Message}");
+        }
+        catch (SyncException ex)
+        {
+            _logger.LogError(ex, "Sync error in {OperationName}: {Error}", operationName, ex.Message);
+            return (default, false, ex.Message);
         }
         catch (TimeoutException ex)
         {
@@ -76,15 +76,15 @@ public class ErrorHandlingMiddleware
             var result = operation();
             return (result, true, null);
         }
-        catch (SyncException ex)
-        {
-            _logger.LogError("Sync error in {OperationName}: {Error}", operationName, ex.Message);
-            return (default, false, ex.Message);
-        }
         catch (ConfigurationException ex)
         {
             _logger.LogError("Configuration error in {OperationName}: {Error}", operationName, ex.Message);
             return (default, false, $"Configuration error: {ex.Message}");
+        }
+        catch (SyncException ex)
+        {
+            _logger.LogError("Sync error in {OperationName}: {Error}", operationName, ex.Message);
+            return (default, false, ex.Message);
         }
         catch (Exception ex)
         {

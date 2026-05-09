@@ -8,7 +8,6 @@ namespace NotionTaskSync.Data.Repositories;
 using NotionTaskSync.Domain.Models;
 using System;
 using System.Collections.Generic;
-using System.Threading.Task;
 
 /// <summary>
 /// Repository interface for Task CRUD operations and queries.

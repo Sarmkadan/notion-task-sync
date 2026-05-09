@@ -34,12 +34,12 @@ public class LoggerFactory
     /// </summary>
     public ILogger CreateLogger<T>()
     {
-        var factory = new Microsoft.Extensions.Logging.LoggerFactory();
-
-        if (_enableConsole)
+        var factory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
         {
-            factory.AddConsole();
-        }
+            if (_enableConsole)
+                builder.AddConsole();
+            builder.SetMinimumLevel(_minLogLevel);
+        });
 
         if (_enableFile && !string.IsNullOrEmpty(_logFilePath))
         {
