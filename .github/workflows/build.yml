@@ -147,7 +147,7 @@ jobs:
 
     - name: Extract metadata
       id: meta
-      uses: docker/metadata-action@v4
+      uses: docker/metadata-action@v6
       with:
         images: |
           ${{ secrets.DOCKER_USERNAME }}/notion-task-sync
