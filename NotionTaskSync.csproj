@@ -7,10 +7,22 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <StartupObject>NotionTaskSync.Program</StartupObject>
-    <RepositoryUrl>https://github.com/sarmkadan/notion-task-sync</RepositoryUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageId>Zaiets.notion.task.sync</PackageId>
+    <Version>1.0.0</Version>
     <Authors>Vladyslav Zaiets</Authors>
+    <Description>Bidirectional sync between Notion databases and local task files in .NET - conflict resolution, change detection</Description>
+    <PackageTags>notion task sync dotnet csharp bidirectional conflict resolution</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/sarmkadan/notion-task-sync</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/sarmkadan/notion-task-sync</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />
