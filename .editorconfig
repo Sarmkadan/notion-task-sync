@@ -61,12 +61,30 @@ csharp_style_prefer_index_operator = true:suggestion
 csharp_style_prefer_range_operator = true:suggestion
 csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
 
+# 'using' directive placement
+csharp_using_directive_placement = outside_namespace:silent
+
+# Prefer 'var' in obvious cases
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+# New line preferences
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+
 # JSON files
 [*.json]
 indent_size = 2
 
 # YAML files
 [*.{yml,yaml}]
+indent_size = 2
+
+# XML files
+[*.{xml,csproj,props,targets}]
 indent_size = 2
 
 # Markdown files
