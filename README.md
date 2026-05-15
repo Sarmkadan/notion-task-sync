@@ -54,6 +54,9 @@ Traditional task management either locks you into a single platform or requires 
 - ✅ **Event System** - Hooks for custom workflows and monitoring
 - ✅ **Caching** - Reduce API calls with intelligent caching
 - ✅ **Rate Limiting** - Built-in rate limiter for API calls
+- ✅ **Two-way Calendar Sync** - Export task due dates to iCal (.ics) and import calendar events back as tasks
+- ✅ **Bulk Operations CLI** - Batch update status, tags, assignees, and priority across many tasks at once
+- ✅ **Conflict Resolution UI** - Interactive terminal UI for reviewing diffs and resolving conflicts manually
 
 ### Format Support
 - JSON, CSV, XML, Markdown exports
@@ -504,6 +507,81 @@ Show current sync status.
 ```bash
 dotnet run -- status --config "ProjectSync" --verbose
 ```
+
+#### calendar
+
+Synchronize task due dates with an iCal (.ics) calendar file.
+
+```bash
+# Bidirectional sync (export tasks → import events)
+dotnet run -- calendar --action sync --file my-calendar.ics
+
+# Export only: write tasks with due dates to an .ics file
+dotnet run -- calendar --action export --file notion-tasks.ics
+
+# Import only: create/update tasks from an existing .ics file
+dotnet run -- calendar --action import --file external.ics
+```
+
+Options:
+- `--action` - `export`, `import`, or `sync` (default: `sync`)
+- `--file` - Path to the .ics file (default: `notion-tasks.ics`)
+- `--verbose` - Show detailed output
+
+#### bulk
+
+Perform bulk operations on multiple tasks at once.
+
+```bash
+# Mark all in-progress tasks as done
+dotnet run -- bulk update-status --status done --filter status:inprogress
+
+# Tag a specific set of tasks
+dotnet run -- bulk add-tag --tag urgent --ids id1,id2,id3
+
+# Reassign tasks matching a tag
+dotnet run -- bulk assign --assignee alice@example.com --filter tag:backend
+
+# Preview a bulk delete without applying it
+dotnet run -- bulk delete --filter tag:obsolete --dry-run
+```
+
+Operations: `update-status`, `add-tag`, `remove-tag`, `assign`, `set-priority`, `delete`
+
+Options:
+- `--ids` - Comma-separated list of task GUIDs
+- `--filter` - Filter expression: `status:<value>`, `tag:<value>`, `assignee:<value>`
+- `--status` - Target status for `update-status` (todo, inprogress, done, blocked, archived)
+- `--tag` - Tag value for `add-tag` / `remove-tag`
+- `--assignee` - Assignee email or username for `assign`
+- `--priority` - Priority 0–100 for `set-priority`
+- `--dry-run` - Preview affected tasks without applying changes
+
+#### conflict
+
+Review and resolve pending sync conflicts interactively.
+
+```bash
+# Interactive session — resolve one conflict at a time
+dotnet run -- conflict
+
+# Auto-resolve all pending conflicts with a strategy
+dotnet run -- conflict --strategy local
+dotnet run -- conflict --strategy notion
+dotnet run -- conflict --strategy last-write
+
+# Print pending conflicts as JSON
+dotnet run -- conflict --json
+
+# Limit interactive session to first 5 conflicts
+dotnet run -- conflict --limit 5
+```
+
+Options:
+- `--strategy` - Auto-resolve mode: `local`, `notion`, or `last-write`
+- `--show-diff` - Show unified diff before each prompt (default: true)
+- `--json` - Output conflict list as JSON instead of interactive mode
+- `--limit` - Maximum conflicts to process in this session
 
 #### history
 
