@@ -36,6 +36,18 @@ public class ConflictResolution
 
     public ResolutionMethod ResolutionMethod { get; set; }
 
+    /// <summary>
+    /// When the local file was last modified (from filesystem metadata).
+    /// Populated by the change detection phase.
+    /// </summary>
+    public DateTime? LocalModifiedAt { get; set; }
+
+    /// <summary>
+    /// When the Notion page was last edited (from Notion API last_edited_time).
+    /// Populated by the change detection phase.
+    /// </summary>
+    public DateTime? NotionModifiedAt { get; set; }
+
     public DateTime DetectedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? ResolvedAt { get; set; }
