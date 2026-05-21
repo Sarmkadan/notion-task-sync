@@ -45,7 +45,7 @@ public class HealthCheckWorker : IDisposable
         _cancellationTokenSource = new CancellationTokenSource();
         _isRunning = true;
 
-        _workerTask = Task.Run(async () => await RunHealthChecksAsync(_cancellationTokenSource.Token));
+        _workerTask = Task.Run(async () => await RunHealthChecksAsync(_cancellationTokenSource.Token)).ConfigureAwait(false);
 
         _logger.LogInformation("Health check worker started (interval: {Interval}s)", _checkIntervalSeconds);
     }
@@ -87,7 +87,7 @@ public class HealthCheckWorker : IDisposable
         {
             try
             {
-                await PerformHealthChecksAsync();
+                await PerformHealthChecksAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -96,7 +96,7 @@ public class HealthCheckWorker : IDisposable
 
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(_checkIntervalSeconds), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(_checkIntervalSeconds), cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -117,7 +117,7 @@ public class HealthCheckWorker : IDisposable
         CheckThreadCount();
 
         // Check connectivity (would require actual implementation)
-        await CheckConnectivityAsync();
+        await CheckConnectivityAsync().ConfigureAwait(false);
 
         _logger.LogDebug("Health check completed");
     }

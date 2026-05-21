@@ -57,12 +57,12 @@ public class StatusCommand : CliCommand
             _logger.LogInformation("Gathering status information...");
 
             // Fetch all tasks
-            var allTasks = await _taskRepository.GetAllAsync();
+            var allTasks = await _taskRepository.GetAllAsync().ConfigureAwait(false);
             var completedTasks = allTasks.FindAll(t => t.Status == Domain.Models.TaskStatus.Done);
             var blockedTasks = allTasks.FindAll(t => t.Status == Domain.Models.TaskStatus.Blocked);
 
             // Get recent changes
-            var recentChanges = await _changeLogRepository.GetLatestAsync(30); // Last 30 entries
+            var recentChanges = await _changeLogRepository.GetLatestAsync(30).ConfigureAwait(false); // Last 30 entries
 
             if (outputJson)
             {

@@ -54,7 +54,7 @@ public class ConfigRepository
             var filePath = Path.Combine(_configDirectory, fileName);
 
             var json = _jsonFormatter.Format(config);
-            var success = await _fileSystemHelper.WriteFileAsync(filePath, json);
+            var success = await _fileSystemHelper.WriteFileAsync(filePath, json).ConfigureAwait(false);
 
             if (success)
             {
@@ -82,7 +82,7 @@ public class ConfigRepository
             var fileName = GetConfigFileName(configName);
             var filePath = Path.Combine(_configDirectory, fileName);
 
-            var json = await _fileSystemHelper.ReadFileAsync(filePath);
+            var json = await _fileSystemHelper.ReadFileAsync(filePath).ConfigureAwait(false);
             if (json is null)
                 return null;
 
@@ -113,7 +113,7 @@ public class ConfigRepository
 
             foreach (var file in directory.GetFiles("*.json"))
             {
-                var json = await _fileSystemHelper.ReadFileAsync(file.FullName);
+                var json = await _fileSystemHelper.ReadFileAsync(file.FullName).ConfigureAwait(false);
                 if (json is not null)
                 {
                     var config = _jsonFormatter.Deserialize<SyncConfig>(json);
@@ -168,7 +168,7 @@ public class ConfigRepository
         try
         {
             var json = _jsonFormatter.Format(config);
-            var success = await _fileSystemHelper.WriteFileAsync(exportPath, json);
+            var success = await _fileSystemHelper.WriteFileAsync(exportPath, json).ConfigureAwait(false);
 
             if (success)
             {
@@ -192,7 +192,7 @@ public class ConfigRepository
     {
         try
         {
-            var json = await _fileSystemHelper.ReadFileAsync(importPath);
+            var json = await _fileSystemHelper.ReadFileAsync(importPath).ConfigureAwait(false);
             if (json is null)
             {
                 _logger.LogWarning("Import file not found: {ImportPath}", importPath);
@@ -203,7 +203,7 @@ public class ConfigRepository
             if (config is not null)
             {
                 // Save the imported configuration
-                await SaveConfigAsync(config);
+                await SaveConfigAsync(config).ConfigureAwait(false);
                 _logger.LogInformation("Configuration imported from {ImportPath}", importPath);
             }
 

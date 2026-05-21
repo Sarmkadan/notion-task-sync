@@ -61,7 +61,7 @@ public class DatabaseContext : IDisposable
 
         if (!_connection.IsOpen)
         {
-            await _connection.OpenAsync();
+            await _connection.OpenAsync().ConfigureAwait(false);
         }
     }
 
@@ -72,7 +72,7 @@ public class DatabaseContext : IDisposable
     {
         if (_connection is not null && _connection.IsOpen)
         {
-            await _connection.CloseAsync();
+            await _connection.CloseAsync().ConfigureAwait(false);
         }
     }
 
@@ -97,7 +97,7 @@ public class DatabaseContext : IDisposable
     {
         if (_currentTransaction is not null && _currentTransaction.IsActive)
         {
-            await _currentTransaction.CommitAsync();
+            await _currentTransaction.CommitAsync().ConfigureAwait(false);
             _currentTransaction = null;
         }
     }
@@ -109,7 +109,7 @@ public class DatabaseContext : IDisposable
     {
         if (_currentTransaction is not null && _currentTransaction.IsActive)
         {
-            await _currentTransaction.RollbackAsync();
+            await _currentTransaction.RollbackAsync().ConfigureAwait(false);
             _currentTransaction = null;
         }
     }
@@ -121,7 +121,7 @@ public class DatabaseContext : IDisposable
     {
         try
         {
-            return await Connection.TestConnectionAsync();
+            return await Connection.TestConnectionAsync().ConfigureAwait(false);
         }
         catch
         {
@@ -138,12 +138,12 @@ public class DatabaseContext : IDisposable
 
         try
         {
-            await action();
-            await CommitAsync();
+            await action().ConfigureAwait(false);
+            await CommitAsync().ConfigureAwait(false);
         }
         catch
         {
-            await RollbackAsync();
+            await RollbackAsync().ConfigureAwait(false);
             throw;
         }
         finally
@@ -161,13 +161,13 @@ public class DatabaseContext : IDisposable
 
         try
         {
-            var result = await action();
-            await CommitAsync();
+            var result = await action().ConfigureAwait(false);
+            await CommitAsync().ConfigureAwait(false);
             return result;
         }
         catch
         {
-            await RollbackAsync();
+            await RollbackAsync().ConfigureAwait(false);
             throw;
         }
         finally
@@ -182,7 +182,7 @@ public class DatabaseContext : IDisposable
     public async Task<int> ExecuteAsync(string command, object? parameters = null)
     {
         ThrowIfDisposed();
-        return await Connection.ExecuteCommandAsync(command, parameters);
+        return await Connection.ExecuteCommandAsync(command, parameters).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -191,7 +191,7 @@ public class DatabaseContext : IDisposable
     public async Task<T?> QueryFirstAsync<T>(string query, object? parameters = null)
     {
         ThrowIfDisposed();
-        return await Connection.ExecuteQueryAsync<T>(query, parameters);
+        return await Connection.ExecuteQueryAsync<T>(query, parameters).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -200,7 +200,7 @@ public class DatabaseContext : IDisposable
     public async Task<object?> QueryScalarAsync(string query, object? parameters = null)
     {
         ThrowIfDisposed();
-        return await Connection.ExecuteScalarAsync(query, parameters);
+        return await Connection.ExecuteScalarAsync(query, parameters).ConfigureAwait(false);
     }
 
     /// <summary>

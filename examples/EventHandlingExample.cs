@@ -57,7 +57,7 @@ public class EventHandlingExample
                 localFolderPath: "./tasks"
             );
 
-            var result = await syncService.ExecuteSyncAsync(config);
+            var result = await syncService.ExecuteSyncAsync(config).ConfigureAwait(false);
 
             _logger.LogInformation("═══════════════════════════════════════════════");
             _logger.LogInformation("Final Results:");
@@ -85,7 +85,7 @@ public class EventHandlingExample
             _logger.LogWarning("Notion change at: {NotionTime}", e.RemoteModifiedAt);
 
             // You could trigger alerts, send notifications, etc.
-            await NotifyTeamAsync(e.TaskId.ToString(), "Conflict detected - manual review needed");
+            await NotifyTeamAsync(e.TaskId.ToString(), "Conflict detected - manual review needed").ConfigureAwait(false);
         });
 
         // Subscribe to sync completion events
@@ -102,7 +102,7 @@ public class EventHandlingExample
             }
 
             // Log to external service, update dashboard, etc.
-            await LogSyncResultsAsync(e);
+            await LogSyncResultsAsync(e).ConfigureAwait(false);
         });
 
         _logger.LogInformation("Event subscriptions configured");

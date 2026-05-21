@@ -47,7 +47,7 @@ public class WebhookHandler
                 return false;
             }
 
-            await handler(data);
+            await handler(data).ConfigureAwait(false);
             return true;
         }
         catch (Exception ex)

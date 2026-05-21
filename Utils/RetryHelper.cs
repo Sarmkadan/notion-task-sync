@@ -45,7 +45,7 @@ public sealed class RetryHelper
 
             try
             {
-                return await operation();
+                return await operation().ConfigureAwait(false);
             }
             catch (Exception ex) when (attempt < maxRetries)
             {
@@ -56,7 +56,7 @@ public sealed class RetryHelper
                     delayMs,
                     ex.Message);
 
-                await Task.Delay(delayMs);
+                await Task.Delay(delayMs).ConfigureAwait(false);
 
                 // Exponential backoff: double the delay for next retry, with jitter
                 var jitter = new Random().Next(0, delayMs / 2);
@@ -96,7 +96,7 @@ public sealed class RetryHelper
 
             try
             {
-                return await operation();
+                return await operation().ConfigureAwait(false);
             }
             catch (Exception ex) when (shouldRetry(ex) && attempt < maxRetries)
             {
@@ -106,7 +106,7 @@ public sealed class RetryHelper
                     maxRetries,
                     ex.Message);
 
-                await Task.Delay(delayMs);
+                await Task.Delay(delayMs).ConfigureAwait(false);
                 delayMs = (delayMs * 2) + new Random().Next(0, delayMs / 2);
             }
             catch (Exception ex) when (!shouldRetry(ex))
@@ -188,7 +188,7 @@ public sealed class RetryHelper
 
         try
         {
-            var result = await operation();
+            var result = await operation().ConfigureAwait(false);
             failureCount = 0; // Reset on success
             return (result, true);
         }

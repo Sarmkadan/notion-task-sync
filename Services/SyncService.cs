@@ -54,8 +54,8 @@ public class SyncService
         try
         {
             // Fetch current state from both sources
-            var localTasks = await _taskRepository.GetAllAsync();
-            var notionPages = await _notionApiService.FetchPagesAsync(config.NotionDatabaseId);
+            var localTasks = await _taskRepository.GetAllAsync().ConfigureAwait(false);
+            var notionPages = await _notionApiService.FetchPagesAsync(config.NotionDatabaseId).ConfigureAwait(false);
 
             result.LocalTaskCount = localTasks.Count;
             result.NotionPageCount = notionPages.Count;
@@ -88,11 +88,11 @@ public class SyncService
             }
 
             // Apply changes based on sync direction
-            await ApplyChangesAsync(localTasks, notionPages, config);
+            await ApplyChangesAsync(localTasks, notionPages, config).ConfigureAwait(false);
 
             // Update sync metadata
             config.UpdateSyncStatus();
-            await _taskRepository.SaveAsync();
+            await _taskRepository.SaveAsync().ConfigureAwait(false);
 
             result.Status = SyncStatus.Completed;
             result.CompletedAt = DateTime.UtcNow;
@@ -122,13 +122,13 @@ public class SyncService
 
                 if (page is not null)
                 {
-                    await _notionApiService.UpdatePageAsync(page.PageId, task);
+                    await _notionApiService.UpdatePageAsync(page.PageId, task).ConfigureAwait(false);
                 }
                 else if (task.NotionPageId is null)
                 {
-                    var newPage = await _notionApiService.CreatePageAsync(config.NotionDatabaseId, task);
+                    var newPage = await _notionApiService.CreatePageAsync(config.NotionDatabaseId, task).ConfigureAwait(false);
                     task.NotionPageId = newPage.PageId;
-                    await _taskRepository.UpdateAsync(task);
+                    await _taskRepository.UpdateAsync(task).ConfigureAwait(false);
                 }
             }
         }
@@ -143,12 +143,12 @@ public class SyncService
                 if (task is not null)
                 {
                     UpdateTaskFromPage(task, page);
-                    await _taskRepository.UpdateAsync(task);
+                    await _taskRepository.UpdateAsync(task).ConfigureAwait(false);
                 }
                 else
                 {
                     var newTask = CreateTaskFromPage(page);
-                    await _taskRepository.AddAsync(newTask);
+                    await _taskRepository.AddAsync(newTask).ConfigureAwait(false);
                 }
             }
         }

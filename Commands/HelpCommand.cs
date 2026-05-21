@@ -35,7 +35,7 @@ public class HelpCommand : CliCommand
     {
         Console.WriteLine(GetHelpText());
         _logger.LogInformation("Help displayed");
-        return await Task.FromResult(0);
+        return await Task.FromResult(0).ConfigureAwait(false);
     }
 
     /// <summary>

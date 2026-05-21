@@ -45,16 +45,16 @@ public class ProgrammaticTaskManagementExample
             Directory.CreateDirectory("./tasks");
 
             // Create new tasks
-            await CreateNewTasksAsync(logger, localFileService);
+            await CreateNewTasksAsync(logger, localFileService).ConfigureAwait(false);
 
             // Load and modify existing tasks
-            await LoadAndModifyTasksAsync(logger, localFileService);
+            await LoadAndModifyTasksAsync(logger, localFileService).ConfigureAwait(false);
 
             // Organize and categorize tasks
-            await OrganizeTasksAsync(logger, localFileService);
+            await OrganizeTasksAsync(logger, localFileService).ConfigureAwait(false);
 
             // Generate task statistics
-            await GenerateTaskStatisticsAsync(logger, localFileService);
+            await GenerateTaskStatisticsAsync(logger, localFileService).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -114,7 +114,7 @@ public class ProgrammaticTaskManagementExample
         // Save each task
         foreach (var task in newTasks)
         {
-            await localFileService.SaveTaskAsync(task);
+            await localFileService.SaveTaskAsync(task).ConfigureAwait(false);
             logger.LogInformation("Created: {Title}", task.Title);
         }
 
@@ -130,7 +130,7 @@ public class ProgrammaticTaskManagementExample
         logger.LogInformation("Loading and Modifying Tasks...");
         logger.LogInformation("==============================================");
 
-        var tasks = await localFileService.LoadAllTasksAsync();
+        var tasks = await localFileService.LoadAllTasksAsync().ConfigureAwait(false);
         logger.LogInformation("Loaded {Count} tasks", tasks.Count);
 
         // Modify first task
@@ -143,7 +143,7 @@ public class ProgrammaticTaskManagementExample
             task.Priority = 3;
             task.UpdatedAt = DateTime.UtcNow;
 
-            await localFileService.SaveTaskAsync(task);
+            await localFileService.SaveTaskAsync(task).ConfigureAwait(false);
             logger.LogInformation("Task updated and saved");
         }
 
@@ -158,7 +158,7 @@ public class ProgrammaticTaskManagementExample
         logger.LogInformation("Organizing Tasks by Status...");
         logger.LogInformation("==============================================");
 
-        var tasks = await localFileService.LoadAllTasksAsync();
+        var tasks = await localFileService.LoadAllTasksAsync().ConfigureAwait(false);
 
         // Group by status
         var grouped = tasks.GroupBy(t => t.Status)
@@ -184,7 +184,7 @@ public class ProgrammaticTaskManagementExample
         logger.LogInformation("Task Statistics...");
         logger.LogInformation("==============================================");
 
-        var tasks = await localFileService.LoadAllTasksAsync();
+        var tasks = await localFileService.LoadAllTasksAsync().ConfigureAwait(false);
 
         // Calculate statistics
         var totalTasks = tasks.Count;

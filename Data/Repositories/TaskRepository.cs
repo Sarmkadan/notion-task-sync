@@ -149,7 +149,7 @@ public class TaskRepository : ITaskRepository
             .GroupBy(t => t.Status)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        return await System.Threading.Tasks.Task.FromResult(counts);
+        return await System.Threading.Tasks.Task.FromResult(counts).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -157,7 +157,7 @@ public class TaskRepository : ITaskRepository
     /// </summary>
     public async Task<List<Task>> GetAllIncludingDeletedAsync()
     {
-        return await System.Threading.Tasks.Task.FromResult(_tasks.ToList());
+        return await System.Threading.Tasks.Task.FromResult(_tasks.ToList()).ConfigureAwait(false);
     }
 
     /// <summary>

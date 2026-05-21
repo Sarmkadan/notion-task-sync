@@ -51,7 +51,7 @@ public class ConflictDetectedHandler
             LogDetailedConflictInfo(@event);
 
             // Could trigger notifications here (email, Slack, etc.)
-            await NotifyConflictAsync(@event);
+            await NotifyConflictAsync(@event).ConfigureAwait(false);
 
             _logger.LogDebug("Conflict handler processed event {EventId}", @event.EventId);
         }

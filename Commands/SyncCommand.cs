@@ -87,7 +87,7 @@ public class SyncCommand : CliCommand
             }
 
             // Execute sync
-            var result = await _syncService.ExecuteSyncAsync(config);
+            var result = await _syncService.ExecuteSyncAsync(config).ConfigureAwait(false);
 
             // Log results
             LogSyncResults(result);

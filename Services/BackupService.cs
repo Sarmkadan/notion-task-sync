@@ -45,7 +45,7 @@ public class BackupService
 
             Directory.CreateDirectory(backupPath);
 
-            var backupedPath = await _fileService.BackupTasksAsync(backupPath);
+            var backupedPath = await _fileService.BackupTasksAsync(backupPath).ConfigureAwait(false);
 
             var info = new BackupInfo
             {
@@ -56,7 +56,7 @@ public class BackupService
                 FileCount = Directory.GetFiles(backupedPath).Length
             };
 
-            await CleanupOldBackupsAsync();
+            await CleanupOldBackupsAsync().ConfigureAwait(false);
 
             return info;
         }
@@ -204,7 +204,7 @@ public class BackupService
 
                 foreach (var backup in backupsToDelete)
                 {
-                    await DeleteBackupAsync(backup.Path);
+                    await DeleteBackupAsync(backup.Path).ConfigureAwait(false);
                 }
             }
         }

@@ -46,13 +46,13 @@ public class ExternalApiWrapper
                 async () =>
                 {
                     _logger.LogDebug("GET request to {Endpoint}", endpoint);
-                    var result = await _httpClient.GetAsync(endpoint);
+                    var result = await _httpClient.GetAsync(endpoint).ConfigureAwait(false);
                     result.EnsureSuccessStatusCode();
                     return result;
                 },
                 IsTransientError);
 
-            var content = await response.Content.ReadAsStringAsync();
+            var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var obj = JsonSerializer.Deserialize<T>(content);
 
             _logger.LogDebug("GET request successful: {Endpoint}", endpoint);
@@ -79,13 +79,13 @@ public class ExternalApiWrapper
                 {
                     _logger.LogDebug("POST request to {Endpoint}", endpoint);
                     var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-                    var result = await _httpClient.PostAsync(endpoint, content);
+                    var result = await _httpClient.PostAsync(endpoint, content).ConfigureAwait(false);
                     result.EnsureSuccessStatusCode();
                     return result;
                 },
                 IsTransientError);
 
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var obj = JsonSerializer.Deserialize<T>(responseContent);
 
             _logger.LogDebug("POST request successful: {Endpoint}", endpoint);
@@ -112,13 +112,13 @@ public class ExternalApiWrapper
                 {
                     _logger.LogDebug("PUT request to {Endpoint}", endpoint);
                     var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-                    var result = await _httpClient.PutAsync(endpoint, content);
+                    var result = await _httpClient.PutAsync(endpoint, content).ConfigureAwait(false);
                     result.EnsureSuccessStatusCode();
                     return result;
                 },
                 IsTransientError);
 
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var obj = JsonSerializer.Deserialize<T>(responseContent);
 
             _logger.LogDebug("PUT request successful: {Endpoint}", endpoint);
@@ -142,7 +142,7 @@ public class ExternalApiWrapper
                 async () =>
                 {
                     _logger.LogDebug("DELETE request to {Endpoint}", endpoint);
-                    var result = await _httpClient.DeleteAsync(endpoint);
+                    var result = await _httpClient.DeleteAsync(endpoint).ConfigureAwait(false);
                     result.EnsureSuccessStatusCode();
                     return result;
                 },

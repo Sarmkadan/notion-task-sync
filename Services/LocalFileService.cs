@@ -49,7 +49,7 @@ public class LocalFileService
 
             var content = FormatTaskAsMarkdown(task);
 
-            await File.WriteAllTextAsync(filePath, content, Encoding.UTF8);
+            await File.WriteAllTextAsync(filePath, content, Encoding.UTF8).ConfigureAwait(false);
             task.LocalFilePath = filePath;
         }
         catch (Exception ex)
@@ -74,7 +74,7 @@ public class LocalFileService
             if (!File.Exists(filePath))
                 return null;
 
-            var content = await File.ReadAllTextAsync(filePath, Encoding.UTF8);
+            var content = await File.ReadAllTextAsync(filePath, Encoding.UTF8).ConfigureAwait(false);
             return ParseTaskFromMarkdown(content, filePath);
         }
         catch (Exception ex)
@@ -104,7 +104,7 @@ public class LocalFileService
             {
                 try
                 {
-                    var task = await LoadTaskAsync(file);
+                    var task = await LoadTaskAsync(file).ConfigureAwait(false);
 
                     if (task is not null)
                         tasks.Add(task);
