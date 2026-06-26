@@ -26,6 +26,11 @@ public class TaskRepository : ITaskRepository
         _hasChanges = false;
     }
 
+    /// <summary>
+    /// Adds a new task to the repository.
+    /// </summary>
+    /// <param name="task">The task to add.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async global::System.Threading.Tasks.Task AddAsync(Task task)
     {
         if (task is null)
@@ -40,6 +45,11 @@ public class TaskRepository : ITaskRepository
         await System.Threading.Tasks.Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Updates an existing task in the repository.
+    /// </summary>
+    /// <param name="task">The updated task.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async global::System.Threading.Tasks.Task UpdateAsync(Task task)
     {
         if (task is null)
@@ -61,6 +71,11 @@ public class TaskRepository : ITaskRepository
         await System.Threading.Tasks.Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Deletes a task from the repository.
+    /// </summary>
+    /// <param name="taskId">The ID of the task to delete.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async global::System.Threading.Tasks.Task DeleteAsync(Guid taskId)
     {
         var task = _tasks.FirstOrDefault(t => t.Id == taskId);
