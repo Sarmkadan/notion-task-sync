@@ -39,13 +39,13 @@ public interface ICollaborationSession
     /// including the full server operation log up to the current revision.
     /// </summary>
     /// <exception cref="CollaborationException">Thrown when the session's participant limit is reached.</exception>
-    Task<SessionJoinResult> JoinAsync(Participant participant, CancellationToken ct = default);
+    global::System.Threading.Tasks.Task<SessionJoinResult> JoinAsync(Participant participant, CancellationToken ct = default);
 
     /// <summary>
     /// Gracefully removes a participant from the session.
     /// Remaining participants are notified via the event bus.
     /// </summary>
-    Task LeaveAsync(string participantId, CancellationToken ct = default);
+    global::System.Threading.Tasks.Task LeaveAsync(string participantId, CancellationToken ct = default);
 
     /// <summary>
     /// Submits an <see cref="OperationBatch"/> for server-side OT transformation and linearisation.
@@ -55,7 +55,7 @@ public interface ICollaborationSession
     /// Thrown when the batch exceeds size limits, the submitter is not a session member,
     /// or an observer submits while observer edits are disabled.
     /// </exception>
-    Task<BatchAcknowledgement> SubmitBatchAsync(OperationBatch batch, CancellationToken ct = default);
+    global::System.Threading.Tasks.Task<BatchAcknowledgement> SubmitBatchAsync(OperationBatch batch, CancellationToken ct = default);
 
     /// <summary>
     /// Returns the server operation log starting at <paramref name="fromRevision"/> (inclusive).
@@ -149,5 +149,5 @@ public interface ICollaborationSessionRegistry
     IReadOnlyList<ICollaborationSession> ActiveSessions { get; }
 
     /// <summary>Closes the named session and evicts all remaining participants.</summary>
-    Task CloseAsync(string sessionId, CancellationToken ct = default);
+    global::System.Threading.Tasks.Task CloseAsync(string sessionId, CancellationToken ct = default);
 }
