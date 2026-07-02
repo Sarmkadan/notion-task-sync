@@ -129,7 +129,8 @@ Traditional task management either locks you into a single platform or requires 
 
 ### Prerequisites
 
-- .NET 10 SDK or later
+- .NET 10 SDK or later (for source builds)
+- Docker (for containerized deployment)
 - Notion API token (obtain from [Notion Integration Settings](https://www.notion.so/my-integrations))
 - Git (for version control)
 
@@ -157,23 +158,39 @@ dotnet run -- sync
 docker build -t notion-task-sync:latest .
 
 # Run in a container
-docker run -e NotionApi__ApiKey=your_token \
-           -v $(pwd)/tasks:/app/tasks \
-           notion-task-sync:latest
+docker run -e NotionApi__ApiKey=your_integration_token_here \n  -e NotionApi__DatabaseId=your_database_id_here \n  -v $(pwd)/tasks:/data/tasks \n  -v $(pwd)/backups:/data/backups \n  -v $(pwd)/logs:/var/log/notion-sync \n  notion-task-sync:latest sync
 ```
 
 ### Method 3: Using Docker Compose
 
 ```bash
-# Copy example config
-cp docker-compose.yml.example docker-compose.yml
-
-# Edit with your configuration
-nano docker-compose.yml
-
-# Start the services
+# Start the services in detached mode
 docker-compose up -d
+
+# View logs
+# docker-compose logs -f notion-sync
+
+# Stop services
+# docker-compose down
 ```
+
+### Docker Configuration Details
+
+The Docker setup includes:
+- Multi-stage build for optimized image size
+- Health checks to verify container health
+- Resource limits (0.5 CPU, 512MB memory)
+- Persistent volumes for tasks, backups, and logs
+- Environment variable configuration via `.env` file
+
+**Required Environment Variables:**
+- `NotionApi__ApiKey` - Your Notion integration API token
+- `NotionApi__DatabaseId` - Your Notion database ID
+
+**Optional Configuration:**
+- Customize `appsettings.local.json` mounted to `/app/appsettings.local.json`
+- Adjust resource limits in `docker-compose.yml`
+- Configure health check interval and timeout
 
 ### Method 4: As a Global Tool
 
@@ -767,21 +784,27 @@ The test suite covers:
 - **ConflictResolutionTests** - verifies all five resolution strategies
 - **StringExtensionsTests** - utility method correctness
 
-## Performance
+## Benchmarks
 
-Benchmarks measured on a single core, .NET 10, 8 GB RAM, SSD:
+This project includes a performance benchmarking suite based on [BenchmarkDotNet](https://benchmarkdotnet.org/).
 
-| Operation | Scale | Result |
-|-----------|-------|--------|
-| Bidirectional sync | 10,000 tasks | ~1,200 tasks/sec |
-| Change detection pass | 50,000 records | < 200 ms |
-| Conflict resolution | 1,000 conflicts | < 50 ms |
-| JSON / CSV export | 10,000 records | < 100 ms |
-| Cache hit (warm) | — | < 5 ms |
+### Running Benchmarks
 
-- Intelligent caching cuts Notion API calls by up to **80%** in steady-state usage.
-- The built-in rate limiter transparently stays within Notion's 3 req/s default quota.
-- A full batch sync of 1,000 tasks typically completes in under 2 minutes on a standard broadband connection.
+To run the benchmarks, navigate to the benchmarks project directory and run the following command:
+
+```bash
+cd benchmarks/notion-task-sync.Benchmarks
+dotnet run -c Release
+```
+
+### Benchmark Results
+
+The following table summarizes the performance of critical operations:
+
+| Method                     | Mean       | Error    | StdDev   | Gen0   | Allocated |
+|--------------------------- |-----------:|---------:|---------:|-------:|----------:|
+| NormalizeRichText          |   193.3 ns |  3.94 ns | 10.11 ns | 0.0966 |     808 B |
+| MapFromNotionPageBenchmark | 1,181.9 ns | 23.09 ns | 31.60 ns | 0.0973 |     816 B |
 
 ## Related Projects
 
