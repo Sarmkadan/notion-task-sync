@@ -127,6 +127,129 @@ class Program
 }
 ```
 
+## ChangeLogRepository
+
+The `ChangeLogRepository` class provides an in-memory implementation for tracking and managing change history during task synchronization workflows. It serves as an audit trail for all modifications, enabling conflict detection, change analysis, and sync history tracking between local storage and Notion databases.
+
+### Public Members
+
+- `AddAsync(ChangeLog changeLog)` - Adds a new change log entry
+- `GetByTaskIdAsync(Guid taskId, int limit = 100)` - Retrieves change logs for a specific task
+- `GetByDateRangeAsync(DateTime from, DateTime to)` - Retrieves change logs within a date range
+- `GetBySourceAsync(ChangeSource source)` - Retrieves change logs from a specific source
+- `GetByChangeTypeAsync(string changeType)` - Retrieves change logs of a specific type
+- `GetConflictChangesAsync()` - Retrieves all conflict change logs
+- `GetLatestAsync(int limit = 50)` - Retrieves the most recent change logs
+- `CountAsync()` - Returns the total number of change logs
+- `CountConflictsAsync()` - Returns the number of conflict change logs
+- `SaveAsync()` - Persists changes (in-memory implementation)
+- `GetFullAuditTrailAsync(Guid taskId)` - Retrieves complete change history for a task
+- `GetStatsAsync()` - Returns summary statistics about change logs
+- `HasPendingChanges` - Property indicating if there are unsaved changes
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Data.Repositories;
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Initialize ChangeLogRepository
+        var changeLogRepository = new ChangeLogRepository();
+
+        // Example 1: Add change log entries
+        var localChange = new ChangeLog
+        {
+            TaskId = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow,
+            Source = ChangeSource.Local,
+            ChangeType = "Created",
+            PropertyName = "Title",
+            OldValue = null,
+            NewValue = "Implement ChangeLogRepository feature",
+            IsConflict = false
+        };
+
+        await changeLogRepository.AddAsync(localChange);
+
+        var notionChange = new ChangeLog
+        {
+            TaskId = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow.AddMinutes(5),
+            Source = ChangeSource.Notion,
+            ChangeType = "Updated",
+            PropertyName = "Status",
+            OldValue = "Todo",
+            NewValue = "InProgress",
+            IsConflict = false
+        };
+
+        await changeLogRepository.AddAsync(notionChange);
+
+        // Example 2: Query change logs by task
+        var taskChanges = await changeLogRepository.GetByTaskIdAsync(localChange.TaskId);
+        Console.WriteLine($"Found {taskChanges.Count} changes for task");
+
+        foreach (var change in taskChanges)
+        {
+            Console.WriteLine($"- {change.ChangeType} at {change.Timestamp:u}: {change.PropertyName}");
+        }
+
+        // Example 3: Get conflict changes
+        var conflictChanges = await changeLogRepository.GetConflictChangesAsync();
+        Console.WriteLine($"Total conflicts detected: {conflictChanges.Count}");
+
+        // Example 4: Get statistics
+        var stats = await changeLogRepository.GetStatsAsync();
+        Console.WriteLine($"\nChange statistics:");
+        Console.WriteLine($"- Total changes: {stats.TotalChanges}");
+        Console.WriteLine($"- Local changes: {stats.LocalChanges}");
+        Console.WriteLine($"- Notion changes: {stats.NotionChanges}");
+        Console.WriteLine($"- Conflicts: {stats.ConflictCount}");
+        Console.WriteLine($"- Created: {stats.CreatedCount}");
+        Console.WriteLine($"- Updated: {stats.UpdatedCount}");
+
+        // Example 5: Get full audit trail for a task
+        var auditTrail = await changeLogRepository.GetFullAuditTrailAsync(localChange.TaskId);
+        Console.WriteLine($"\nFull audit trail has {auditTrail.Count} entries");
+
+        // Example 6: Get changes by source
+        var localChanges = await changeLogRepository.GetBySourceAsync(ChangeSource.Local);
+        Console.WriteLine($"Local changes: {localChanges.Count}");
+
+        var notionChanges = await changeLogRepository.GetBySourceAsync(ChangeSource.Notion);
+        Console.WriteLine($"Notion changes: {notionChanges.Count}");
+
+        // Example 7: Get changes by date range
+        var recentChanges = await changeLogRepository.GetByDateRangeAsync(
+            DateTime.UtcNow.AddHours(-1),
+            DateTime.UtcNow
+        );
+        Console.WriteLine($"Recent changes in last hour: {recentChanges.Count}");
+
+        // Example 8: Get changes by type
+        var createdChanges = await changeLogRepository.GetByChangeTypeAsync("Created");
+        Console.WriteLine($"Created changes: {createdChanges.Count}");
+
+        var updatedChanges = await changeLogRepository.GetByChangeTypeAsync("Updated");
+        Console.WriteLine($"Updated changes: {updatedChanges.Count}");
+
+        // Example 9: Get latest changes
+        var latestChanges = await changeLogRepository.GetLatestAsync(10);
+        Console.WriteLine($"Latest 10 changes: {latestChanges.Count}");
+
+        // Example 10: Check for pending changes
+        var hasPending = changeLogRepository.HasPendingChanges;
+        Console.WriteLine($"\nHas pending changes: {hasPending}");
+    }
+}
+```
+
 ## AdvancedUsage
 
 The `AdvancedUsage` class demonstrates advanced configuration patterns, custom options, and comprehensive error handling for task synchronization workflows. It includes examples for:
