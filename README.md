@@ -506,6 +506,95 @@ class Program
 }
 ```
 
+## StringExtensions
+
+The `StringExtensions` static class provides extension methods for string manipulation and validation. It centralizes common string operations used throughout the sync pipeline, improving code readability and reducing duplication. Methods include truncation, sanitization for filenames, email/GUID validation, case conversion, substring extraction, case-insensitive comparison, line ending normalization, and slug generation.
+
+### Public Members
+
+- `Truncate(this string str, int maxLength, string suffix = "...")` - Truncates a string to a maximum length with optional ellipsis suffix
+- `SanitizeForFilename(this string str)` - Sanitizes a string by removing or replacing invalid filesystem characters
+- `IsValidEmail(this string str)` - Validates if a string is a valid email address format
+- `IsValidGuid(this string str)` - Validates if a string matches a UUID/GUID format
+- `ToPascalCase(this string str)` - Converts a string to PascalCase (first letter uppercase, word boundaries at capitals)
+- `ToSnakeCase(this string str)` - Converts a string to snake_case (lowercase with underscores)
+- `AfterLast(this string str, string delimiter)` - Extracts the portion of a string after the last occurrence of a delimiter
+- `BeforeLast(this string str, string delimiter)` - Extracts the portion of a string before the last occurrence of a delimiter
+- `ContainsIgnoreCase(this string str, string value)` - Determines if a string contains another string case-insensitively
+- `NormalizeLineEndings(this string str)` - Normalizes line endings to a consistent format (Unix style \n)
+- `ToSlug(this string str)` - Generates a slug from a string suitable for URLs or identifiers
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using System;
+
+class Program
+{
+  static void Main()
+  {
+    // Example 1: Truncate strings for display
+    var longTitle = "This is a very long task title that needs to be truncated for display purposes";
+    var truncated = longTitle.Truncate(30);
+    Console.WriteLine($"Original: {longTitle}");
+    Console.WriteLine($"Truncated: {truncated}"); // "This is a very long task tit..."
+
+    // Example 2: Sanitize strings for filenames
+    var invalidFilename = "Task #1: Fix / Important 🚨";
+    var safeFilename = invalidFilename.SanitizeForFilename();
+    Console.WriteLine($"Safe filename: {safeFilename}"); // "Task_1_Fix_Important__.txt"
+
+    // Example 3: Validate email addresses
+    var validEmail = "user@example.com";
+    var invalidEmail = "not-an-email";
+    Console.WriteLine($"Valid email: {validEmail.IsValidEmail()}"); // True
+    Console.WriteLine($"Invalid email: {invalidEmail.IsValidEmail()}"); // False
+
+    // Example 4: Validate GUID/UUID strings
+    var validGuid = "550e8400-e29b-41d4-a716-446655440000";
+    var invalidGuid = "not-a-guid";
+    Console.WriteLine($"Valid GUID: {validGuid.IsValidGuid()}"); // True
+    Console.WriteLine($"Invalid GUID: {invalidGuid.IsValidGuid()}"); // False
+
+    // Example 5: Convert to PascalCase
+    var snakeCaseInput = "user_authentication_token";
+    var pascalCase = snakeCaseInput.ToPascalCase();
+    Console.WriteLine($"PascalCase: {pascalCase}"); // "UserAuthenticationToken"
+
+    // Example 6: Convert to snake_case
+    var pascalCaseInput = "UserAuthenticationToken";
+    var snakeCase = pascalCaseInput.ToSnakeCase();
+    Console.WriteLine($"snake_case: {snakeCase}"); // "user_authentication_token"
+
+    // Example 7: Extract substring after last delimiter
+    var filePath = "/home/user/documents/report.pdf";
+    var fileName = filePath.AfterLast("/");
+    Console.WriteLine($"Filename: {fileName}"); // "report.pdf"
+
+    // Example 8: Extract substring before last delimiter
+    var url = "https://api.example.com/v1/users";
+    var baseUrl = url.BeforeLast("/");
+    Console.WriteLine($"Base URL: {baseUrl}"); // "https://api.example.com/v1"
+
+    // Example 9: Case-insensitive string search
+    var text = "The Quick Brown Fox";
+    Console.WriteLine($"Contains 'quick': {text.ContainsIgnoreCase("quick")}"); // True
+    Console.WriteLine($"Contains 'FAST': {text.ContainsIgnoreCase("FAST")}"); // False
+
+    // Example 10: Normalize line endings
+    var mixedLineEndings = "Line1\r\nLine2\rLine3\nLine4";
+    var normalized = mixedLineEndings.NormalizeLineEndings();
+    Console.WriteLine($"Normalized line count: {normalized.Split('\n').Length}"); // 4
+
+    // Example 11: Generate URL slugs
+    var title = "Implement StringExtensions Documentation";
+    var slug = title.ToSlug();
+    Console.WriteLine($"Slug: {slug}"); // "implement-stringextensions-documentation"
+  }
+}
+```
+
 ## ChangeLogRepository
 
 The `TaskRepository` class provides an in-memory implementation of the `ITaskRepository` interface for managing task entities.
