@@ -1968,6 +1968,136 @@ class Program
 }
 ```
 
+## BulkOperationService
+
+The `BulkOperationService` class provides batch operations for managing multiple tasks simultaneously. It enables efficient bulk updates including status changes, tag management, assignee assignment, priority setting, and soft deletion across multiple tasks in a single operation. The service tracks operation statistics including requested items, successfully affected items, and skipped items that couldn't be processed.
+
+### Public Members
+
+- `BulkOperationService(ITaskRepository taskRepository, ILogger<BulkOperationService> logger)` - Constructor that initializes the service with task repository and logger
+- `public async Task<BulkResult> UpdateStatusAsync(Guid[] taskIds, TaskStatus newStatus)` - Updates the status of multiple tasks
+- `public async Task<BulkResult> AddTagAsync(Guid[] taskIds, string tag)` - Adds a tag to multiple tasks (avoids duplicates)
+- `public async Task<BulkResult> RemoveTagAsync(Guid[] taskIds, string tag)` - Removes a tag from multiple tasks
+- `public async Task<BulkResult> AssignAsync(Guid[] taskIds, string assigneeEmail)` - Assigns multiple tasks to a person
+- `public async Task<BulkResult> SetPriorityAsync(Guid[] taskIds, int priority)` - Sets priority for multiple tasks
+- `public async Task<BulkResult> DeleteAsync(Guid[] taskIds)` - Soft deletes multiple tasks
+- `public async Task<List<Domain.Models.Task>> QueryAsync(Func<Domain.Models.Task, bool> predicate)` - Queries tasks with a filter predicate
+- `public string Operation` - Gets the current operation name
+- `public int Requested` - Gets the number of tasks requested for the operation
+- `public int Affected` - Gets the number of tasks successfully affected
+- `public int Skipped` - Gets the number of tasks skipped (missing or invalid)
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder.AddConsole());
+        services.AddSingleton<ITaskRepository, InMemoryTaskRepository>();
+        services.AddSingleton<BulkOperationService>();
+        
+        var serviceProvider = services.BuildServiceProvider();
+        var bulkService = serviceProvider.GetRequiredService<BulkOperationService>();
+        var taskRepository = serviceProvider.GetRequiredService<ITaskRepository>();
+
+        // Create sample tasks
+        var task1 = new Domain.Models.Task
+        {
+            Id = Guid.NewGuid(),
+            Title = "Implement BulkOperationService feature",
+            Status = TaskStatus.Todo,
+            Priority = 50,
+            Tags = "backend,feature"
+        };
+
+        var task2 = new Domain.Models.Task
+        {
+            Id = Guid.NewGuid(),
+            Title = "Write documentation",
+            Status = TaskStatus.InProgress,
+            Priority = 75,
+            Tags = "docs"
+        };
+
+        var task3 = new Domain.Models.Task
+        {
+            Id = Guid.NewGuid(),
+            Title = "Fix critical bug",
+            Status = TaskStatus.Todo,
+            Priority = 25,
+            Tags = "bug,urgent"
+        };
+
+        await taskRepository.SaveAsync(task1);
+        await taskRepository.SaveAsync(task2);
+        await taskRepository.SaveAsync(task3);
+
+        // Example 1: Update status for multiple tasks
+        var statusResult = await bulkService.UpdateStatusAsync(
+            new[] { task1.Id, task2.Id, task3.Id },
+            TaskStatus.Done
+        );
+        Console.WriteLine($"Updated {statusResult.Affected} tasks, skipped {statusResult.Skipped} missing tasks");
+
+        // Example 2: Add tags to tasks (avoids duplicates)
+        var tagResult = await bulkService.AddTagAsync(
+            new[] { task1.Id, task2.Id },
+            "high-priority"
+        );
+        Console.WriteLine($"Added tag to {tagResult.Affected} tasks");
+
+        // Example 3: Remove a tag from tasks
+        var removeResult = await bulkService.RemoveTagAsync(
+            new[] { task3.Id },
+            "urgent"
+        );
+        Console.WriteLine($"Removed tag from {removeResult.Affected} tasks");
+
+        // Example 4: Assign tasks to a person
+        var assignResult = await bulkService.AssignAsync(
+            new[] { task1.Id, task2.Id },
+            "developer@example.com"
+        );
+        Console.WriteLine($"Assigned {assignResult.Affected} tasks");
+
+        // Example 5: Set priority for tasks
+        var priorityResult = await bulkService.SetPriorityAsync(
+            new[] { task1.Id, task2.Id, task3.Id },
+            90
+        );
+        Console.WriteLine($"Set priority for {priorityResult.Affected} tasks");
+
+        // Example 6: Soft delete tasks
+        var deleteResult = await bulkService.DeleteAsync(
+            new[] { task3.Id }
+        );
+        Console.WriteLine($"Soft deleted {deleteResult.Affected} tasks");
+
+        // Example 7: Query tasks with filters
+        var matchingTasks = await bulkService.QueryAsync(
+            t => t.Status == TaskStatus.Done && t.Priority >= 75
+        );
+        Console.WriteLine($"Found {matchingTasks.Count} matching tasks");
+
+        // Example 8: Check operation statistics
+        Console.WriteLine($"\nOperation: {bulkService.Operation}");
+        Console.WriteLine($"Requested: {bulkService.Requested}");
+        Console.WriteLine($"Affected: {bulkService.Affected}");
+        Console.WriteLine($"Skipped: {bulkService.Skipped}");
+    }
+}
+```
+
 ## BulkOperationServiceTests
 
 The `BulkOperationServiceTests` class contains unit tests for the `BulkOperationService` class, which provides batch operations for managing multiple tasks simultaneously. These tests verify bulk updates including status changes, tag management, assignee assignment, priority setting, and soft deletion, with proper handling of edge cases and validation.
