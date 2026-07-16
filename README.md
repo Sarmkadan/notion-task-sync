@@ -336,6 +336,87 @@ class Program
 }
 ```
 
+## LoggingMiddleware
+
+The `LoggingMiddleware` class provides structured logging for all synchronization operations, enabling observability and debugging. It wraps operations with timing, status logging, and error tracking, creating consistent log entries that can be analyzed for performance monitoring and error diagnosis. The middleware supports both synchronous and asynchronous operations with detailed logging at different verbosity levels.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Middleware;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup logger
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<LoggingMiddleware>();
+
+        // Create middleware instance
+        var loggingMiddleware = new LoggingMiddleware(logger);
+
+        // Example 1: Async operation with logging
+        var asyncResult = await loggingMiddleware.ExecuteWithLoggingAsync("SyncTaskOperation", async () =>
+        {
+            // Simulate async work
+            await Task.Delay(100);
+            return new { TasksSynced = 42, Status = "Success" };
+        });
+
+        Console.WriteLine($"Async operation result: {asyncResult.TasksSynced} tasks synced");
+
+        // Example 2: Sync operation with logging
+        var syncResult = loggingMiddleware.ExecuteWithLogging("LocalFileOperation", () =>
+        {
+            // Simulate sync work
+            return "File sync completed successfully";
+        });
+
+        Console.WriteLine($"Sync operation result: {syncResult}");
+
+        // Example 3: Structured sync operation logging
+        loggingMiddleware.LogSyncOperation(
+            operationName: "FullDatabaseSync",
+            status: "Completed",
+            itemCount: 150,
+            changeCount: 25,
+            duration: TimeSpan.FromSeconds(45)
+        );
+
+        // Example 4: Log warning for slow operation
+        loggingMiddleware.LogWarning(
+            "DatabaseSync",
+            "High conflict count detected: {ConflictCount} conflicts",
+            15
+        );
+
+        // Example 5: Log debug information (only visible with Verbose logging)
+        loggingMiddleware.LogDebug(
+            "ConflictResolution",
+            "Conflict resolution strategy applied: {Strategy}",
+            "LocalWins"
+        );
+
+        // Example 6: Error handling with logging
+        try
+        {
+            await loggingMiddleware.ExecuteWithLoggingAsync("RiskyOperation", async () =>
+            {
+                throw new InvalidOperationException("Simulated failure");
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Caught exception (already logged by middleware): {ex.Message}");
+        }
+    }
+}
+```
+
 ## ErrorHandlingMiddleware
 
 The `ErrorHandlingMiddleware` class provides robust exception handling and error management for task synchronization workflows. It wraps operations to catch exceptions, log them appropriately, and return structured error information instead of throwing. This middleware supports both synchronous and asynchronous operations, maps exceptions to appropriate HTTP status codes, and determines if errors are retryable.
