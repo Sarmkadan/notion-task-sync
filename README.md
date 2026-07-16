@@ -1961,6 +1961,78 @@ class Program
 }
 ```
 
+## NotionApiService
+
+The `NotionApiService` class provides integration with the Notion API for reading and writing task data. It handles authentication, pagination, error handling, and data transformation between Notion's API format and the application's domain models. The service supports both full database queries and incremental sync operations based on modification timestamps.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Initialize Notion API service with your API key
+        var notionApiService = new NotionApiService("your-notion-api-key-here");
+        
+        // Test API connection
+        bool isConnected = await notionApiService.TestConnectionAsync();
+        Console.WriteLine($"API connection test: {(isConnected ? "Success" : "Failed")}");
+        
+        // Fetch all pages from a database
+        var allPages = await notionApiService.FetchPagesAsync("550e8400-e29b-41d4-a716-446655440000");
+        Console.WriteLine($"Fetched {allPages.Count} pages from database");
+        
+        // Fetch only pages modified since a specific timestamp (incremental sync)
+        var recentPages = await notionApiService.FetchPagesSinceAsync(
+            "550e8400-e29b-41d4-a716-446655440000",
+            DateTime.UtcNow.AddDays(-1)
+        );
+        Console.WriteLine($"Fetched {recentPages.Count} pages modified in the last 24 hours");
+        
+        // Fetch a specific page by ID
+        if (allPages.Count > 0)
+        {
+            var page = await notionApiService.FetchPageAsync(allPages[0].Id);
+            Console.WriteLine($"Fetched page: {page.Title}");
+        }
+        
+        // Create a new page in Notion
+        var newTask = new Task
+        {
+            Id = Guid.NewGuid(),
+            Title = "Implement NotionApiService documentation",
+            Description = "Add documentation section for NotionApiService in README.md",
+            Status = TaskStatus.Todo,
+            Priority = 75,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        
+        var createdPage = await notionApiService.CreatePageAsync(
+            "550e8400-e29b-41d4-a716-446655440000",
+            newTask
+        );
+        Console.WriteLine($"Created page: {createdPage.Title} with ID: {createdPage.Id}");
+        
+        // Update an existing page
+        newTask.Status = TaskStatus.InProgress;
+        newTask.UpdatedAt = DateTime.UtcNow;
+        var updatedPage = await notionApiService.UpdatePageAsync(createdPage.Id, newTask);
+        Console.WriteLine($"Updated page status to: {updatedPage.Status}");
+        
+        // Archive/delete a page
+        await notionApiService.ArchivePageAsync(createdPage.Id);
+        Console.WriteLine("Page archived successfully");
+    }
+}
+```
+
 ## ConfigureCommand
 
 The `ConfigureCommand` class provides interactive and command-line configuration for the Notion Task Sync application. It allows users to set up API keys, database IDs, local task directories, sync intervals, and conflict resolution strategies. The command validates settings before saving them to `appsettings.json`, ensuring the application remains functional after configuration.
