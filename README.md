@@ -1462,6 +1462,78 @@ if (Directory.Exists(localTasksDirectory))
 }
 ```
 
+## ConflictResolution
+
+The `ConflictResolution` class represents a conflict detected during synchronization between local task storage and Notion databases. It tracks both local and Notion versions of conflicting properties, enabling automatic resolution strategies (like last-write-wins) or manual review workflows. Each conflict maintains timestamps for both local and Notion modifications, allowing precise conflict resolution based on temporal ordering or explicit strategy selection.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Domain.Models;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a conflict for a task title that was modified in both local and Notion
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
+            ConflictType = ConflictType.ConcurrentModification,
+            PropertyName = "Title",
+            LocalValue = "Implement ConflictResolution feature",
+            NotionValue = "Document ConflictResolution class",
+            LocalModifiedAt = DateTime.UtcNow.AddMinutes(-30),
+            NotionModifiedAt = DateTime.UtcNow.AddMinutes(-15),
+            Status = ResolutionStatus.Pending
+        };
+
+        // Resolve using last-write-wins strategy
+        if (conflict.LocalModifiedAt > conflict.NotionModifiedAt)
+        {
+            conflict.Resolve(conflict.LocalValue!, ResolutionMethod.LastWrite, 
+                          "Local modification is more recent");
+        }
+        else
+        {
+            conflict.Resolve(conflict.NotionValue!, ResolutionMethod.LastWrite, 
+                          "Notion modification is more recent");
+        }
+
+        Console.WriteLine($"Conflict resolved: {conflict.Status}");
+        Console.WriteLine($"Resolved value: {conflict.ResolvedValue}");
+        Console.WriteLine($"Resolution method: {conflict.ResolutionMethod}");
+        Console.WriteLine($"Conflict age: {conflict.GetAge().TotalMinutes:F1} minutes");
+
+        // Mark a complex conflict for manual review
+        var complexConflict = new ConflictResolution
+        {
+            TaskId = Guid.Parse("123e4567-e89b-12d3-a456-426614174000"),
+            ConflictType = ConflictType.PropertyMismatch,
+            PropertyName = "Priority",
+            LocalValue = "High",
+            NotionValue = "Critical",
+            LocalModifiedAt = DateTime.UtcNow.AddHours(-2),
+            NotionModifiedAt = DateTime.UtcNow.AddMinutes(-5),
+            Status = ResolutionStatus.Pending
+        };
+
+        complexConflict.MarkForManualReview(
+            "Priority values diverged significantly - requires business decision");
+
+        Console.WriteLine($"Conflict marked for review: {complexConflict.Status}");
+        Console.WriteLine($"Review reason: {complexConflict.ResolutionNotes}");
+
+        // Validate the conflict resolution
+        if (conflict.Validate())
+        {
+            Console.WriteLine("Conflict resolution is valid and ready for application");
+        }
+    }
+}
+```
+
 ## ChangeLog
 
 The `ChangeLog` class tracks changes made during synchronization operations between local task storage and Notion databases. It records detailed information about each modification including what changed, when, by whom, and how conflicts were resolved. This comprehensive audit trail enables debugging, rollback, and analysis of synchronization workflows.
