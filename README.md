@@ -1398,6 +1398,56 @@ if (Directory.Exists(localTasksDirectory))
 }
 ```
 
+## ChangeLog
+
+The `ChangeLog` class tracks changes made during synchronization operations between local task storage and Notion databases. It records detailed information about each modification including what changed, when, by whom, and how conflicts were resolved. This comprehensive audit trail enables debugging, rollback, and analysis of synchronization workflows.
+
+### Usage Example
+
+```csharp
+using Domain.Models;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a change log entry for a task title update
+        var changeLog = new ChangeLog
+        {
+            Id = Guid.NewGuid(),
+            TaskId = Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
+            ChangeType = "Updated",
+            PropertyName = "Title",
+            OldValue = "Old task title",
+            NewValue = "New improved task title",
+            Source = ChangeSource.Local,
+            Timestamp = DateTime.UtcNow,
+            UserEmail = "user@example.com",
+            Description = "Updated task title to better reflect actual work needed",
+            IsConflict = false,
+            ConflictResolutionStrategy = "None",
+            Validate = true
+        };
+
+        // Generate a summary of the change
+        var summary = changeLog.GetSummary();
+        Console.WriteLine(summary);
+        // Output: "[2026-07-16 14:30:00] user@example.com: Updated 'Title' from 'Old task title' to 'New improved task title'"
+
+        // Mark as conflict if needed
+        changeLog.MarkAsConflict("Manual review required - conflicting changes detected");
+        Console.WriteLine($"Conflict status: {changeLog.IsConflict}");
+        Console.WriteLine($"Resolution strategy: {changeLog.ConflictResolutionStrategy}");
+
+        // Check if change is within a specific time window
+        var timeWindow = TimeSpan.FromHours(1);
+        var isWithinWindow = changeLog.IsWithinTimeWindow(timeWindow);
+        Console.WriteLine($"Within 1 hour window: {isWithinWindow}");
+    }
+}
+```
+
 ## CalendarEvent
 
 The `CalendarEvent` class represents calendar events that can be synchronized with tasks' due dates and schedules. It supports two-way synchronization between local tasks and iCal (.ics) calendar files, enabling tasks with due dates to be visible in external calendar applications. Events can originate from local tasks or be imported from external calendar sources.
