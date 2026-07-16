@@ -691,6 +691,47 @@ class Program
 }
 ```
 
+## StringExtensionsTests
+
+The `StringExtensionsTests` class contains unit tests for string extension methods that provide utilities for text manipulation and formatting. These methods include truncation, filename sanitization, case conversion, and slug generation, which are commonly used throughout the task synchronization workflow.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+
+class Program
+{
+    static void Main()
+    {
+        // Truncate a long string with default suffix
+        var longText = "This is a very long text that needs to be truncated";
+        var truncated = longText.Truncate(20);
+        Console.WriteLine(truncated); // "This is a very long..."
+        
+        // Sanitize for filename (empty string returns "untitled")
+        var emptyFileName = "".SanitizeForFilename();
+        Console.WriteLine(emptyFileName); // "untitled"
+        
+        // Sanitize for filename (replace spaces with underscores)
+        var fileName = "My Task File.txt".SanitizeForFilename();
+        Console.WriteLine(fileName); // "My_Task_File.txt"
+        
+        // Convert PascalCase to snake_case
+        var pascalCase = "NotionTaskSync".ToSnakeCase();
+        Console.WriteLine(pascalCase); // "notion_task_sync"
+        
+        // Convert to URL-friendly slug
+        var title = "Hello World!".ToSlug();
+        Console.WriteLine(title); // "hello-world"
+        
+        // Use in a task title context
+        var taskTitle = "Implement New Feature 🚀".ToSlug();
+        Console.WriteLine(taskTitle); // "implement-new-feature"
+    }
+}
+```
+
 ## RetryHelperTests
 
 The `RetryHelperTests` class contains unit tests for the `RetryHelper` utility, which provides robust retry and circuit breaker patterns for handling transient failures in distributed systems. These tests verify retry behavior with exponential backoff, circuit breaker state transitions, predicate-based retry conditions, and proper error handling.
