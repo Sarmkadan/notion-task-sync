@@ -968,6 +968,174 @@ class Program
 ```
 ```
 
+## SyncIntegrationTests
+
+The `SyncIntegrationTests` class contains integration tests for the complete synchronization workflow between local task storage and Notion databases. These tests verify end-to-end scenarios including change detection, conflict resolution, different sync directions, backup creation, and incremental sync operations.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Tests;
+using NotionTaskSync.Domain.Models;
+using NotionTaskSync.Domain.Enums;
+using Microsoft.Extensions.Logging;
+using Moq;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+static async Task Main()
+{
+// Setup test dependencies
+var localTasksDirectory = Path.Combine(Path.GetTempPath(), $"sync_test_{Guid.NewGuid()}");
+Directory.CreateDirectory(localTasksDirectory);
+
+var localFileService = new LocalFileService(localTasksDirectory);
+var mockTaskRepository = new Mock<ITaskRepository>();
+var mockChangeLogRepository = new Mock<IChangeLogRepository>();
+var mockNotionApiService = new Mock<NotionApiService>(null);
+var mockChangeDetectionService = new Mock<ChangeDetectionService>(mockChangeLogRepository.Object);
+var mockConflictResolutionService = new Mock<ConflictResolutionService>(mockChangeLogRepository.Object);
+var mockLogger = new Mock<ILogger<SyncService>>();
+
+// Create SyncService with mocked dependencies
+var syncService = new SyncService(
+    mockChangeDetectionService.Object,
+    mockConflictResolutionService.Object,
+    mockNotionApiService.Object,
+    mockTaskRepository.Object,
+    mockChangeLogRepository.Object);
+
+// Example 1: Test creating a new task and syncing to Notion
+var newTask = new Domain.Models.Task
+{
+    Id = Guid.NewGuid(),
+    Title = "Implement SyncIntegrationTests feature",
+    Description = "Add documentation for SyncIntegrationTests",
+    Priority = 5,
+    CreatedAt = DateTime.UtcNow,
+    UpdatedAt = DateTime.UtcNow
+};
+
+await localFileService.SaveTaskAsync(newTask);
+
+// Setup mocks to simulate successful sync
+mockTaskRepository.Setup(r => r.GetAllAsync())
+    .ReturnsAsync(new List<Domain.Models.Task> { newTask });
+mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
+    .ReturnsAsync(new List<NotionPage>());
+mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Domain.Models.Task>>(), It.IsAny<DateTime>()))
+    .Returns(new List<ChangeLog>());
+mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
+    .Returns(new List<ChangeLog>());
+mockChangeDetectionService.Setup(s => s.DetectConflicts(It.IsAny<List<ChangeLog>>(), It.IsAny<List<ChangeLog>>()))
+    .Returns(new List<ConflictResolution>());
+
+var config = new SyncConfig(
+    "Test Sync",
+    "550e8400-e29b-41d4-a716-446655440000",
+    localTasksDirectory);
+
+var syncResult = await syncService.ExecuteSyncAsync(config);
+
+Console.WriteLine($"Sync completed: {syncResult.Status}");
+Console.WriteLine($"Local tasks: {syncResult.LocalTaskCount}");
+Console.WriteLine($"Notion pages: {syncResult.NotionPageCount}");
+
+// Example 2: Test conflict resolution
+var conflictedTask = new Domain.Models.Task
+{
+    Id = Guid.NewGuid(),
+    Title = "Conflicted Task",
+    Priority = 3,
+    CreatedAt = DateTime.UtcNow.AddHours(-1),
+    UpdatedAt = DateTime.UtcNow
+};
+
+mockTaskRepository.Setup(r => r.GetAllAsync())
+    .ReturnsAsync(new List<Domain.Models.Task> { conflictedTask });
+
+var notionPage = new NotionPage("page_123", "550e8400-e29b-41d4-a716-446655440000", "Conflicted Task - Notion Version")
+{
+    LastEditedTime = DateTime.UtcNow.AddMinutes(-15)
+};
+
+mockNotionApiService.Setup(a => a.FetchPagesAsync(It.IsAny<string>(), It.IsAny<int>()))
+    .ReturnsAsync(new List<NotionPage> { notionPage });
+
+var localChange = new ChangeLog { TaskId = conflictedTask.Id, ChangeType = "Updated", Source = ChangeSource.Local };
+var notionChange = new ChangeLog { TaskId = conflictedTask.Id, ChangeType = "Updated", Source = ChangeSource.Notion };
+
+var conflict = new ConflictResolution
+{
+    TaskId = conflictedTask.Id,
+    LocalValue = "Conflicted Task",
+    NotionValue = "Conflicted Task - Notion Version",
+    PropertyName = "Title",
+    ConflictType = ConflictType.ConcurrentModification,
+    Status = ResolutionStatus.Pending
+};
+
+mockChangeDetectionService.Setup(s => s.DetectLocalChanges(It.IsAny<List<Domain.Models.Task>>(), It.IsAny<DateTime>()))
+    .Returns(new List<ChangeLog> { localChange });
+mockChangeDetectionService.Setup(s => s.DetectNotionChanges(It.IsAny<List<NotionPage>>(), It.IsAny<DateTime>()))
+    .Returns(new List<ChangeLog> { notionChange });
+mockChangeDetectionService.Setup(s => s.DetectConflicts(It.IsAny<List<ChangeLog>>(), It.IsAny<List<ChangeLog>>()))
+    .Returns(new List<ConflictResolution> { conflict });
+
+var resolvedConflict = new ConflictResolution
+{
+    TaskId = conflictedTask.Id,
+    LocalValue = "Conflicted Task",
+    NotionValue = "Conflicted Task - Notion Version",
+    PropertyName = "Title",
+    ResolvedValue = "Conflicted Task",
+    ResolutionMethod = ResolutionMethod.LocalWins,
+    Status = ResolutionStatus.Resolved,
+    ResolvedAt = DateTime.UtcNow
+};
+
+mockConflictResolutionService.Setup(s => s.ResolveConflictsAsync(
+    It.IsAny<List<ConflictResolution>>(),
+    It.IsAny<ConflictResolutionStrategy>(),
+    It.IsAny<Dictionary<string, ConflictResolutionStrategy>?>()))
+    .ReturnsAsync(new List<ConflictResolution> { resolvedConflict });
+
+var conflictConfig = new SyncConfig("Conflict Test", "550e8400-e29b-41d4-a716-446655440000", localTasksDirectory)
+{
+    ConflictStrategy = ConflictResolutionStrategy.LocalWins
+};
+
+var conflictResult = await syncService.ExecuteSyncAsync(conflictConfig);
+
+Console.WriteLine($"Conflicts detected: {conflictResult.ConflictsDetected}");
+Console.WriteLine($"Conflicts resolved: {conflictResult.ConflictsResolved}");
+
+// Example 3: Test different sync directions
+var localToNotionConfig = new SyncConfig("Local to Notion", "550e8400-e29b-41d4-a716-446655440000", localTasksDirectory)
+{
+    Direction = SyncDirection.LocalToNotion
+};
+
+var localResult = await syncService.ExecuteSyncAsync(localToNotionConfig);
+Console.WriteLine($"Local to Notion sync: {localResult.Status}");
+
+var notionToLocalConfig = new SyncConfig("Notion to Local", "550e8400-e29b-41d4-a716-446655440000", localTasksDirectory)
+{
+    Direction = SyncDirection.NotionToLocal
+};
+
+var notionResult = await syncService.ExecuteSyncAsync(notionToLocalConfig);
+Console.WriteLine($"Notion to Local sync: {notionResult.Status}");
+
+// Cleanup
+if (Directory.Exists(localTasksDirectory))
+    Directory.Delete(localTasksDirectory, recursive: true);
+}
+}
+```
+
 ## BackupServiceTests
 
 The `BackupServiceTests` class contains unit tests for the `BackupService` class, which provides backup functionality for task synchronization workflows. These tests verify backup creation with labels, retrieval of available backups, proper error handling, and validation of backup metadata including timestamps, file counts, and ordering.
