@@ -159,6 +159,184 @@ using System.Threading.Tasks;
 
 class Program
 {
+static async Task Main()
+{
+// Initialize TaskRepository
+var taskRepository = new TaskRepository();
+
+// Example 1: Add a new task
+var newTask = new Task
+{
+Id = Guid.NewGuid(),
+Title = "Implement TaskRepository documentation feature",
+Description = "Add TaskRepository section to README.md with realistic usage examples",
+Status = TaskStatus.InProgress,
+Priority = 75,
+CreatedAt = DateTime.UtcNow,
+UpdatedAt = DateTime.UtcNow,
+DueDate = DateTime.UtcNow.AddDays(7),
+AssignedTo = "developer@example.com",
+Tags = "documentation,readme,feature"
+};
+
+await taskRepository.AddAsync(newTask);
+Console.WriteLine($"Added task: {newTask.Title}");
+
+// Example 2: Retrieve tasks by status
+var inProgressTasks = await taskRepository.GetByStatusAsync(TaskStatus.InProgress);
+Console.WriteLine($"In progress tasks: {inProgressTasks.Count}");
+
+// Example 3: Retrieve tasks assigned to a specific user
+var assignedTasks = await taskRepository.GetAssignedToAsync("developer@example.com");
+Console.WriteLine($"Tasks assigned to developer@example.com: {assignedTasks.Count}");
+
+// Example 4: Update a task
+var taskToUpdate = inProgressTasks.FirstOrDefault();
+if (taskToUpdate != null)
+{
+    taskToUpdate.Status = TaskStatus.Done;
+    taskToUpdate.CompletedAt = DateTime.UtcNow;
+    taskToUpdate.UpdateTimestamp();
+
+    await taskRepository.UpdateAsync(taskToUpdate);
+    Console.WriteLine($"Updated task: {taskToUpdate.Title} to {taskToUpdate.Status}");
+}
+
+// Example 5: Count tasks by status
+var statusCounts = await taskRepository.CountByStatusAsync();
+foreach (var kvp in statusCounts)
+{
+    Console.WriteLine($"{kvp.Key}: {kvp.Value} tasks");
+}
+
+// Example 6: Get overdue tasks
+var overdueTasks = await taskRepository.GetOverdueAsync(DateTime.UtcNow);
+Console.WriteLine($"Overdue tasks: {overdueTasks.Count}");
+
+// Example 7: Get all tasks
+var allTasks = await taskRepository.GetAllAsync();
+Console.WriteLine($"Total active tasks: {allTasks.Count}");
+
+// Example 8: Check for pending changes
+if (taskRepository.HasPendingChanges)
+{
+    await taskRepository.SaveAsync();
+    Console.WriteLine("Changes saved successfully");
+}
+
+// Example 9: Get tasks modified since a specific date
+var recentChanges = await taskRepository.GetModifiedSinceAsync(DateTime.UtcNow.AddDays(-1));
+Console.WriteLine($"Tasks modified in last 24 hours: {recentChanges.Count}");
+
+// Example 10: Delete a task
+if (allTasks.Count > 0)
+{
+    await taskRepository.DeleteAsync(allTasks[0].Id);
+    Console.WriteLine("Task marked as deleted (soft delete)");
+}
+
+// Example 11: Get task by Notion page ID
+var taskByNotionId = await taskRepository.GetByNotionPageIdAsync(newTask.NotionPageId);
+Console.WriteLine($"Found task by Notion ID: {taskByNotionId?.Title}");
+}
+}
+```
+
+## ConfigRepository
+
+The `ConfigRepository` class provides persistence and retrieval of sync configurations as JSON files. It enables users to define multiple sync profiles for different Notion databases, supporting configuration export/import for sharing and backup purposes. The repository handles file system operations with proper error handling and logging.
+
+### Public Members
+
+- `public async Task<bool> SaveConfigAsync(SyncConfig config)` - Saves a configuration to a JSON file
+- `public async Task<SyncConfig?> GetConfigAsync(string configName)` - Loads a configuration by name
+- `public async Task<List<SyncConfig>> GetAllConfigsAsync()` - Gets all saved configurations
+- `public bool DeleteConfig(string configName)` - Deletes a configuration by name
+- `public async Task<bool> ExportConfigAsync(SyncConfig config, string exportPath)` - Exports a configuration to a specific file path
+- `public async Task<SyncConfig?> ImportConfigAsync(string importPath)` - Imports a configuration from a file
+- `public bool ConfigExists(string configName)` - Checks if a configuration exists
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Repositories;
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+static async Task Main()
+{
+// Initialize ConfigRepository with configuration directory
+var configRepository = new ConfigRepository(
+    configDirectory: @"./configs",
+    fileSystemHelper: new FileSystemHelper(),
+    jsonFormatter: new JsonFormatter(),
+    logger: new Logger<ConfigRepository>(new LoggerFactory())
+);
+
+// Example 1: Save a new configuration
+var config = new SyncConfig
+{
+    Name = "TeamDailySync",
+    NotionDatabaseId = "550e8400-e29b-41d4-a716-446655440000",
+    LocalFolderPath = @"./tasks",
+    NotionApiKey = "secret_test_api_key_1234567890abcdef",
+    Direction = SyncDirection.Bidirectional,
+    ConflictStrategy = ConflictResolutionStrategy.LocalWins,
+    SyncIntervalSeconds = 86400, // 24 hours
+    IsEnabled = true
+};
+
+var saveSuccess = await configRepository.SaveConfigAsync(config);
+Console.WriteLine(saveSuccess ? "Configuration saved successfully" : "Failed to save configuration");
+
+// Example 2: Load an existing configuration
+var loadedConfig = await configRepository.GetConfigAsync("TeamDailySync");
+if (loadedConfig != null)
+{
+    Console.WriteLine($"Loaded configuration: {loadedConfig.Name}");
+    Console.WriteLine($"Notion Database: {loadedConfig.NotionDatabaseId}");
+    Console.WriteLine($"Sync Direction: {loadedConfig.Direction}");
+    Console.WriteLine($"Conflict Strategy: {loadedConfig.ConflictStrategy}");
+}
+
+// Example 3: Get all configurations
+var allConfigs = await configRepository.GetAllConfigsAsync();
+Console.WriteLine($"Total configurations: {allConfigs.Count}");
+
+// Example 4: Check if configuration exists
+var exists = configRepository.ConfigExists("TeamDailySync");
+Console.WriteLine($"Configuration exists: {exists}");
+
+// Example 5: Export configuration to a specific location
+var exportSuccess = await configRepository.ExportConfigAsync(config, @"./backups/TeamDailySync-backup.json");
+Console.WriteLine(exportSuccess ? "Configuration exported" : "Failed to export configuration");
+
+// Example 6: Import configuration from file
+var importSuccess = await configRepository.ImportConfigAsync(@"./backups/TeamDailySync-backup.json");
+if (importSuccess != null)
+{
+    Console.WriteLine($"Imported configuration: {importSuccess.Name}");
+}
+
+// Example 7: Delete a configuration
+var deleteSuccess = configRepository.DeleteConfig("TeamDailySync");
+Console.WriteLine(deleteSuccess ? "Configuration deleted" : "Failed to delete configuration");
+}
+}
+```
+
+## ChangeLogRepository
+
+The `TaskRepository` class provides an in-memory implementation of the `ITaskRepository` interface for managing task entities.
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
     static async Task Main()
     {
         // Initialize TaskRepository
