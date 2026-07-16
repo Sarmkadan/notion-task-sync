@@ -924,11 +924,48 @@ class Program
     }
 }
 
-// Simple result class for demonstration
-public class TaskResult
+## CryptoHelperTests
+
+The `CryptoHelperTests` class contains unit tests for the `CryptoHelper` utility class, which provides cryptographic operations including SHA-256 and MD5 hashing, HMAC-SHA256 signature generation, and random token generation. These tests ensure the correct behavior and robustness of these security-critical functions, including edge cases like null inputs and invalid length constraints.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using System;
+using Xunit;
+using FluentAssertions;
+
+class Program
 {
-    public bool IsSuccess { get; set; }
+    static void Main()
+    {
+        // 1. Hash with SHA256
+        var hash = CryptoHelper.HashSha256("test-data");
+        Console.WriteLine($"SHA256 Hash: {hash}");
+        
+        // 2. Handle null or empty input
+        var emptyHash = CryptoHelper.HashSha256("");
+        Console.WriteLine($"Empty input hash: '{emptyHash}'");
+        
+        // 3. Hash with MD5
+        var md5Hash = CryptoHelper.HashMd5("test-data");
+        Console.WriteLine($"MD5 Hash: {md5Hash}");
+        
+        // 4. Generate random token
+        var token = CryptoHelper.GenerateRandomToken(32);
+        Console.WriteLine($"Token (length 32): {token}");
+        
+        // 5. Generate HMAC-SHA256 signature
+        var signature = CryptoHelper.ComputeHmacSha256("data", "key");
+        Console.WriteLine($"HMAC signature: {signature}");
+        
+        // 6. Verify HMAC or SHA256 hash
+        bool isValid = CryptoHelper.VerifyHashSha256("test-data", hash);
+        Console.WriteLine($"Is hash valid: {isValid}");
+    }
 }
+```
 ```
 
 ## BackupServiceTests
