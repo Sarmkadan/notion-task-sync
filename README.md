@@ -1703,6 +1703,102 @@ public class SyncManager
 }
 ```
 
+## DatabaseContext
+
+The `DatabaseContext` class provides centralized data access and transaction management for database operations. It serves as the main entry point for executing queries, commands, and managing database connections and transactions across different database engines (SQLite, SQL Server, PostgreSQL).
+
+### Public Members
+
+- `DatabaseContext(string connectionString, string databaseEngine = "SQLite", int commandTimeout = 30)` - Constructor that initializes the context with connection string, database engine type, and command timeout
+- `IDbConnection Connection` - Gets or creates the database connection
+- `bool HasActiveTransaction` - Gets a value indicating whether a transaction is currently active
+- `public async Task OpenAsync()` - Opens the database connection asynchronously
+- `public async Task CloseAsync()` - Closes the database connection
+- `public IDbTransaction BeginTransaction()` - Begins a new transaction if one is not already active
+- `public async Task CommitAsync()` - Commits the current transaction if one is active
+- `public async Task RollbackAsync()` - Rolls back the current transaction if one is active
+- `public async Task<bool> TestConnectionAsync()` - Tests the database connection
+- `public async Task ExecuteInTransactionAsync(Func<Task> action)` - Executes an action within a transaction scope, auto-committing on success
+- `public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action)` - Executes an action within a transaction scope and returns a result
+- `public async Task<int> ExecuteAsync(string command, object? parameters = null)` - Executes a command and returns the number of affected rows
+- `public async Task<T?> QueryFirstAsync<T>(string query, object? parameters = null)` - Executes a query and returns the first result
+- `public async Task<object?> QueryScalarAsync(string query, object? parameters = null)` - Executes a scalar query and returns a single value
+- `public string GetDatabaseEngine()` - Gets the current database engine being used
+- `public string GetMaskedConnectionString()` - Gets the connection string with sensitive data masked
+- `public void Dispose()` - Disposes the database context and closes the connection
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Data.Database;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Initialize DatabaseContext with connection string and database engine
+        var dbContext = new DatabaseContext(
+            connectionString: "Data Source=./tasks.db",
+            databaseEngine: "SQLite",
+            commandTimeout: 30
+        );
+
+        try
+        {
+            // Open the database connection
+            await dbContext.OpenAsync();
+            Console.WriteLine("Database connection opened successfully");
+            Console.WriteLine($"Using database engine: {dbContext.GetDatabaseEngine()}");
+            Console.WriteLine($"Connection string: {dbContext.GetMaskedConnectionString()}");
+
+            // Test the connection
+            var isConnected = await dbContext.TestConnectionAsync();
+            Console.WriteLine($"Connection test: {(isConnected ? "Success" : "Failed")}");
+
+            // Execute a simple query
+            var result = await dbContext.QueryFirstAsync<int>(
+                "SELECT COUNT(*) FROM Tasks WHERE Status = @status",
+                new { status = "InProgress" }
+            );
+            Console.WriteLine($"Active tasks count: {result}");
+
+            // Execute a command within a transaction
+            await dbContext.ExecuteInTransactionAsync(async () =>
+            {
+                // Transactional operations
+                var updateCount = await dbContext.ExecuteAsync(
+                    "UPDATE Tasks SET Status = @newStatus WHERE Status = @oldStatus",
+                    new { newStatus = "Done", oldStatus = "InProgress" }
+                );
+                Console.WriteLine($"Updated {updateCount} tasks to 'Done' status");
+            });
+
+            // Execute a query with parameters
+            var tasks = await dbContext.QueryFirstAsync<string>(
+                "SELECT Title FROM Tasks WHERE Priority > @priority",
+                new { priority = 50 }
+            );
+            Console.WriteLine($"High priority tasks: {tasks}");
+
+            // Execute scalar query
+            var count = await dbContext.QueryScalarAsync(
+                "SELECT COUNT(*) FROM Tasks"
+            );
+            Console.WriteLine($"Total tasks: {count}");
+        }
+        finally
+        {
+            // Close the connection and dispose the context
+            await dbContext.CloseAsync();
+            dbContext.Dispose();
+            Console.WriteLine("Database connection closed and context disposed");
+        }
+    }
+}
+```
+
 ## LocalFileService
 
 The `LocalFileService` class provides file system operations for persisting tasks to the local file system. It handles reading and writing task files in Markdown format with metadata headers, supports backup operations, and provides utility methods for file management and statistics.
