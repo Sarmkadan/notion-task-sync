@@ -997,6 +997,57 @@ class Program
 }
 ```
 
+## ConfigureCommand
+
+The `ConfigureCommand` class provides interactive and command-line configuration for the Notion Task Sync application. It allows users to set up API keys, database IDs, local task directories, sync intervals, and conflict resolution strategies. The command validates settings before saving them to `appsettings.json`, ensuring the application remains functional after configuration.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Commands;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        // Setup configuration
+        var configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .Build();
+
+        // Create logger
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<ConfigureCommand>();
+
+        // Create ConfigureCommand instance
+        var configureCommand = new ConfigureCommand(configuration, logger);
+
+        // Example 1: Interactive configuration
+        var interactiveOptions = new Dictionary<string, string>();
+        var exitCode = await configureCommand.ExecuteAsync(new List<string>(), interactiveOptions);
+        Console.WriteLine($"Interactive configuration exit code: {exitCode}");
+
+        // Example 2: Command-line configuration
+        var commandLineOptions = new Dictionary<string, string>
+        {
+            {"api-key", "your-notion-api-key-here"},
+            {"database-id", "550e8400-e29b-41d4-a716-446655440000"},
+            {"task-directory", "./my-tasks"},
+            {"sync-interval", "600"},
+            {"conflict-strategy", "last-write"}
+        };
+        
+        var commandLineExitCode = await configureCommand.ExecuteAsync(new List<string>(), commandLineOptions);
+        Console.WriteLine($"Command-line configuration exit code: {commandLineExitCode}");
+    }
+}
+```
+
 ## CryptoHelperTests
 
 The `CryptoHelperTests` class contains unit tests for the `CryptoHelper` utility class, which provides cryptographic operations including SHA-256 and MD5 hashing, HMAC-SHA256 signature generation, and random token generation. These tests ensure the correct behavior and robustness of these security-critical functions, including edge cases like null inputs and invalid length constraints.
