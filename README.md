@@ -2,6 +2,67 @@
 
 For the big picture - what runs on the default path, how a sync cycle flows, why the design is the way it is, and where the extension seams are - see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Short version: a single-shot console app where `SyncService` orchestrates change detection, conflict resolution and bidirectional apply between a Notion database and a local task store.
 
+## SyncConfig
+
+The `SyncConfig` class represents the configuration for a synchronization operation between local task storage and Notion databases. It defines all parameters needed to execute a sync cycle including authentication, database identification, sync direction, conflict resolution strategies, scheduling, and field mappings.
+
+### Usage Example
+
+```csharp
+using Domain.Models;
+using System;
+using System.Collections.Generic;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a sync configuration for bidirectional synchronization
+        var config = new SyncConfig
+        {
+            Id = Guid.NewGuid(),
+            Name = "Daily Team Sync",
+            NotionDatabaseId = "550e8400-e29b-41d4-a716-446655440000",
+            LocalFolderPath = @"./tasks",
+            NotionApiKey = "secret_test_api_key_1234567890abcdef",
+            Direction = SyncDirection.Bidirectional,
+            ConflictStrategy = ConflictResolutionStrategy.LastWrite,
+            SyncIntervalSeconds = 86400, // 24 hours
+            MaxRetries = 3,
+            IsEnabled = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            FieldMappings = new Dictionary<string, string>
+            {
+                { "Title", "title" },
+                { "Description", "rich_text" },
+                { "Status", "status" },
+                { "Priority", "number" }
+            },
+            IgnoredFields = new List<string> { "CreatedAt", "UpdatedAt" },
+            FieldConflictStrategies = new Dictionary<string, ConflictResolutionStrategy>
+            {
+                { "Status", ConflictResolutionStrategy.LocalWins },
+                { "Priority", ConflictResolutionStrategy.NotionWins }
+            }
+        };
+
+        // Validate the configuration
+        if (config.Validate())
+        {
+            Console.WriteLine($"Valid sync configuration: {config.Name}");
+            Console.WriteLine($"Sync direction: {config.Direction}");
+            Console.WriteLine($"Conflict strategy: {config.ConflictStrategy}");
+            Console.WriteLine($"Sync interval: {config.SyncIntervalSeconds / 60} minutes");
+        }
+
+        // Map a local field to its Notion equivalent
+        var notionPropertyName = config.MapLocalFieldToNotion("Status");
+        Console.WriteLine($"Local 'Status' maps to Notion property: {notionPropertyName}");
+    }
+}
+```
+
 ## AdvancedUsageExtensions
 
 The `AdvancedUsageExtensions` class provides advanced utilities for validating, optimizing, and analyzing task synchronization workflows. It includes methods to validate configuration, optimize sync settings, execute syncs with retry logic, and analyze performance metrics.
