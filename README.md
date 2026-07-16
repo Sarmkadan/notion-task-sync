@@ -63,6 +63,70 @@ class Program
 }
 ```
 
+## Task
+
+The `Task` class represents a task entity that can be synchronized between local storage and Notion databases. It encapsulates all properties needed for task management including identification, status tracking, priority levels, due dates, assignees, and metadata for synchronization workflows.
+
+### Usage Example
+
+```csharp
+using Domain.Models;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a new task
+        var task = new Domain.Models.Task
+        {
+            Id = Guid.NewGuid(),
+            Title = "Implement Task documentation feature",
+            Description = "Add Task section to README.md with realistic usage examples",
+            NotionPageId = "550e8400-e29b-41d4-a716-446655440000",
+            LocalFilePath = @"./tasks/task-implement-documentation.md",
+            Status = TaskStatus.InProgress,
+            Priority = 75,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            DueDate = DateTime.UtcNow.AddDays(7),
+            AssignedTo = "developer@example.com",
+            Tags = "documentation,readme,feature"
+        };
+
+        // Validate the task
+        if (task.Validate())
+        {
+            Console.WriteLine($"Valid task created: {task.Title}");
+            Console.WriteLine($"Status: {task.Status}");
+            Console.WriteLine($"Priority: {task.Priority}");
+            Console.WriteLine($"Due: {task.DueDate?.ToString("yyyy-MM-dd")}");
+        }
+
+        // Update task status
+        task.UpdateTimestamp();
+        task.Status = TaskStatus.Done;
+        task.CompletedAt = DateTime.UtcNow;
+
+        Console.WriteLine($"\nTask completed: {task.Title}");
+        Console.WriteLine($"Completed at: {task.CompletedAt:u}");
+
+        // Mark as deleted (soft delete)
+        task.MarkAsDeleted();
+        task.DeletedAt = DateTime.UtcNow;
+        task.IsDeleted = true;
+
+        Console.WriteLine($"\nTask marked as deleted: {task.Title}");
+        Console.WriteLine($"Deleted at: {task.DeletedAt:u}");
+
+        // Clone a task
+        var clonedTask = task.Clone();
+        Console.WriteLine($"\nCloned task ID: {clonedTask.Id}");
+        Console.WriteLine($"Clone title: {clonedTask.Title}");
+    }
+}
+```
+
 ## AdvancedUsageExtensions
 
 The `AdvancedUsageExtensions` class provides advanced utilities for validating, optimizing, and analyzing task synchronization workflows. It includes methods to validate configuration, optimize sync settings, execute syncs with retry logic, and analyze performance metrics.
