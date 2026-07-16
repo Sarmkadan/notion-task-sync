@@ -1227,6 +1227,96 @@ class Program
 }
 ```
 
+## DateTimeExtensions
+
+The `DateTimeExtensions` static class provides extension methods for DateTime operations commonly used in synchronization scenarios. It centralizes recurring patterns for timestamp comparisons, timezone handling, and formatting, improving code readability and reducing duplication across the codebase.
+
+### Public Members
+
+- `IsWithinDays(this DateTime dateTime, int days)` - Determines if a timestamp falls within a specified number of days from now
+- `IsNewerThan(this DateTime dateTime, DateTime comparison)` - Determines if a timestamp is more recent than another timestamp
+- `RoundToMinute(this DateTime dateTime)` - Rounds a DateTime to the nearest minute boundary
+- `RoundToSecond(this DateTime dateTime)` - Rounds a DateTime to the nearest second boundary
+- `ToIso8601String(this DateTime dateTime)` - Converts a DateTime to ISO 8601 format string
+- `ToUserFriendlyString(this DateTime dateTime)` - Converts a DateTime to a human-readable format suitable for logging and display
+- `ToTimeAgoString(this DateTime dateTime)` - Calculates the time elapsed since the given timestamp in a human-readable format
+- `IsSameDay(this DateTime dateTime, DateTime other)` - Determines if two DateTime objects represent the same day in UTC
+- `ToUnixTimestamp(this DateTime dateTime)` - Converts a DateTime to a Unix timestamp (seconds since epoch)
+- `FromUnixTimestamp(this long unixTimestamp)` - Converts a Unix timestamp to a DateTime object
+- `IsStale(this DateTime dateTime, int maxAgeHours)` - Determines if a timestamp is stale based on a maximum age in hours
+- `GetStartOfDay(this DateTime dateTime)` - Gets the start of the day (00:00:00) for a given DateTime
+- `GetEndOfDay(this DateTime dateTime)` - Gets the end of the day (23:59:59.999...) for a given DateTime
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Example 1: Check if timestamp is within recent days
+        var recentDate = DateTime.UtcNow.AddHours(-6);
+        var isWithinLastDay = recentDate.IsWithinDays(1);
+        Console.WriteLine($"Is within last 24 hours: {isWithinLastDay}"); // True
+        
+        var oldDate = DateTime.UtcNow.AddDays(-30);
+        var isWithinLastMonth = oldDate.IsWithinDays(30);
+        Console.WriteLine($"Is within last 30 days: {isWithinLastMonth}"); // True
+        
+        // Example 2: Compare timestamps for recency
+        var taskUpdated = DateTime.UtcNow.AddMinutes(-15);
+        var lastSync = DateTime.UtcNow.AddHours(-2);
+        var hasRecentChanges = taskUpdated.IsNewerThan(lastSync);
+        Console.WriteLine($"Has recent changes: {hasRecentChanges}"); // True
+        
+        // Example 3: Round timestamps for consistent comparison
+        var preciseTime = DateTime.UtcNow.AddMilliseconds(456);
+        var roundedMinute = preciseTime.RoundToMinute();
+        var roundedSecond = preciseTime.RoundToSecond();
+        Console.WriteLine($"Original: {preciseTime:O}");
+        Console.WriteLine($"Rounded to minute: {roundedMinute:O}");
+        Console.WriteLine($"Rounded to second: {roundedSecond:O}");
+        
+        // Example 4: Format timestamps for different use cases
+        var now = DateTime.UtcNow;
+        Console.WriteLine($"ISO 8601: {now.ToIso8601String()}");
+        Console.WriteLine($"User friendly: {now.ToUserFriendlyString()}");
+        Console.WriteLine($"Time ago: {now.ToTimeAgoString()}");
+        
+        // Example 5: Date-based comparisons
+        var morning = DateTime.UtcNow.Date.AddHours(9);
+        var evening = DateTime.UtcNow.Date.AddHours(21);
+        var isSameDay = morning.IsSameDay(evening);
+        Console.WriteLine($"Same day: {isSameDay}"); // True
+        
+        // Example 6: Unix timestamp conversions
+        var timestamp = DateTime.UtcNow.ToUnixTimestamp();
+        Console.WriteLine($"Unix timestamp: {timestamp}");
+        var convertedBack = timestamp.FromUnixTimestamp();
+        Console.WriteLine($"Converted back: {convertedBack:O}");
+        
+        // Example 7: Check for stale data
+        var recentTask = DateTime.UtcNow.AddMinutes(-30);
+        var isStale = recentTask.IsStale(maxAgeHours: 1);
+        Console.WriteLine($"Is stale (1 hour threshold): {isStale}"); // False
+        
+        var oldTask = DateTime.UtcNow.AddHours(-25);
+        var isOldStale = oldTask.IsStale(maxAgeHours: 24);
+        Console.WriteLine($"Is stale (24 hour threshold): {isOldStale}"); // True
+        
+        // Example 8: Get day boundaries for range queries
+        var today = DateTime.UtcNow;
+        var startOfDay = today.GetStartOfDay();
+        var endOfDay = today.GetEndOfDay();
+        Console.WriteLine($"Start of day: {startOfDay:O}");
+        Console.WriteLine($"End of day: {endOfDay:O}");
+    }
+}
+```
+
 ## AdvancedUsageExtensions
 
 The `AdvancedUsageExtensions` class provides advanced utilities for validating, optimizing, and analyzing task synchronization workflows. It includes methods to validate configuration, optimize sync settings, execute syncs with retry logic, and analyze performance metrics.
