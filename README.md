@@ -1059,6 +1059,113 @@ public abstract class ApplicationEvent
 }
 ```
 
+## NotionApiServiceTests
+
+The `NotionApiServiceTests` class contains unit tests for the `NotionApiService` class, which provides a wrapper around the Notion API for fetching, creating, and updating pages in Notion databases. These tests verify API interaction patterns, error handling, authentication, pagination, and request/response formatting.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using NotionTaskSync.Domain.Exceptions;
+using FluentAssertions;
+using Xunit;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Example 1: Create NotionApiService with valid API key
+        var apiService = new NotionApiService("secret_test_api_key_1234567890abcdef");
+        Console.WriteLine("NotionApiService created with valid API key");
+        
+        // Example 2: Fetch pages from a Notion database
+        var pages = await apiService.FetchPagesAsync("550e8400-e29b-41d4-a716-446655440000", pageSize: 50);
+        Console.WriteLine($"Fetched {pages.Count} pages from database");
+        
+        // Example 3: Fetch pages with pagination
+        var allPages = new List<NotionPage>();
+        var pageSize = 100;
+        var hasMore = true;
+        string? startCursor = null;
+        
+        while (hasMore)
+        {
+            var batch = await apiService.FetchPagesAsync(
+                "550e8400-e29b-41d4-a716-446655440000",
+                pageSize: pageSize,
+                startCursor: startCursor
+            );
+            
+            allPages.AddRange(batch.Pages);
+            hasMore = batch.HasMore;
+            startCursor = batch.NextCursor;
+        }
+        
+        Console.WriteLine($"Total pages fetched with pagination: {allPages.Count}");
+        
+        // Example 4: Fetch pages since a specific timestamp
+        var cutoffTime = DateTime.UtcNow.AddDays(-7);
+        var recentPages = await apiService.FetchPagesSinceAsync(
+            "550e8400-e29b-41d4-a716-446655440000",
+            cutoffTime
+        );
+        Console.WriteLine($"Pages modified in last 7 days: {recentPages.Count}");
+        
+        // Example 5: Create a new page in Notion
+        var newTask = new NotionTask
+        {
+            Title = "Implement Notion API integration",
+            Description = "Add NotionApiServiceTests documentation to README.md",
+            Status = "In Progress",
+            Priority = 50,
+            DueDate = DateTime.UtcNow.AddDays(7),
+            CreatedTime = DateTime.UtcNow
+        };
+        
+        var createdPage = await apiService.CreatePageAsync(
+            "550e8400-e29b-41d4-a716-446655440000",
+            newTask
+        );
+        Console.WriteLine($"Created page with ID: {createdPage.Id}");
+        
+        // Example 6: Update an existing page
+        newTask.Status = "Done";
+        newTask.CompletedTime = DateTime.UtcNow;
+        
+        await apiService.UpdatePageAsync(
+            createdPage.Id,
+            newTask
+        );
+        Console.WriteLine("Page updated successfully");
+        
+        // Example 7: Handle validation exceptions
+        try
+        {
+            await apiService.FetchPagesAsync(""); // Empty database ID
+            Console.WriteLine("ERROR: Should have thrown ValidationException");
+        }
+        catch (ValidationException ex)
+        {
+            Console.WriteLine($"Correctly caught ValidationException: {ex.Message}");
+        }
+        
+        // Example 8: Handle API exceptions
+        try
+        {
+            var failingService = new NotionApiService("invalid_api_key");
+            await failingService.FetchPagesAsync("550e8400-e29b-41d4-a716-446655440000");
+            Console.WriteLine("ERROR: Should have thrown NotionApiException");
+        }
+        catch (NotionApiException ex)
+        {
+            Console.WriteLine($"Correctly caught NotionApiException: {ex.Message}");
+        }
+    }
+}
+```
+
 ## SyncServiceTests
 
 The `SyncServiceTests` class contains unit tests for the `SyncService` class, which handles synchronization between local task storage and Notion databases. These tests verify synchronization execution, configuration validation, incremental/full sync modes, conflict detection and resolution, error handling, and timing tracking.
