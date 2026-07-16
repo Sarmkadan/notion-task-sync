@@ -1228,6 +1228,74 @@ class Program
 }
 ```
 
+## HttpClientFactory
+
+`HttpClientFactory` centralizes HTTP client creation and configuration for the application, providing specialized clients for different use cases including authenticated requests to external APIs like Notion. It handles client lifecycle management, header configuration, and rate limiting awareness.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Integration;
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Create HttpClientFactory with configuration
+        var factory = new HttpClientFactory(
+            baseAddress: new Uri("https://api.notion.com/v1"),
+            defaultRequestHeaders: new()
+            {
+                {"User-Agent", "NotionTaskSync/1.0"},
+                {"Accept", "application/json"}
+            }
+        );
+
+        // Example 1: Get a pre-configured Notion HTTP client
+        using var notionClient = factory.GetNotionHttpClient("secret_test_api_key_1234567890abcdef");
+        
+        Console.WriteLine($"Notion client base address: {notionClient.BaseAddress}");
+        Console.WriteLine($"Notion client default headers: {notionClient.DefaultRequestHeaders.UserAgent}");
+
+        // Example 2: Create a generic HTTP client for external services
+        using var genericClient = factory.CreateGenericHttpClient();
+        
+        Console.WriteLine($"Generic client base address: {genericClient.BaseAddress}");
+        Console.WriteLine($"Generic client has notion auth header: {genericClient.DefaultRequestHeaders.Contains("Authorization")}");
+
+        // Example 3: Create an authenticated HTTP client with custom headers
+        using var authenticatedClient = factory.CreateAuthenticatedHttpClient(
+            apiKey: "custom-api-key-12345",
+            additionalHeaders: new() { {"X-Custom-Header", "custom-value"} }
+        );
+
+        Console.WriteLine($"Authenticated client has auth header: {authenticatedClient.DefaultRequestHeaders.Authorization != null}");
+        Console.WriteLine($"Custom header present: {authenticatedClient.DefaultRequestHeaders.Contains("X-Custom-Header")}");
+
+        // Example 4: Create a rate-limit aware HTTP client
+        using var rateLimitClient = factory.CreateRateLimitAwareHttpClient(
+            maxRequestsPerSecond: 10,
+            burstCapacity: 20
+        );
+
+        Console.WriteLine("Rate limit aware client created successfully");
+
+        // Example 5: Configure custom headers for an existing client
+        factory.ConfigureHeaders(notionClient, 
+            new() { {"X-Notion-Version", "2022-06-28"} }
+        );
+
+        Console.WriteLine("Headers configured successfully");
+
+        // Clean up
+        factory.Dispose();
+    }
+}
+```
+
 ## AppSettings
 
 The `AppSettings` class provides application-wide configuration settings loaded from appsettings.json. It includes paths for local task storage, logging configuration, synchronization defaults, and backup settings.
