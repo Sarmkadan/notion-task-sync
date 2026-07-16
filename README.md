@@ -2159,6 +2159,80 @@ class Program
 }
 ```
 
+## VectorClock
+
+The `VectorClock` class implements a Lamport-style vector clock for tracking causal ordering of distributed operations in collaborative task synchronization scenarios. It maintains a thread-safe collection of logical timestamps for each participant, enabling precise detection of concurrent modifications, operation ordering, and conflict resolution.
+
+Vector clocks are particularly useful in distributed systems where multiple participants can modify shared data concurrently. Each participant maintains their own logical clock that advances with each local operation, and vector clocks can be merged to establish a partial ordering of events across the entire system.
+
+### Usage Example
+
+```csharp
+using Domain.Models;
+using System;
+using System.Collections.Generic;
+
+class Program
+{
+    static void Main()
+    {
+        // Create vector clocks for two collaboration participants
+        var aliceClock = new VectorClock();
+        var bobClock = new VectorClock();
+
+        // Alice performs some operations and advances her clock
+        aliceClock.Tick("alice@example.com"); // Operation 1
+        aliceClock.Tick("alice@example.com"); // Operation 2
+        Console.WriteLine($"Alice's clock: {FormatClock(aliceClock)}"); // { "alice@example.com": 2 }
+
+        // Bob performs some operations and advances his clock
+        bobClock.Tick("bob@example.com"); // Operation A
+        bobClock.Tick("bob@example.com"); // Operation B
+        bobClock.Tick("bob@example.com"); // Operation C
+        Console.WriteLine($"Bob's clock: {FormatClock(bobClock)}"); // { "bob@example.com": 3 }
+
+        // Alice receives Bob's operations and merges his clock
+        aliceClock.Merge(bobClock);
+        Console.WriteLine($"Alice after merge: {FormatClock(aliceClock)}");
+        // { "alice@example.com": 2, "bob@example.com": 3 }
+
+        // Bob receives Alice's operations and merges her clock
+        bobClock.Merge(aliceClock);
+        Console.WriteLine($"Bob after merge: {FormatClock(bobClock)}");
+        // { "alice@example.com": 2, "bob@example.com": 3 }
+
+        // Check causal relationships between clocks
+        var earlierClock = new VectorClock();
+        earlierClock.Tick("alice@example.com");
+        var laterClock = new VectorClock();
+        laterClock.Tick("alice@example.com");
+        laterClock.Tick("alice@example.com");
+
+        Console.WriteLine($"Earlier happens before later: {earlierClock.HappensBefore(laterClock)}"); // True
+        Console.WriteLine($"Later happens before earlier: {laterClock.HappensBefore(earlierClock)}"); // False
+
+        // Clone a vector clock for safe sharing
+        var clonedClock = aliceClock.Clone();
+        Console.WriteLine($"Cloned clock equals original: {clonedClock.Components.Count == aliceClock.Components.Count}");
+
+        // Get specific participant's timestamp
+        var aliceTimestamp = aliceClock.Get("alice@example.com");
+        var unknownParticipantTimestamp = aliceClock.Get("unknown@example.com"); // Returns 0
+        Console.WriteLine($"Alice's timestamp: {aliceTimestamp}, Unknown participant: {unknownParticipantTimestamp}");
+    }
+
+    static string FormatClock(VectorClock clock)
+    {
+        var components = new List<string>();
+        foreach (var kvp in clock.Components)
+        {
+            components.Add($"\"{kvp.Key}\": {kvp.Value}");
+        }
+        return "{ " + string.Join(", ", components) + " }";
+    }
+}
+```
+
 ## WebhookHandler
 
 The `WebhookHandler` class processes incoming webhook events from external services like Notion, GitHub, or other integrations. It validates, routes, and publishes domain events based on webhook payloads, enabling real-time reactive synchronization workflows.
