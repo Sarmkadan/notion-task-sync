@@ -127,6 +127,121 @@ class Program
 }
 ```
 
+## TaskRepository
+
+The `TaskRepository` class provides an in-memory implementation of the `ITaskRepository` interface for managing task entities. It serves as a data access layer for task operations including creation, retrieval, updating, and deletion, with support for various query patterns needed for task synchronization workflows. The repository handles soft deletion (marking tasks as deleted rather than removing them) and provides change tracking capabilities.
+
+### Public Members
+
+- `AddAsync(Task task)` - Adds a new task to the repository
+- `UpdateAsync(Task task)` - Updates an existing task in the repository
+- `DeleteAsync(Guid taskId)` - Deletes a task from the repository by ID
+- `GetByIdAsync(Guid taskId)` - Retrieves a task by its ID (excluding deleted tasks)
+- `GetByNotionPageIdAsync(string notionPageId)` - Retrieves a task by its Notion page ID (excluding deleted tasks)
+- `GetAllAsync()` - Retrieves all non-deleted tasks
+- `GetByStatusAsync(TaskStatus status)` - Retrieves tasks filtered by status
+- `GetModifiedSinceAsync(DateTime since)` - Retrieves tasks modified since a specific timestamp
+- `GetAssignedToAsync(string assignee)` - Retrieves tasks assigned to a specific user
+- `GetOverdueAsync(DateTime beforeDate)` - Retrieves overdue tasks that are not yet completed
+- `SaveAsync()` - Persists changes (in-memory implementation)
+- `CountAsync()` - Returns the total count of non-deleted tasks
+- `CountByStatusAsync()` - Returns a dictionary of task counts grouped by status
+- `GetAllIncludingDeletedAsync()` - Retrieves all tasks including deleted ones (for administrative purposes)
+- `HasPendingChanges` - Property indicating if there are unsaved changes
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Data.Repositories;
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Initialize TaskRepository
+        var taskRepository = new TaskRepository();
+
+        // Example 1: Add a new task
+        var newTask = new Task
+        {
+            Id = Guid.NewGuid(),
+            Title = "Implement TaskRepository documentation feature",
+            Description = "Add TaskRepository section to README.md with realistic usage examples",
+            Status = TaskStatus.InProgress,
+            Priority = 75,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            DueDate = DateTime.UtcNow.AddDays(7),
+            AssignedTo = "developer@example.com",
+            Tags = "documentation,readme,feature"
+        };
+
+        await taskRepository.AddAsync(newTask);
+        Console.WriteLine($"Added task: {newTask.Title}");
+
+        // Example 2: Retrieve tasks by status
+        var inProgressTasks = await taskRepository.GetByStatusAsync(TaskStatus.InProgress);
+        Console.WriteLine($"In progress tasks: {inProgressTasks.Count}");
+
+        // Example 3: Retrieve tasks assigned to a specific user
+        var assignedTasks = await taskRepository.GetAssignedToAsync("developer@example.com");
+        Console.WriteLine($"Tasks assigned to developer@example.com: {assignedTasks.Count}");
+
+        // Example 4: Update a task
+        var taskToUpdate = inProgressTasks.FirstOrDefault();
+        if (taskToUpdate != null)
+        {
+            taskToUpdate.Status = TaskStatus.Done;
+            taskToUpdate.CompletedAt = DateTime.UtcNow;
+            taskToUpdate.UpdateTimestamp();
+            
+            await taskRepository.UpdateAsync(taskToUpdate);
+            Console.WriteLine($"Updated task: {taskToUpdate.Title} to {taskToUpdate.Status}");
+        }
+
+        // Example 5: Count tasks by status
+        var statusCounts = await taskRepository.CountByStatusAsync();
+        foreach (var kvp in statusCounts)
+        {
+            Console.WriteLine($"{kvp.Key}: {kvp.Value} tasks");
+        }
+
+        // Example 6: Get overdue tasks
+        var overdueTasks = await taskRepository.GetOverdueAsync(DateTime.UtcNow);
+        Console.WriteLine($"Overdue tasks: {overdueTasks.Count}");
+
+        // Example 7: Get all tasks
+        var allTasks = await taskRepository.GetAllAsync();
+        Console.WriteLine($"Total active tasks: {allTasks.Count}");
+
+        // Example 8: Check for pending changes
+        if (taskRepository.HasPendingChanges)
+        {
+            await taskRepository.SaveAsync();
+            Console.WriteLine("Changes saved successfully");
+        }
+
+        // Example 9: Get tasks modified since a specific date
+        var recentChanges = await taskRepository.GetModifiedSinceAsync(DateTime.UtcNow.AddDays(-1));
+        Console.WriteLine($"Tasks modified in last 24 hours: {recentChanges.Count}");
+
+        // Example 10: Delete a task
+        if (allTasks.Count > 0)
+        {
+            await taskRepository.DeleteAsync(allTasks[0].Id);
+            Console.WriteLine("Task marked as deleted (soft delete)");
+        }
+
+        // Example 11: Get task by Notion page ID
+        var taskByNotionId = await taskRepository.GetByNotionPageIdAsync(newTask.NotionPageId);
+        Console.WriteLine($"Found task by Notion ID: {taskByNotionId?.Title}");
+    }
+}
+```
+
 ## ChangeLogRepository
 
 The `ChangeLogRepository` class provides an in-memory implementation for tracking and managing change history during task synchronization workflows. It serves as an audit trail for all modifications, enabling conflict detection, change analysis, and sync history tracking between local storage and Notion databases.
