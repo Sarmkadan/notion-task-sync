@@ -242,6 +242,111 @@ Console.WriteLine($"Found task by Notion ID: {taskByNotionId?.Title}");
 }
 ```
 
+## FileSystemHelper
+
+The `FileSystemHelper` class provides safe and reliable filesystem operations with comprehensive error handling and logging. It abstracts away filesystem complexity, making code more testable and robust. The helper handles directory creation, file reading/writing, file operations, and path normalization across different platforms.
+
+### Public Members
+
+- `EnsureDirectoryExists(string path)` - Ensures a directory exists, creating it if necessary
+- `ReadFileAsync(string path)` - Safely reads a file's content with proper error handling
+- `WriteFileAsync(string path, string content)` - Safely writes content to a file with automatic directory creation
+- `AppendFileAsync(string path, string content)` - Safely appends content to a file, creating it if it doesn't exist
+- `DeleteFile(string path)` - Safely deletes a file with logging
+- `DeleteDirectory(string path)` - Safely deletes a directory and all its contents (recursive)
+- `CopyFile(string sourcePath, string destinationPath, bool overwrite = false)` - Copies a file with overwrite handling
+- `GetFileSize(string path)` - Gets the size of a file in bytes
+- `IsDirectory(string path)` - Checks if a path is a directory
+- `IsFile(string path)` - Checks if a path is a file
+- `NormalizePath(string path)` - Normalizes a file path to use forward slashes and removes redundant segments
+- `GetLastModifiedTime(string path)` - Gets the last modified time of a file
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using Microsoft.Extensions.Logging;
+using System;
+using System.IO;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Initialize FileSystemHelper with logger
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<FileSystemHelper>();
+        var fileSystem = new FileSystemHelper(logger);
+
+        // Example 1: Ensure directory exists and create if needed
+        var taskDirectory = @"./tasks/sync-2024";
+        var directoryCreated = fileSystem.EnsureDirectoryExists(taskDirectory);
+        Console.WriteLine($"Directory created/verified: {directoryCreated}");
+
+        // Example 2: Read file content safely
+        var readmePath = Path.Combine(taskDirectory, "README.md");
+        var fileContent = await fileSystem.ReadFileAsync(readmePath);
+        if (fileContent != null)
+        {
+            Console.WriteLine($"File exists with {fileContent.Length} characters");
+        }
+        else
+        {
+            Console.WriteLine("File doesn't exist or couldn't be read");
+        }
+
+        // Example 3: Write content to a new file
+        var newFilePath = Path.Combine(taskDirectory, "task-config.json");
+        var writeSuccess = await fileSystem.WriteFileAsync(
+            newFilePath,
+            @"{
+                ""title"": ""Sync configuration"",
+                ""databaseId"": ""550e8400-e29b-41d4-a716-446655440000""
+            }"
+        );
+        Console.WriteLine($"File written successfully: {writeSuccess}");
+
+        // Example 4: Append to log file
+        var logPath = Path.Combine(taskDirectory, "sync.log");
+        var appendSuccess = await fileSystem.AppendFileAsync(
+            logPath,
+            $"[{DateTime.UtcNow:O}] Sync operation started\n"
+        );
+        Console.WriteLine($"Log entry appended: {appendSuccess}");
+
+        // Example 5: Get file information
+        var fileSize = fileSystem.GetFileSize(newFilePath);
+        var lastModified = fileSystem.GetLastModifiedTime(newFilePath);
+        Console.WriteLine($"File size: {fileSize} bytes");
+        Console.WriteLine($"Last modified: {lastModified:u}");
+
+        // Example 6: Check if path is file or directory
+        var isFile = fileSystem.IsFile(newFilePath);
+        var isDirectory = fileSystem.IsDirectory(taskDirectory);
+        Console.WriteLine($"Is file: {isFile}, Is directory: {isDirectory}");
+
+        // Example 7: Normalize paths for cross-platform consistency
+        var windowsPath = @"C:\Users\Developer\tasks\sync";
+        var normalizedPath = FileSystemHelper.NormalizePath(windowsPath);
+        Console.WriteLine($"Normalized path: {normalizedPath}");
+
+        // Example 8: Copy configuration file
+        var backupPath = Path.Combine(taskDirectory, "config-backup.json");
+        var copySuccess = fileSystem.CopyFile(newFilePath, backupPath);
+        Console.WriteLine($"File copied: {copySuccess}");
+
+        // Example 9: Clean up - delete files
+        var deleteFileSuccess = fileSystem.DeleteFile(backupPath);
+        Console.WriteLine($"File deleted: {deleteFileSuccess}");
+
+        // Example 10: Clean up - delete directory
+        var deleteDirSuccess = fileSystem.DeleteDirectory(taskDirectory);
+        Console.WriteLine($"Directory deleted: {deleteDirSuccess}");
+    }
+}
+```
+
 ## ConfigRepository
 
 The `ConfigRepository` class provides persistence and retrieval of sync configurations as JSON files. It enables users to define multiple sync profiles for different Notion databases, supporting configuration export/import for sharing and backup purposes. The repository handles file system operations with proper error handling and logging.
