@@ -710,6 +710,86 @@ class Program
 }
 ```
 
+## ChangeDetectionService
+
+The `ChangeDetectionService` class detects changes to tasks in both local and Notion sources, enabling efficient synchronization workflows. It identifies new, updated, and deleted tasks, detects conflicts when concurrent modifications occur, and provides change history tracking for auditability. The service supports bidirectional synchronization scenarios by comparing timestamps and determining which changes need to be propagated.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder.AddConsole());
+        services.AddSingleton<IChangeLogRepository, InMemoryChangeLogRepository>();
+        services.AddSingleton<ChangeDetectionService>();
+        
+        var serviceProvider = services.BuildServiceProvider();
+        var changeDetection = serviceProvider.GetRequiredService<ChangeDetectionService>();
+
+        // Example 1: Detect local changes since a specific timestamp
+        var localTasks = new List<Task>();
+        var localChanges = changeDetection.DetectLocalChanges(localTasks, DateTime.UtcNow.AddDays(-1));
+        Console.WriteLine($"Detected {localChanges.Count} local changes");
+        
+        foreach (var change in localChanges)
+        {
+            Console.WriteLine($"- {change.ChangeType} at {change.Timestamp:u}");
+        }
+
+        // Example 2: Detect Notion changes since a specific timestamp
+        var notionPages = new List<NotionPage>();
+        var notionChanges = changeDetection.DetectNotionChanges(notionPages, DateTime.UtcNow.AddDays(-1));
+        Console.WriteLine($"\nDetected {notionChanges.Count} Notion changes");
+        
+        foreach (var change in notionChanges)
+        {
+            Console.WriteLine($"- {change.ChangeType} at {change.Timestamp:u}");
+        }
+
+        // Example 3: Detect conflicts between local and Notion changes
+        var conflicts = changeDetection.DetectConflicts(localChanges, notionChanges);
+        Console.WriteLine($"\nDetected {conflicts.Count} conflicts");
+        
+        foreach (var conflict in conflicts)
+        {
+            Console.WriteLine($"- Conflict on task {conflict.TaskId}: {conflict.PropertyName}");
+            Console.WriteLine($"  Local value: {conflict.LocalValue}");
+            Console.WriteLine($"  Notion value: {conflict.NotionValue}");
+        }
+
+        // Example 4: Check if a specific task has changed since a timestamp
+        var sampleTask = new Task { Id = Guid.NewGuid(), UpdatedAt = DateTime.UtcNow.AddHours(-2) };
+        var hasChanged = changeDetection.HasChangedSince(sampleTask, DateTime.UtcNow.AddDays(-1));
+        Console.WriteLine($"\nTask has changed since yesterday: {hasChanged}");
+
+        // Example 5: Get change history for a task
+        var changeHistory = changeDetection.GetTaskChangeHistory(sampleTask.Id);
+        Console.WriteLine($"Task change history entries: {changeHistory.Count}");
+
+        // Example 6: Get the most recent change for a task
+        var lastChange = changeDetection.GetLastChange(sampleTask.Id);
+        Console.WriteLine($"Last change: {lastChange?.ChangeType ?? "None"} at {lastChange?.Timestamp:u}");
+
+        // Example 7: Compare property values for equality
+        var areEqual = ChangeDetectionService.ArePropertyValuesEqual("Hello World", "Hello World");
+        Console.WriteLine($"\nProperty values equal: {areEqual}");
+        
+        var areDifferent = ChangeDetectionService.ArePropertyValuesEqual("Hello", "World");
+        Console.WriteLine($"Property values different: {areDifferent}");
+    }
+}
+```
+
 ## BackupService
 
 The `BackupService` class manages task file backups and restoration, providing automated and manual backup functionality with retention policies. It creates timestamped backup directories containing copies of all task markdown files, tracks backup metadata, and automatically cleans up old backups based on a retention limit.
