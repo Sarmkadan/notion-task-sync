@@ -732,6 +732,113 @@ class Program
 }
 ```
 
+## BulkOperationServiceTests
+
+The `BulkOperationServiceTests` class contains unit tests for the `BulkOperationService` class, which provides batch operations for managing multiple tasks simultaneously. These tests verify bulk updates including status changes, tag management, assignee assignment, priority setting, and soft deletion, with proper handling of edge cases and validation.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+
+class Program
+{
+static async Task Main()
+{
+// Create sample tasks
+var task1 = new Domain.Models.Task
+{
+    Id = Guid.NewGuid(),
+    Title = "Implement BulkOperationService feature",
+    Status = TaskStatus.Todo,
+    Priority = 50,
+    Tags = "backend,feature"
+};
+
+var task2 = new Domain.Models.Task
+{
+    Id = Guid.NewGuid(),
+    Title = "Write documentation",
+    Status = TaskStatus.InProgress,
+    Priority = 75,
+    Tags = "docs"
+};
+
+var task3 = new Domain.Models.Task
+{
+    Id = Guid.NewGuid(),
+    Title = "Fix critical bug",
+    Status = TaskStatus.Todo,
+    Priority = 25,
+    Tags = "bug,urgent"
+};
+
+// Example 1: Update status for multiple tasks
+var bulkService = new BulkOperationService(taskRepository, logger);
+var statusResult = await bulkService.UpdateStatusAsync(
+    new[] { task1.Id, task2.Id, task3.Id },
+    TaskStatus.Done
+);
+Console.WriteLine($"Updated {statusResult.Affected} tasks, skipped {statusResult.Skipped} missing tasks");
+
+// Example 2: Add tags to tasks (avoids duplicates)
+var tagResult = await bulkService.AddTagAsync(
+    new[] { task1.Id, task2.Id },
+    "high-priority"
+);
+Console.WriteLine($"Added tag to {tagResult.Affected} tasks");
+
+// Example 3: Remove a tag from tasks
+var removeResult = await bulkService.RemoveTagAsync(
+    new[] { task3.Id },
+    "urgent"
+);
+Console.WriteLine($"Removed tag from {removeResult.Affected} tasks");
+
+// Example 4: Assign tasks to a person
+var assignResult = await bulkService.AssignAsync(
+    new[] { task1.Id, task2.Id },
+    "developer@example.com"
+);
+Console.WriteLine($"Assigned {assignResult.Affected} tasks");
+
+// Example 5: Set priority for tasks
+var priorityResult = await bulkService.SetPriorityAsync(
+    new[] { task1.Id, task2.Id, task3.Id },
+    90
+);
+Console.WriteLine($"Set priority for {priorityResult.Affected} tasks");
+
+// Example 6: Soft delete tasks
+var deleteResult = await bulkService.DeleteAsync(
+    new[] { task3.Id }
+);
+Console.WriteLine($"Soft deleted {deleteResult.Affected} tasks");
+
+// Example 7: Query tasks with filters
+var matchingTasks = await bulkService.QueryAsync(
+    t => t.Status == TaskStatus.Done && t.Priority >= 75
+);
+Console.WriteLine($"Found {matchingTasks.Count} matching tasks");
+
+// Example 8: Handle validation errors (priority out of range)
+try
+{
+    await bulkService.SetPriorityAsync(new[] { task1.Id }, 200); // Invalid priority
+}
+catch (ArgumentOutOfRangeException)
+{
+    Console.WriteLine("Correctly caught ArgumentOutOfRangeException for invalid priority");
+}
+}
+}
+}
+```
+
 ## RetryHelperTests
 
 The `RetryHelperTests` class contains unit tests for the `RetryHelper` utility, which provides robust retry and circuit breaker patterns for handling transient failures in distributed systems. These tests verify retry behavior with exponential backoff, circuit breaker state transitions, predicate-based retry conditions, and proper error handling.
