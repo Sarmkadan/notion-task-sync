@@ -1432,6 +1432,91 @@ public class SyncManager
 }
 ```
 
+## LocalFileService
+
+The `LocalFileService` class provides file system operations for persisting tasks to the local file system. It handles reading and writing task files in Markdown format with metadata headers, supports backup operations, and provides utility methods for file management and statistics.
+
+### Public Members
+
+- `LocalFileService(string basePath)` - Constructor that initializes the service with a base directory path
+- `SaveTaskAsync(Task task)` - Saves a task to a local Markdown file
+- `LoadTaskAsync(string filePath)` - Loads a task from a local file by its path
+- `LoadAllTasksAsync()` - Loads all tasks from files in the base directory
+- `DeleteTaskAsync(string filePath)` - Deletes a task file from the local file system
+- `BackupTasksAsync(string backupDir)` - Backs up all task files to a backup directory
+- `GetLastModifiedTime()` - Gets the last modified time of any task file
+- `CountTaskFiles()` - Counts the number of task files in the directory
+- `GetBasePath()` - Gets the base directory path
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Initialize LocalFileService with a base directory path
+        var fileService = new LocalFileService(@"./tasks");
+        
+        // Create a new task
+        var task = new Task
+        {
+            Id = Guid.NewGuid(),
+            Title = "Implement LocalFileService feature",
+            Description = "Add documentation for LocalFileService class",
+            Status = TaskStatus.InProgress,
+            Priority = 75,
+            DueDate = DateTime.UtcNow.AddDays(7),
+            AssignedTo = "developer@example.com",
+            Tags = "documentation,readme",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        
+        // Save the task to a Markdown file
+        await fileService.SaveTaskAsync(task);
+        Console.WriteLine($"Task saved to: {task.LocalFilePath}");
+        
+        // Load all tasks from the directory
+        var allTasks = await fileService.LoadAllTasksAsync();
+        Console.WriteLine($"Loaded {allTasks.Count} tasks from directory");
+        
+        // Get statistics about task files
+        var fileCount = fileService.CountTaskFiles();
+        var lastModified = fileService.GetLastModifiedTime();
+        Console.WriteLine($"Total task files: {fileCount}");
+        Console.WriteLine($"Last modified: {lastModified:O}");
+        
+        // Create a backup of all task files
+        var backupPath = await fileService.BackupTasksAsync(@"./backups");
+        Console.WriteLine($"Backup created at: {backupPath}");
+        
+        // Load a specific task by file path
+        if (allTasks.Count > 0)
+        {
+            var loadedTask = await fileService.LoadTaskAsync(allTasks[0].LocalFilePath!);
+            Console.WriteLine($"Loaded task: {loadedTask?.Title}");
+        }
+        
+        // Delete a task file
+        if (allTasks.Count > 0)
+        {
+            await fileService.DeleteTaskAsync(allTasks[0].LocalFilePath!);
+            Console.WriteLine("Task file deleted");
+        }
+        
+        // Get the base path
+        var basePath = fileService.GetBasePath();
+        Console.WriteLine($"Base path: {basePath}");
+    }
+}
+```
+
 ## LocalFileServiceTests
 
 The `LocalFileServiceTests` class contains unit tests for the `LocalFileService` class, which provides file system operations for persisting tasks to the local file system. These tests verify saving tasks to markdown files, loading tasks from files, handling edge cases like invalid inputs, and managing task collections.
