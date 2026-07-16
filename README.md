@@ -710,6 +710,99 @@ class Program
 }
 ```
 
+## ConflictDiffService
+
+The `ConflictDiffService` class generates structured diff previews for conflicting task property values using an LCS-based algorithm. It compares local and Notion values line by line and renders results as unified-diff text for terminal or log output. This service is designed to be called before a resolution strategy is applied so operators can review exactly what changed on each side before committing to a winner.
+
+### Public Members
+
+- `ConflictDiffService(ILogger<ConflictDiffService> logger)` - Constructor that initializes the service with a logger
+- `GenerateDiffAsync(ConflictResolution conflict, CancellationToken cancellationToken)` - Generates a diff for a conflict resolution
+- `GenerateDiffForPropertyAsync(string? localValue, string? notionValue, string propertyName, Guid conflictId, CancellationToken cancellationToken)` - Compares two text values and returns a structured diff
+- `RenderAsTextAsync(ConflictDiffResult diff, CancellationToken cancellationToken)` - Renders a diff result as unified-diff text
+- `GenerateBatchDiffsAsync(IReadOnlyList<ConflictResolution> conflicts, CancellationToken cancellationToken)` - Generates diffs for multiple conflicts in batch
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup logger
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<ConflictDiffService>();
+
+        // Create ConflictDiffService instance
+        var diffService = new ConflictDiffService(logger);
+
+        // Example 1: Generate diff for a single conflict
+        var conflict = new ConflictResolution
+        {
+            Id = Guid.NewGuid(),
+            TaskId = Guid.NewGuid(),
+            PropertyName = "Title",
+            LocalValue = "Implement new feature",
+            NotionValue = "Implement new feature 🚀"
+        };
+
+        var diffResult = await diffService.GenerateDiffAsync(conflict);
+        Console.WriteLine($"Diff generated for property: {diffResult.PropertyName}");
+        Console.WriteLine($"Added lines: {diffResult.AddedCount}, Removed lines: {diffResult.RemovedCount}");
+
+        // Example 2: Generate diff for property values directly
+        var propertyDiff = await diffService.GenerateDiffForPropertyAsync(
+            "This is the local description\nwith multiple lines",
+            "This is the Notion description\nwith different content",
+            "Description",
+            Guid.NewGuid()
+        );
+
+        Console.WriteLine("\nGenerated diff:");
+        var renderedDiff = await diffService.RenderAsTextAsync(propertyDiff);
+        Console.WriteLine(renderedDiff);
+
+        // Example 3: Generate diffs for multiple conflicts in batch
+        var conflicts = new List<ConflictResolution>
+        {
+            new ConflictResolution
+            {
+                Id = Guid.NewGuid(),
+                TaskId = Guid.NewGuid(),
+                PropertyName = "Status",
+                LocalValue = "In Progress",
+                NotionValue = "Done"
+            },
+            new ConflictResolution
+            {
+                Id = Guid.NewGuid(),
+                TaskId = Guid.NewGuid(),
+                PropertyName = "Priority",
+                LocalValue = "High",
+                NotionValue = "Medium"
+            }
+        };
+
+        var batchResults = await diffService.GenerateBatchDiffsAsync(conflicts);
+        Console.WriteLine($"\nBatch processed {batchResults.Count} conflicts");
+
+        // Example 4: Render diff as text for display
+        if (batchResults.Count > 0)
+        {
+            var firstDiff = batchResults.First().Value;
+            var textOutput = await diffService.RenderAsTextAsync(firstDiff);
+            Console.WriteLine(textOutput);
+        }
+    }
+}
+```
+
 ## ChangeDetectionService
 
 The `ChangeDetectionService` class detects changes to tasks in both local and Notion sources, enabling efficient synchronization workflows. It identifies new, updated, and deleted tasks, detects conflicts when concurrent modifications occur, and provides change history tracking for auditability. The service supports bidirectional synchronization scenarios by comparing timestamps and determining which changes need to be propagated.
