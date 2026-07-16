@@ -336,7 +336,121 @@ class Program
 }
 ```
 
+## ErrorHandlingMiddleware
+
+The `ErrorHandlingMiddleware` class provides robust exception handling and error management for task synchronization workflows. It wraps operations to catch exceptions, log them appropriately, and return structured error information instead of throwing. This middleware supports both synchronous and asynchronous operations, maps exceptions to appropriate HTTP status codes, and determines if errors are retryable.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Middleware;
+using NotionTaskSync.Domain.Exceptions;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup logger
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<ErrorHandlingMiddleware>();
+        
+        // Create middleware instance
+        var errorHandler = new ErrorHandlingMiddleware(logger);
+
+        // Example 1: Handle async operation with error checking
+        var syncResult = await errorHandler.TryExecuteAsync("SyncTaskOperation", async () =>
+        {
+            // Simulate a sync operation that might fail
+            if (DateTime.UtcNow.Second % 3 == 0)
+            {
+                throw new SyncException("Failed to sync with Notion API: rate limit exceeded");
+            }
+            
+            return new { TasksSynced = 42, Status = "Success" };
+        });
+
+        if (syncResult.success)
+        {
+            Console.WriteLine($"Operation succeeded: {syncResult.result}");
+        }
+        else
+        {
+            Console.WriteLine($"Operation failed: {syncResult.error}");
+            
+            // Get appropriate status code for the error
+            var statusCode = errorHandler.GetStatusCode(new SyncException(syncResult.error!));
+            Console.WriteLine($"HTTP Status Code: {statusCode}");
+            
+            // Check if error is retryable
+            var isRetryable = errorHandler.IsRetryable(new SyncException(syncResult.error!));
+            Console.WriteLine($"Is retryable: {isRetryable}");
+        }
+
+        // Example 2: Handle sync operation with retry logic
+        var retryResult = await errorHandler.TryExecuteAsync("SyncWithRetry", async () =>
+        {
+            // Your sync operation here
+            await Task.Delay(100);
+            return "Sync completed successfully";
+        });
+
+        Console.WriteLine(retryResult.success ? "Success!" : "Failed: " + retryResult.error);
+
+        // Example 3: Format user-friendly error messages
+        try
+        {
+            throw new ConfigurationException("Missing Notion API key in configuration");
+        }
+        catch (Exception ex)
+        {
+            var friendlyMessage = errorHandler.FormatErrorMessage(ex);
+            Console.WriteLine($"User-friendly error: {friendlyMessage}");
+            
+            var statusCode = errorHandler.GetStatusCode(ex);
+            Console.WriteLine($"Status code for this error: {statusCode}");
+        }
+
+        // Example 4: Synchronous operation with error handling
+        var syncOperation = errorHandler.TryExecute("ValidateConfiguration", () =>
+        {
+            // Validate configuration synchronously
+            if (string.IsNullOrEmpty("notion-api-key"))
+            {
+                throw new ConfigurationException("API key cannot be empty");
+            }
+            return true;
+        });
+
+        Console.WriteLine(syncOperation.success 
+            ? "Configuration is valid"
+            : "Configuration error: " + syncOperation.error);
+
+        // Example 5: Execute operation and throw on error
+        try
+        {
+            await errorHandler.ExecuteAsync("CriticalSyncOperation", async () =>
+            {
+                // Critical operation that should throw on failure
+                await Task.Delay(50);
+                if (DateTime.UtcNow.Second % 5 == 0)
+                {
+                    throw new InvalidOperationException("Cannot proceed with invalid state");
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Caught exception: {errorHandler.FormatErrorMessage(ex)}");
+        }
+    }
+}
+```
+
 ## RateLimitingMiddlewareExtensions
+
 
 The `RateLimitingMiddlewareExtensions` class provides utilities for handling rate limiting in task synchronization workflows. It includes methods to execute actions with retry logic, check if the rate limit has been exceeded, and get the time until the rate limit resets. 
 
