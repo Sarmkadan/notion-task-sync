@@ -1555,6 +1555,103 @@ public class FuncSyncStep : ISyncStep
 }
 ```
 
+## SyncException
+
+`SyncException` is the base exception type for all synchronization-related errors in the Notion Task Sync application. It provides contextual information about failed sync operations including configuration IDs, timestamps, and detailed error context. This exception hierarchy enables precise error handling and logging throughout the sync pipeline.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Domain.Exceptions;
+using NotionTaskSync.Domain.Models;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        try
+        {
+            // Simulate a sync operation that might fail
+            ExecuteSyncOperation("production-sync-config", "550e8400-e29b-41d4-a716-446655440000");
+        }
+        catch (SyncException ex) when (ex is NotionApiException)
+        {
+            Console.WriteLine($"Notion API error: {ex.Message}");
+            if (ex is NotionApiException notionEx && notionEx.HttpStatusCode.HasValue)
+            {
+                Console.WriteLine($"HTTP Status: {notionEx.HttpStatusCode}");
+            }
+        }
+        catch (SyncException ex)
+        {
+            Console.WriteLine($"Sync failed: {ex.Message}");
+            Console.WriteLine($"Configuration: {ex.SyncConfigId ?? "unknown"}");
+            Console.WriteLine($"Occurred at: {ex.OccurredAt:u}");
+            
+            if (!string.IsNullOrEmpty(ex.Details))
+            {
+                Console.WriteLine($"Details: {ex.Details}");
+            }
+            
+            // Create a new exception with additional context
+            var detailedException = SyncException.CreateWithContext(
+                "Failed to sync task due to network issues",
+                ex.SyncConfigId,
+                $"Task ID: {Guid.NewGuid()}, Database: {ex.SyncConfigId}"
+            );
+            
+            // Handle specific exception types
+            if (ex is ValidationException validationEx)
+            {
+                Console.WriteLine($"Validation failed for field: {validationEx.FieldName}");
+                Console.WriteLine($"Invalid value: {validationEx.InvalidValue}");
+            }
+            else if (ex is LocalFileException fileEx)
+            {
+                Console.WriteLine($"File operation failed: {fileEx.FilePath}");
+            }
+            else if (ex is ConflictException conflictEx)
+            {
+                Console.WriteLine($"Conflict detected for task: {conflictEx.TaskId}");
+                Console.WriteLine($"Conflict details: {conflictEx.ConflictDetails}");
+            }
+        }
+    }
+    
+    static void ExecuteSyncOperation(string configId, string databaseId)
+    {
+        // Simulate various sync exceptions
+        throw new NotionApiException("Rate limit exceeded for Notion API")
+        {
+            SyncConfigId = configId,
+            HttpStatusCode = 429,
+            ApiErrorCode = "rate_limited"
+        };
+        
+        // throw new LocalFileException("Failed to write task file")
+        // {
+        //     SyncConfigId = configId,
+        //     FilePath = @"/tasks/task-123.md"
+        // };
+        
+        // throw new ValidationException("Invalid task priority")
+        // {
+        //     SyncConfigId = configId,
+        //     FieldName = "Priority",
+        //     InvalidValue = 150
+        // };
+        
+        // throw new ConflictException("Task modified in both local and Notion")
+        // {
+        //     SyncConfigId = configId,
+        //     TaskId = Guid.NewGuid(),
+        //     ConflictDetails = "Title and Description fields conflict"
+        // };
+    }
+}
+```
+
 ## HttpClientFactory
 
 `HttpClientFactory` centralizes HTTP client creation and configuration for the application, providing specialized clients for different use cases including authenticated requests to external APIs like Notion. It handles client lifecycle management, header configuration, and rate limiting awareness.
