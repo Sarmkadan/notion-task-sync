@@ -289,6 +289,94 @@ class Program
 }
 ```
 
+## TaskMapper
+
+The `TaskMapper` static class provides bidirectional mapping between `Task` domain entities and their Notion representations, as well as DTO conversion for API responses. It handles serialization and deserialization of task data, enabling seamless integration between local storage and Notion databases.
+
+### Public Members
+
+- `MapFromNotionPage(NotionPage page)` - Creates a new `Task` entity from a Notion page
+- `UpdateTaskFromPage(Task task, NotionPage page)` - Updates an existing `Task` entity from a Notion page
+- `MapToNotionPage(Task task, string databaseId)` - Converts a `Task` entity to a Notion page representation
+- `MapToDto(Task task)` - Creates a DTO representation of a task for API responses
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Data.Mappers;
+using NotionTaskSync.Domain.Models;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Example 1: Map from Notion page to Task entity
+        var notionPage = new NotionPage(
+            pageId: "550e8400-e29b-41d4-a716-446655440000",
+            databaseId: "880e8400-e29b-41d4-a716-446655440000",
+            title: "Implement TaskMapper documentation"
+        );
+        
+        notionPage.Properties = new()
+        {
+            ["Description"] = "Add TaskMapper section to README.md",
+            ["Status"] = "InProgress",
+            ["Priority"] = "75",
+            ["DueDate"] = DateTime.UtcNow.AddDays(7).ToString("O"),
+            ["AssignedTo"] = "developer@example.com",
+            ["Tags"] = "documentation,mappers"
+        };
+        
+        var taskFromNotion = TaskMapper.MapFromNotionPage(notionPage);
+        Console.WriteLine($"Mapped from Notion: {taskFromNotion.Title}");
+        Console.WriteLine($"Status: {taskFromNotion.Status}");
+        Console.WriteLine($"Priority: {taskFromNotion.Priority}");
+        
+        // Example 2: Update existing task from Notion page
+        var existingTask = new Task
+        {
+            Id = Guid.NewGuid(),
+            Title = "Original task title",
+            Description = "Original description",
+            Status = TaskStatus.Todo,
+            Priority = 50,
+            CreatedAt = DateTime.UtcNow.AddDays(-1),
+            UpdatedAt = DateTime.UtcNow.AddDays(-1),
+            DueDate = DateTime.UtcNow.AddDays(14),
+            AssignedTo = "old@example.com",
+            NotionPageId = notionPage.PageId,
+            IsDeleted = false
+        };
+        
+        TaskMapper.UpdateTaskFromPage(existingTask, notionPage);
+        Console.WriteLine($"\nUpdated task: {existingTask.Title}");
+        Console.WriteLine($"New status: {existingTask.Status}");
+        Console.WriteLine($"New priority: {existingTask.Priority}");
+        
+        // Example 3: Map Task entity to Notion page
+        var notionPageFromTask = TaskMapper.MapToNotionPage(existingTask, "880e8400-e29b-41d4-a716-446655440000");
+        Console.WriteLine($"\nMapped to Notion page: {notionPageFromTask.Title}");
+        Console.WriteLine($"Database ID: {notionPageFromTask.DatabaseId}");
+        Console.WriteLine($"Properties count: {notionPageFromTask.Properties?.Count}");
+        
+        // Example 4: Map Task entity to DTO
+        var taskDto = TaskMapper.MapToDto(existingTask);
+        Console.WriteLine($"\nMapped to DTO:");
+        Console.WriteLine($"ID: {taskDto.Id}");
+        Console.WriteLine($"Title: {taskDto.Title}");
+        Console.WriteLine($"Status: {taskDto.Status}");
+        Console.WriteLine($"Priority: {taskDto.Priority}");
+        Console.WriteLine($"Created: {taskDto.CreatedAt:u}");
+        Console.WriteLine($"Updated: {taskDto.UpdatedAt:u}");
+        Console.WriteLine($"Due: {taskDto.DueDate?.ToString("yyyy-MM-dd")}");
+        Console.WriteLine($"Assigned: {taskDto.AssignedTo}");
+        Console.WriteLine($"Notion Page ID: {taskDto.NotionPageId}");
+        Console.WriteLine($"Is Deleted: {taskDto.IsDeleted}");
+    }
+}
+```
+
 ## SyncService
 
 The `SyncService` class orchestrates bidirectional synchronization between Notion databases and local task storage. It coordinates change detection, conflict resolution, and data propagation across both systems according to the configured sync direction and conflict resolution strategy.
