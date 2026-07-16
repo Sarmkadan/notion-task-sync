@@ -328,6 +328,184 @@ Console.WriteLine(deleteSuccess ? "Configuration deleted" : "Failed to delete co
 }
 ```
 
+## CollectionExtensions
+
+The `CollectionExtensions` static class provides extension methods for collections (lists, enumerables, dictionaries) that simplify common collection operations used throughout the application. It includes utilities for checking collection state, safe access, batching, partitioning, filtering, and transformation operations that reduce repetitive code patterns in data processing pipelines.
+
+### Public Members
+
+- `IsNullOrEmpty<T>(this IEnumerable<T>? collection)` - Determines if a collection is null or contains no elements
+- `HasItems<T>(this IEnumerable<T>? collection)` - Determines if a collection has elements with meaningful content
+- `SafeGetAt<T>(this IList<T> list, int index, T? defaultValue = default)` - Safely gets an item at a specific index, returning a default value if index is out of range
+- `Batch<T>(this IEnumerable<T> items, int batchSize)` - Batches a collection into chunks of specified size
+- `Partition<T>(this IEnumerable<T> items, Func<T, bool> predicate)` - Partitions a collection into two groups based on a predicate
+- `GroupByFrequency<T, TKey>(this IEnumerable<T> items, Func<T, TKey> keySelector)` - Groups items and returns the groups with the highest occurrence count first
+- `Flatten<T>(this IEnumerable<IEnumerable<T>> nested)` - Flattens a nested collection (collection of collections) into a single collection
+- `SafeToDictionary<TItem, TKey, TValue>(this IEnumerable<TItem> items, Func<TItem, TKey> keySelector, Func<TItem, TValue> valueSelector)` - Creates a dictionary from a collection, handling duplicate keys gracefully
+- `SplitWhere<T>(this IEnumerable<T> items, Func<T, bool> splitCondition)` - Splits a collection at indices where a predicate returns true
+- `WhereNotNull<T>(this IEnumerable<T?> items)` - Removes all null values from a collection
+- `DistinctBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> keySelector)` - Returns distinct items based on a key selector function
+- `IntersectBy<T, TKey>(this IEnumerable<T> items, IEnumerable<T> other, Func<T, TKey> keySelector)` - Intersects two collections based on a key selector function
+- `AddIf<T>(this List<T> list, T item, Func<T, bool> condition)` - Adds an item to a collection if it passes a condition
+- `Shuffle<T>(this IList<T> list, Random? random = null)` - Shuffles a collection in-place using Fisher-Yates algorithm
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Program
+{
+  static void Main()
+  {
+    // Example 1: Check if collection is null or empty
+    List<string>? nullList = null;
+    var isNullOrEmpty = nullList.IsNullOrEmpty();
+    Console.WriteLine($"Null list is null or empty: {isNullOrEmpty}"); // True
+
+    var emptyList = new List<string>();
+    Console.WriteLine($"Empty list is null or empty: {emptyList.IsNullOrEmpty()}"); // True
+
+    var populatedList = new List<string> { "item1", "item2" };
+    Console.WriteLine($"Populated list is null or empty: {populatedList.IsNullOrEmpty()}"); // False
+
+    // Example 2: Check if collection has items
+    Console.WriteLine($"Null list has items: {nullList.HasItems()}"); // False
+    Console.WriteLine($"Empty list has items: {emptyList.HasItems()}"); // False
+    Console.WriteLine($"Populated list has items: {populatedList.HasItems()}"); // True
+
+    // Example 3: Safe index access
+    var numbers = new List<int> { 10, 20, 30, 40, 50 };
+    var first = numbers.SafeGetAt(0); // 10
+    var last = numbers.SafeGetAt(4); // 50
+    var outOfRange = numbers.SafeGetAt(10); // null (default)
+    var outOfRangeWithDefault = numbers.SafeGetAt(10, -1); // -1
+    
+    Console.WriteLine($"First element: {first}");
+    Console.WriteLine($"Last element: {last}");
+    Console.WriteLine($"Out of range (default): {outOfRange}");
+    Console.WriteLine($"Out of range (custom default): {outOfRangeWithDefault}");
+
+    // Example 4: Batch processing
+    var largeCollection = Enumerable.Range(1, 100);
+    var batches = largeCollection.Batch(10);
+    
+    Console.WriteLine($"Total batches: {batches.Count()}");
+    foreach (var batch in batches)
+    {
+      Console.WriteLine($"Batch size: {batch.Count()}");
+    }
+
+    // Example 5: Partition collection
+    var mixedNumbers = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    var (evenNumbers, oddNumbers) = mixedNumbers.Partition(x => x % 2 == 0);
+    
+    Console.WriteLine($"Even numbers: {string.Join(", ", evenNumbers)}");
+    Console.WriteLine($"Odd numbers: {string.Join(", ", oddNumbers)}");
+
+    // Example 6: Group by frequency
+    var fruits = new List<string> { "apple", "banana", "apple", "orange", "banana", "apple", "kiwi" };
+    var frequencyGroups = fruits.GroupByFrequency(x => x);
+    
+    Console.WriteLine("Fruit frequencies:");
+    foreach (var group in frequencyGroups)
+    {
+      Console.WriteLine($"{group.Key}: {group.Count()} occurrences");
+    }
+
+    // Example 7: Flatten nested collections
+    var nestedLists = new List<List<int>>
+    {
+      new List<int> { 1, 2, 3 },
+      new List<int> { 4, 5 },
+      new List<int> { 6, 7, 8, 9 }
+    };
+    
+    var flattened = nestedLists.Flatten();
+    Console.WriteLine($"Flattened count: {flattened.Count()}");
+    Console.WriteLine($"Flattened values: {string.Join(", ", flattened)}");
+
+    // Example 8: Safe dictionary conversion
+    var people = new List<(string Name, int Age)>
+    {
+      ("Alice", 30),
+      ("Bob", 25),
+      ("Charlie", 35),
+      ("Alice", 31) // Duplicate key - last wins
+    };
+    
+    var ageDictionary = people.SafeToDictionary(
+      person => person.Name,
+      person => person.Age
+    );
+    
+    Console.WriteLine($"Age dictionary: {string.Join(", ", ageDictionary.Select(kvp => $"{kvp.Key}={kvp.Value}"))}");
+
+    // Example 9: Split collection where condition is met
+    var logEntries = new List<string>
+    {
+      "[INFO] Application started",
+      "[DEBUG] Loading configuration",
+      "[INFO] User logged in",
+      "---",
+      "[ERROR] Database connection failed",
+      "[INFO] Retrying connection..."
+    };
+    
+    var logGroups = logEntries.SplitWhere(entry => entry == "---");
+    Console.WriteLine($"Log groups: {logGroups.Count}");
+    foreach (var group in logGroups)
+    {
+      Console.WriteLine($"Group has {group.Count} entries");
+    }
+
+    // Example 10: Remove null values
+    var nullableList = new List<string?> { "hello", null, "world", null, "test" };
+    var nonNullItems = nullableList.WhereNotNull();
+    
+    Console.WriteLine($"Original count: {nullableList.Count}");
+    Console.WriteLine($"After filtering nulls: {nonNullItems.Count()}");
+    Console.WriteLine($"Values: {string.Join(", ", nonNullItems)}");
+
+    // Example 11: Distinct by property
+    var products = new List<(string Name, string Category, decimal Price)>
+    {
+      ("Laptop", "Electronics", 999.99m),
+      ("Phone", "Electronics", 699.99m),
+      ("Laptop", "Computers", 1099.99m), // Same name, different category
+      ("Monitor", "Electronics", 249.99m)
+    };
+    
+    var uniqueProducts = products.DistinctBy(p => p.Name);
+    Console.WriteLine($"Unique products by name: {uniqueProducts.Count()}");
+
+    // Example 12: Intersect collections by key
+    var ids1 = new List<int> { 1, 2, 3, 4, 5 };
+    var ids2 = new List<int> { 3, 4, 5, 6, 7 };
+    var commonIds = ids1.IntersectBy(ids2, x => x);
+    
+    Console.WriteLine($"Common IDs: {string.Join(", ", commonIds)}");
+
+    // Example 13: Conditional add
+    var numbersList = new List<int> { 1, 2, 3 };
+    numbersList.AddIf(4, x => x % 2 == 0); // 4 is even, will be added
+    numbersList.AddIf(5, x => x % 2 == 0); // 5 is odd, will NOT be added
+    
+    Console.WriteLine($"Numbers after conditional adds: {string.Join(", ", numbersList)}");
+
+    // Example 14: Shuffle list
+    var deck = new List<string> { "Ace", "King", "Queen", "Jack", "10", "9" };
+    var random = new Random(42); // Use fixed seed for reproducible example
+    deck.Shuffle(random);
+    
+    Console.WriteLine($"Shuffled deck: {string.Join(", ", deck)}");
+  }
+}
+```
+
 ## ChangeLogRepository
 
 The `TaskRepository` class provides an in-memory implementation of the `ITaskRepository` interface for managing task entities.
