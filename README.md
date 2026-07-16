@@ -420,6 +420,83 @@ class Program
 }
 ```
 
+## CacheKeyBuilder
+
+The `CacheKeyBuilder` class provides a fluent interface for generating consistent and standardized cache keys throughout the application. It ensures cache keys follow a predictable format with a configurable prefix, reducing bugs from inconsistent key generation and making cache invalidation more reliable. The builder supports various entity types and provides both instance methods for dynamic keys and static factory methods for common use cases.
+
+### Public Members
+
+- `CacheKeyBuilder(string prefix = "notion-sync")` - Constructor that initializes the builder with a custom prefix (defaults to "notion-sync")
+- `BuildTaskKey(string taskId)` - Builds a cache key for a task by ID
+- `BuildDatabaseTasksKey(string databaseId)` - Builds a cache key for all tasks in a database
+- `BuildNotionPageKey(string pageId)` - Builds a cache key for a Notion page by ID
+- `BuildConfigKey(string configId)` - Builds a cache key for sync configuration
+- `BuildStatisticsKey()` - Builds a cache key for sync statistics
+- `BuildApiResponseKey(string endpoint, string? query = null)` - Builds a cache key for API responses
+- `BuildChangeLogKey(string configId, int days = 30)` - Builds a cache key for change logs
+- `BuildRateLimitKey(string service)` - Builds a cache key for rate limit status
+- `BuildPatternKey(string entityType)` - Builds a pattern-based cache key for wildcard invalidation
+- `ForTask(string taskId)` - Static factory method for task cache keys
+- `ForDatabase(string databaseId)` - Static factory method for database task cache keys
+- `ForNotionPage(string pageId)` - Static factory method for Notion page cache keys
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Caching;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Example 1: Create a CacheKeyBuilder with default prefix
+        var builder = new CacheKeyBuilder();
+        
+        // Build cache keys for different entities
+        var taskKey = builder.BuildTaskKey("550e8400-e29b-41d4-a716-446655440000");
+        var databaseKey = builder.BuildDatabaseTasksKey("880e8400-e29b-41d4-a716-446655440000");
+        var pageKey = builder.BuildNotionPageKey("990e8400-e29b-41d4-a716-446655440000");
+        var configKey = builder.BuildConfigKey("sync-config-123");
+        var statsKey = builder.BuildStatisticsKey();
+        var apiKey = builder.BuildApiResponseKey("tasks", "status=completed");
+        var changeLogKey = builder.BuildChangeLogKey("config-123", days: 7);
+        var rateLimitKey = builder.BuildRateLimitKey("notion-api");
+        var patternKey = builder.BuildPatternKey("task:*");
+        
+        Console.WriteLine("Generated cache keys:");
+        Console.WriteLine($"Task: {taskKey}");
+        Console.WriteLine($"Database: {databaseKey}");
+        Console.WriteLine($"Page: {pageKey}");
+        Console.WriteLine($"Config: {configKey}");
+        Console.WriteLine($"Statistics: {statsKey}");
+        Console.WriteLine($"API Response: {apiKey}");
+        Console.WriteLine($"Change Log: {changeLogKey}");
+        Console.WriteLine($"Rate Limit: {rateLimitKey}");
+        Console.WriteLine($"Pattern: {patternKey}");
+        
+        // Example 2: Use custom prefix
+        var customBuilder = new CacheKeyBuilder("my-custom-app");
+        var customTaskKey = customBuilder.BuildTaskKey("task-456");
+        Console.WriteLine($"\nCustom prefix task key: {customTaskKey}");
+        
+        // Example 3: Use static factory methods
+        var staticTaskKey = CommonCacheKeys.ForTask("550e8400-e29b-41d4-a716-446655440000");
+        var staticDatabaseKey = CommonCacheKeys.ForDatabase("880e8400-e29b-41d4-a716-446655440000");
+        var staticPageKey = CommonCacheKeys.ForNotionPage("990e8400-e29b-41d4-a716-446655440000");
+        
+        Console.WriteLine($"\nStatic factory keys:");
+        Console.WriteLine($"Task: {staticTaskKey}");
+        Console.WriteLine($"Database: {staticDatabaseKey}");
+        Console.WriteLine($"Page: {staticPageKey}");
+        
+        // Example 4: Use for cache invalidation patterns
+        var invalidationPattern = builder.BuildPatternKey("notion:*");
+        Console.WriteLine($"\nInvalidation pattern: {invalidationPattern}");
+    }
+}
+```
+
 ## ChangeLogRepository
 
 The `ChangeLogRepository` class provides an in-memory implementation for tracking and managing change history during task synchronization workflows. It serves as an audit trail for all modifications, enabling conflict detection, change analysis, and sync history tracking between local storage and Notion databases.
