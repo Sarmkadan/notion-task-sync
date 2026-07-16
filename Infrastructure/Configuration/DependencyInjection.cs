@@ -38,11 +38,19 @@ public static class DependencyInjection
         services.AddSingleton<IChangeLogRepository, ChangeLogRepository>();
 
         // Register services
+        services.AddHttpClients();
         services.AddSingleton<NotionApiService>(sp =>
         {
             var notionApiConfig = configuration.GetSection("NotionApi");
             var apiKey = notionApiConfig["ApiKey"];
-            return new NotionApiService(apiKey);
+
+            // Use the factory-managed client so handler lifetime/pooling is
+            // handled by HttpClientFactory instead of a raw new HttpClient().
+            var httpClient = sp
+                .GetRequiredService<System.Net.Http.IHttpClientFactory>()
+                .CreateClient("NotionApi");
+
+            return new NotionApiService(apiKey, httpClient);
         });
 
         services.AddSingleton<ChangeDetectionService>();
