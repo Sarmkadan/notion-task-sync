@@ -1302,6 +1302,139 @@ class Program
 }
 ```
 
+## SyncPipeline
+
+`SyncPipeline` provides a pipeline pattern implementation for organizing and executing sequential synchronization workflows. It enables composing multiple operations into a pipeline that shares context, handles errors, and tracks execution results through a context object. The pipeline uses dependency injection for logging and maintains shared state across steps.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Pipeline;
+using NotionTaskSync.Domain.Models;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup logging (required for pipeline)
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<SyncPipeline>();
+        
+        // Create a new pipeline
+        var pipeline = new SyncPipeline(logger);
+        
+        // Create context for shared data and messages
+        var context = new PipelineContext();
+        
+        // Define a sync step for loading tasks
+        var loadStep = new FuncSyncStep("Load Local Tasks", async ctx =>
+        {
+            // Simulate loading tasks from local storage
+            var tasks = new List<Domain.Models.Task>
+            {
+                new Domain.Models.Task { Id = Guid.NewGuid(), Title = "Implement SyncPipeline feature" },
+                new Domain.Models.Task { Id = Guid.NewGuid(), Title = "Add documentation" }
+            };
+            ctx.SetData("localTasks", tasks);
+            ctx.AddMessage("Loaded 2 local tasks");
+            return true; // Success
+        });
+        
+        pipeline.AddStep(loadStep);
+        
+        // Define a sync step for validation
+        var validateStep = new FuncSyncStep("Validate Configuration", async ctx =>
+        {
+            // Simulate configuration validation
+            var config = new SyncConfig
+            {
+                Name = "Test Sync",
+                NotionDatabaseId = "550e8400-e29b-41d4-a716-446655440000"
+            };
+            
+            if (string.IsNullOrEmpty(config.NotionDatabaseId))
+            {
+                ctx.AddMessage("Configuration validation failed: Database ID is required");
+                return false; // Failure
+            }
+            
+            ctx.SetData("syncConfig", config);
+            ctx.AddMessage("Configuration validated successfully");
+            return true; // Success
+        });
+        
+        pipeline.AddStep(validateStep);
+        
+        // Define a sync step for syncing to Notion
+        var syncStep = new FuncSyncStep("Sync to Notion", async ctx =>
+        {
+            // Retrieve shared data
+            var config = ctx.GetData<SyncConfig>("syncConfig");
+            var localTasks = ctx.GetData<List<Domain.Models.Task>>("localTasks");
+            
+            ctx.AddMessage($"Syncing {localTasks?.Count ?? 0} tasks to Notion database {config?.NotionDatabaseId}");
+            
+            // Simulate successful sync
+            ctx.AddMessage("Successfully synced tasks to Notion");
+            return true; // Success
+        });
+        
+        pipeline.AddStep(syncStep);
+        
+        // Execute the pipeline
+        var result = await pipeline.ExecuteAsync(context);
+        
+        Console.WriteLine($"\nPipeline execution completed:");
+        Console.WriteLine($"- Success: {result.Success}");
+        Console.WriteLine($"- Error: {result.ErrorMessage ?? "None"}");
+        Console.WriteLine($"- Steps executed: {result.StepResults.Count}");
+        
+        // Display step results
+        Console.WriteLine("\nStep execution details:");
+        foreach (var stepResult in result.StepResults)
+        {
+            Console.WriteLine($"- {stepResult.StepName}: {stepResult.Success} at {stepResult.ExecutedAt:HH:mm:ss}");
+        }
+        
+        // Display collected messages
+        Console.WriteLine("\nMessages:");
+        foreach (var message in context.Messages)
+        {
+            Console.WriteLine($"- {message}");
+        }
+        
+        // Access shared data
+        var syncedTasks = context.GetData<List<Domain.Models.Task>>("localTasks");
+        Console.WriteLine($"\nShared data contains {syncedTasks?.Count ?? 0} tasks");
+    }
+}
+
+// Helper class for creating sync steps from functions
+public class FuncSyncStep : ISyncStep
+{
+    private readonly Func<PipelineContext, Task<bool>> _func;
+    
+    public FuncSyncStep(string name, Func<PipelineContext, Task<bool>> func, bool isCritical = false)
+    {
+        Name = name ?? throw new ArgumentNullException(nameof(name));
+        _func = func ?? throw new ArgumentNullException(nameof(func));
+        IsCritical = isCritical;
+    }
+    
+    public string Name { get; }
+    public bool IsCritical { get; }
+    
+    public async Task<bool> ExecuteAsync(PipelineContext context)
+    {
+        return await _func(context);
+    }
+}
+```
+
 ## HttpClientFactory
 
 `HttpClientFactory` centralizes HTTP client creation and configuration for the application, providing specialized clients for different use cases including authenticated requests to external APIs like Notion. It handles client lifecycle management, header configuration, and rate limiting awareness.
