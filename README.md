@@ -2008,6 +2008,96 @@ public class FuncSyncStep : ISyncStep
 }
 ```
 
+## TaskProperty
+
+The `TaskProperty` class represents a custom property or extended attribute for tasks, enabling flexible schema support for additional metadata beyond the standard task fields. It supports various data types (string, integer, decimal, boolean, datetime, JSON) and provides validation, type conversion, and synchronization control between local storage and Notion.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Domain.Models;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a task property for tracking estimated hours
+        var estimatedHoursProperty = new TaskProperty(
+            propertyName: "EstimatedHours",
+            propertyValue: "8",
+            dataType: PropertyDataType.Integer
+        )
+        {
+            Id = Guid.NewGuid(),
+            TaskId = Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
+            IsRequired = true,
+            SyncToNotion = true,
+            SyncToLocal = true
+        };
+
+        // Validate the property
+        if (estimatedHoursProperty.Validate())
+        {
+            Console.WriteLine($"Valid property: {estimatedHoursProperty}");
+            Console.WriteLine($"Data type: {estimatedHoursProperty.DataType}");
+            Console.WriteLine($"Typed value: {estimatedHoursProperty.GetTypedValue<int>()}");
+        }
+
+        // Update the property value
+        var updateSuccess = estimatedHoursProperty.UpdateValue("12");
+        Console.WriteLine($"Update successful: {updateSuccess}, New value: {estimatedHoursProperty.PropertyValue}");
+
+        // Create a string property for custom tags
+        var tagsProperty = new TaskProperty(
+            propertyName: "CustomTags",
+            propertyValue: "backend,api,performance",
+            dataType: PropertyDataType.String
+        )
+        {
+            Id = Guid.NewGuid(),
+            TaskId = Guid.Parse("123e4567-e89b-12d3-a456-426614174000"),
+            IsRequired = false
+        };
+
+        // Get typed value (returns string)
+        var tags = tagsProperty.GetTypedValue<string>();
+        Console.WriteLine($"Task tags: {tags}");
+
+        // Create a boolean property for tracking completion status
+        var isHighPriorityProperty = new TaskProperty(
+            propertyName: "IsHighPriority",
+            propertyValue: "true",
+            dataType: PropertyDataType.Boolean
+        )
+        {
+            Id = Guid.NewGuid(),
+            TaskId = Guid.Parse("abcdef12-3456-7890-abcd-ef1234567890"),
+            IsRequired = false
+        };
+
+        // Get typed boolean value
+        var isHighPriority = isHighPriorityProperty.GetTypedValue<bool>();
+        Console.WriteLine($"Is high priority: {isHighPriority}");
+
+        // Create a datetime property for deadline tracking
+        var deadlineProperty = new TaskProperty(
+            propertyName: "Deadline",
+            propertyValue: "2026-07-31T23:59:59Z",
+            dataType: PropertyDataType.DateTime
+        )
+        {
+            Id = Guid.NewGuid(),
+            TaskId = Guid.Parse("550e8400-e29b-41d4-a716-446655440000")
+        };
+
+        // Get typed datetime value
+        var deadline = deadlineProperty.GetTypedValue<DateTime>();
+        Console.WriteLine($"Deadline: {deadline:yyyy-MM-dd}");
+    }
+}
+```
+
 ## SyncException
 
 `SyncException` is the base exception type for all synchronization-related errors in the Notion Task Sync application. It provides contextual information about failed sync operations including configuration IDs, timestamps, and detailed error context. This exception hierarchy enables precise error handling and logging throughout the sync pipeline.
