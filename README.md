@@ -127,6 +127,168 @@ class Program
 }
 ```
 
+## AdvancedUsage
+
+The `AdvancedUsage` class demonstrates advanced configuration patterns, custom options, and comprehensive error handling for task synchronization workflows. It includes examples for:
+
+- Creating fully configured sync setups with custom field mappings and per-field conflict resolution
+- Setting up services with custom logging configuration
+- Implementing comprehensive error handling and retry logic
+- Using the IOptions pattern for strongly-typed configuration
+- Conditional sync based on change detection
+
+### Usage Examples
+
+#### Basic Advanced Usage
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Create advanced configuration with custom settings
+        var config = new SyncConfig(
+            name: "TeamProjectSync",
+            notionDatabaseId: "your_team_database_id_here",
+            localFolderPath: "./team-tasks"
+        )
+        {
+            Direction = SyncDirection.NotionToLocal,
+            ConflictStrategy = ConflictResolutionStrategy.LocalWins,
+            SyncIntervalSeconds = 300, // 5 minutes
+            IsEnabled = true
+        };
+
+        // Configure field mappings (local field name → Notion property name)
+        config.FieldMappings = new Dictionary<string, string>
+        {
+            {"title", "Title"},
+            {"status", "Status"},
+            {"priority", "Priority"},
+            {"dueDate", "Due Date"}
+        };
+
+        // Configure per-field conflict resolution overrides
+        config.FieldConflictStrategies = new Dictionary<string, ConflictResolutionStrategy>
+        {
+            {"description", ConflictResolutionStrategy.LocalWins},
+            {"status", ConflictResolutionStrategy.NotionWins}
+        };
+
+        // Set up services with custom logging
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder.AddConsole());
+        services.AddApplicationServices(configuration); // Your configuration
+        
+        var serviceProvider = services.BuildServiceProvider();
+        var syncService = serviceProvider.GetRequiredService<SyncService>();
+
+        // Execute sync with error handling
+        try
+        {
+            var result = await syncService.ExecuteSyncAsync(config);
+            Console.WriteLine($"Sync completed: {result.SyncedCount} tasks synced");
+        }
+        catch (NotionApiException ex) when (ex.StatusCode == 429)
+        {
+            Console.WriteLine("Rate limited! Consider increasing SyncIntervalSeconds");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Sync failed: {ex.Message}");
+        }
+    }
+}
+```
+
+#### Using IOptions Pattern
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using NotionTaskSync.Infrastructure.Configuration;
+using NotionTaskSync.Services;
+
+class Program
+{
+    static async Task Main()
+    {
+        var services = new ServiceCollection();
+
+        // Configure strongly-typed settings
+        services.Configure<NotionApiSettings>(options =>
+        {
+            options.ApiKey = "your_api_key_here";
+            options.DatabaseId = "your_db_id_here";
+            options.RateLimitPerSecond = 3;
+        });
+
+        services.AddLogging(builder => builder.AddConsole());
+        services.AddApplicationServices(new ConfigurationBuilder().Build());
+
+        var serviceProvider = services.BuildServiceProvider();
+        
+        // Resolve IOptions directly
+        var notionApiOptions = serviceProvider.GetRequiredService<IOptions<NotionApiSettings>>();
+        var syncService = serviceProvider.GetRequiredService<SyncService>();
+
+        var config = new SyncConfig(
+            "OptionsPatternSync",
+            notionApiOptions.Value.DatabaseId,
+            "./tasks"
+        );
+
+        var result = await syncService.ExecuteSyncAsync(config);
+    }
+}
+```
+
+#### Conditional Sync Based on Changes
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+
+class Program
+{
+    static async Task Main()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder.AddConsole());
+        services.AddApplicationServices(new ConfigurationBuilder().Build());
+        
+        var serviceProvider = services.BuildServiceProvider();
+        var syncService = serviceProvider.GetRequiredService<SyncService>();
+        var changeDetection = serviceProvider.GetRequiredService<ChangeDetectionService>();
+
+        var config = new SyncConfig("ConditionalSync", "test-db-id", "./tasks");
+
+        // Detect changes before syncing
+        var localTasks = await changeDetection.LoadLocalTasksAsync(config.LocalFolderPath);
+        var notionPages = await changeDetection.LoadNotionPagesAsync(config.NotionDatabaseId);
+        
+        var localChanges = changeDetection.DetectLocalChanges(localTasks, DateTime.UtcNow.AddDays(-1));
+        var notionChanges = changeDetection.DetectNotionChanges(notionPages, DateTime.UtcNow.AddDays(-1));
+
+        // Only sync if changes detected
+        if (localChanges.Count > 0 || notionChanges.Count > 0)
+        {
+            var result = await syncService.ExecuteSyncAsync(config);
+            Console.WriteLine($"Synced {result.SyncedCount} tasks");
+        }
+        else
+        {
+            Console.WriteLine("No changes detected - skipping sync");
+        }
+    }
+}
+```
+
 ## AdvancedUsageExtensions
 
 The `AdvancedUsageExtensions` class provides advanced utilities for validating, optimizing, and analyzing task synchronization workflows. It includes methods to validate configuration, optimize sync settings, execute syncs with retry logic, and analyze performance metrics.
