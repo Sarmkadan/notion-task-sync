@@ -755,6 +755,224 @@ class Program
 }
 ```
 
+## IntegrationExample
+
+The `IntegrationExample` class demonstrates how to integrate Notion Task Sync into ASP.NET Core applications using dependency injection patterns. It provides examples for setting up sync services in web applications, creating background services for scheduled syncs, implementing REST API controllers, and managing multiple sync profiles with different configurations.
+
+### Usage Examples
+
+#### Basic ASP.NET Core Integration
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Infrastructure.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+// Setup host builder (similar to ASP.NET Core WebApplicationBuilder)
+var hostBuilder = new HostBuilder();
+
+// Configure services
+// Similar to builder.Services in ASP.NET Core
+
+hostBuilder.ConfigureServices((context, services) =>
+{
+    // Add logging
+    services.AddLogging(builder => builder.AddConsole());
+    
+    // Add application services
+    services.AddApplicationServices(context.Configuration);
+    
+    // Register sync as hosted service (background task)
+    services.AddHostedService<SyncBackgroundService>();
+    
+    // Or register as singleton for direct access
+    services.AddSingleton<SyncService>();
+});
+
+// Configure appsettings.json
+// Similar to builder.Configuration in ASP.NET Core
+
+hostBuilder.ConfigureAppConfiguration((hostingContext, config) =>
+{
+    config.SetBasePath(Directory.GetCurrentDirectory());
+    config.AddJsonFile("appsettings.json", optional: false);
+    config.AddEnvironmentVariables("NOTION_");
+});
+
+// Build and start the host
+var host = hostBuilder.Build();
+
+// Access services
+var syncService = host.Services.GetRequiredService<SyncService>();
+
+// Create and execute sync configuration
+var config = new SyncConfig(
+    "MySyncProfile",
+    host.Services.GetRequiredService<IOptions<NotionApiSettings>>().Value.DatabaseId,
+    "./my-tasks"
+);
+
+var result = await syncService.ExecuteSyncAsync(config);
+```
+
+#### REST API Controller Integration
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class SyncController : ControllerBase
+{
+    private readonly SyncService _syncService;
+    private readonly ILogger<SyncController> _logger;
+
+    public SyncController(SyncService syncService, ILogger<SyncController> logger)
+    {
+        _syncService = syncService;
+        _logger = logger;
+    }
+
+    [HttpPost("sync")]
+    public async Task<IActionResult> Sync([FromBody] SyncRequest request)
+    {
+        _logger.LogInformation("Starting sync: {Name}", request.Name);
+
+        var config = new SyncConfig(
+            request.Name,
+            request.DatabaseId,
+            request.LocalPath
+        );
+
+        if (request.Direction.HasValue)
+            config.Direction = request.Direction.Value;
+
+        var result = await _syncService.ExecuteSyncAsync(config);
+
+        _logger.LogInformation("Sync completed: {Status}", result.Status);
+
+        return Ok(new { Status = result.Status, TasksSynced = result.SyncedCount });
+    }
+
+    [HttpGet("status")]
+    public IActionResult GetStatus()
+    {
+        return Ok(new {
+            IsHealthy = true,
+            LastSync = DateTime.UtcNow,
+            Message = "Sync service running"
+        });
+    }
+}
+
+// Request DTO
+public class SyncRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string DatabaseId { get; set; } = string.Empty;
+    public string LocalPath { get; set; } = "./tasks";
+    public SyncDirection? Direction { get; set; }
+}
+```
+
+#### Background Service for Scheduled Sync
+
+```csharp
+// Custom background service implementing IHostedService
+public class SyncBackgroundService : BackgroundService
+{
+    private readonly SyncService _syncService;
+    private readonly ILogger<SyncBackgroundService> _logger;
+    private readonly IOptions<SyncConfig> _config;
+
+    public SyncBackgroundService(
+        SyncService syncService,
+        ILogger<SyncBackgroundService> logger,
+        IOptions<SyncConfig> config)
+    {
+        _syncService = syncService;
+        _logger = logger;
+        _config = config;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("SyncBackgroundService starting...");
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                _logger.LogInformation("Running scheduled sync...");
+
+                var result = await _syncService.ExecuteSyncAsync(_config.Value);
+
+                _logger.LogInformation(
+                    "Sync completed: {LocalTasks} local tasks, {NotionPages} Notion pages, {Status}",
+                    result.LocalTaskCount,
+                    result.NotionPageCount,
+                    result.Status
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during scheduled sync");
+            }
+
+            // Wait for next sync interval
+            var delay = TimeSpan.FromSeconds(_config.Value.SyncIntervalSeconds);
+            await Task.Delay(delay, stoppingToken);
+        }
+
+        _logger.LogInformation("SyncBackgroundService stopped.");
+    }
+}
+
+// Register in DI container
+services.AddHostedService<SyncBackgroundService>();
+services.Configure<SyncConfig>(options => {
+    options.Name = "BackgroundSync";
+    options.SyncIntervalSeconds = 300; // 5 minutes
+    options.IsEnabled = true;
+});
+```
+
+#### Multiple Sync Profiles
+
+```csharp
+// In Program.cs or Startup.cs
+builder.Services.Configure<SyncConfig>("ProjectA", options => {
+    options.Name = "ProjectA";
+    options.NotionDatabaseId = Configuration["Sync:ProjectA:DatabaseId"];
+    options.LocalFolderPath = Configuration["Sync:ProjectA:LocalPath"];
+    options.ConflictStrategy = ConflictResolutionStrategy.LocalWins;
+});
+
+builder.Services.Configure<SyncConfig>("ProjectB", options => {
+    options.Name = "ProjectB";
+    options.NotionDatabaseId = Configuration["Sync:ProjectB:DatabaseId"];
+    options.LocalFolderPath = Configuration["Sync:ProjectB:LocalPath"];
+    options.ConflictStrategy = ConflictResolutionStrategy.NotionWins;
+});
+
+// Access specific configuration
+public class SyncManager
+{
+    private readonly IOptionsSnapshot<SyncConfig> _configs;
+
+    public SyncManager(IOptionsSnapshot<SyncConfig> configs)
+    {
+        _configs = configs;
+    }
+
+    public void SyncProjectA()
+    {
+        var config = _configs.Get("ProjectA");
+        // Execute sync for ProjectA
+    }
+}
+```
+
 ## LocalFileServiceTests
 
 The `LocalFileServiceTests` class contains unit tests for the `LocalFileService` class, which provides file system operations for persisting tasks to the local file system. These tests verify saving tasks to markdown files, loading tasks from files, handling edge cases like invalid inputs, and managing task collections.
