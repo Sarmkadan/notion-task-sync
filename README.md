@@ -1867,6 +1867,170 @@ class Program
 }
 ```
 
+## ConflictResolutionService
+
+The `ConflictResolutionService` class handles conflicts detected during synchronization between local task storage and Notion databases. It provides multiple resolution strategies including last-write-wins, local-wins, notion-wins, and manual review workflows. The service tracks resolution methods, timestamps, and automatically logs discarded local changes for auditability.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using NotionTaskSync.Data.Repositories;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder.AddConsole());
+        services.AddSingleton<IChangeLogRepository, InMemoryChangeLogRepository>();
+        services.AddSingleton<ConflictResolutionService>();
+        
+        var serviceProvider = services.BuildServiceProvider();
+        var conflictResolutionService = serviceProvider.GetRequiredService<ConflictResolutionService>();
+
+        // Example 1: Create conflicts for demonstration
+        var conflicts = new List<ConflictResolution>
+        {
+            new ConflictResolution
+            {
+                TaskId = Guid.NewGuid(),
+                PropertyName = "Title",
+                LocalValue = "Implement ConflictResolution feature",
+                NotionValue = "Document ConflictResolution class",
+                LocalModifiedAt = DateTime.UtcNow.AddMinutes(-30),
+                NotionModifiedAt = DateTime.UtcNow.AddMinutes(-15),
+                ConflictType = ConflictType.ConcurrentModification
+            },
+            new ConflictResolution
+            {
+                TaskId = Guid.NewGuid(),
+                PropertyName = "Status",
+                LocalValue = "In Progress",
+                NotionValue = "Done",
+                ConflictType = ConflictType.ConcurrentModification
+            },
+            new ConflictResolution
+            {
+                TaskId = Guid.NewGuid(),
+                PropertyName = "Priority",
+                LocalValue = "50",
+                NotionValue = "75",
+                ConflictType = ConflictType.ConcurrentModification
+            }
+        };
+
+        // Example 2: Resolve conflicts using different strategies
+        Console.WriteLine("=== Resolving conflicts using LastWrite strategy ===");
+        var lastWriteResolutions = await conflictResolutionService.ResolveConflictsAsync(
+            conflicts,
+            ConflictResolutionStrategy.LastWrite
+        );
+        
+        foreach (var resolution in lastWriteResolutions)
+        {
+            Console.WriteLine($"Conflict {resolution.TaskId}: {resolution.PropertyName}");
+            Console.WriteLine($"  Status: {resolution.Status}");
+            Console.WriteLine($"  Method: {resolution.ResolutionMethod}");
+            Console.WriteLine($"  Resolved value: {resolution.ResolvedValue}");
+            Console.WriteLine($"  Notes: {resolution.ResolutionNotes}");
+        }
+
+        // Example 3: Resolve conflicts using LocalWins strategy
+        Console.WriteLine("\n=== Resolving conflicts using LocalWins strategy ===");
+        var localWinsResolutions = await conflictResolutionService.ResolveConflictsAsync(
+            conflicts,
+            ConflictResolutionStrategy.LocalWins
+        );
+        
+        Console.WriteLine($"Resolved {localWinsResolutions.Count(r => r.Status == ResolutionStatus.Resolved)} conflicts");
+        Console.WriteLine($"Pending review: {localWinsResolutions.Count(r => r.Status == ResolutionStatus.PendingReview)}");
+
+        // Example 4: Resolve conflicts using Manual strategy
+        Console.WriteLine("\n=== Resolving conflicts using Manual strategy ===");
+        var manualResolutions = await conflictResolutionService.ResolveConflictsAsync(
+            conflicts,
+            ConflictResolutionStrategy.Manual
+        );
+        
+        Console.WriteLine($"Conflicts requiring manual review: {manualResolutions.Count(r => r.Status == ResolutionStatus.PendingReview)}");
+
+        // Example 5: Use per-field conflict resolution strategies
+        Console.WriteLine("\n=== Resolving conflicts using field-specific strategies ===");
+        var fieldStrategies = new Dictionary<string, ConflictResolutionStrategy>
+        {
+            {"Title", ConflictResolutionStrategy.LocalWins},
+            {"Status", ConflictResolutionStrategy.NotionWins},
+            {"Priority", ConflictResolutionStrategy.LastWrite}
+        };
+        
+        var fieldStrategyResolutions = await conflictResolutionService.ResolveConflictsAsync(
+            conflicts,
+            ConflictResolutionStrategy.LastWrite, // Default strategy
+            fieldStrategies
+        );
+        
+        Console.WriteLine("Applied field-specific strategies:");
+        foreach (var resolution in fieldStrategyResolutions)
+        {
+            Console.WriteLine($"  {resolution.PropertyName}: {resolution.ResolutionMethod}");
+        }
+
+        // Example 6: Get pending conflicts
+        Console.WriteLine("\n=== Getting pending conflicts ===");
+        var allResolutions = await conflictResolutionService.ResolveConflictsAsync(
+            conflicts,
+            ConflictResolutionStrategy.Manual
+        );
+        
+        var pendingConflicts = conflictResolutionService.GetPendingConflicts(allResolutions);
+        Console.WriteLine($"Total conflicts: {allResolutions.Count}");
+        Console.WriteLine($"Pending review: {pendingConflicts.Count}");
+
+        // Example 7: Get resolution statistics
+        Console.WriteLine("\n=== Getting resolution statistics ===");
+        var stats = conflictResolutionService.GetResolutionStats(allResolutions);
+        Console.WriteLine($"Total conflicts: {stats.TotalConflicts}");
+        Console.WriteLine($"Resolved: {stats.ResolvedCount}");
+        Console.WriteLine($"Pending review: {stats.PendingReviewCount}");
+        Console.WriteLine($"Abandoned: {stats.AbandonedCount}");
+        Console.WriteLine($"Resolution rate: {stats.ResolutionRate:P}");
+
+        // Example 8: Manually resolve a conflict
+        Console.WriteLine("\n=== Manually resolving a conflict ===");
+        var manualResolution = await conflictResolutionService.ManuallyResolveAsync(
+            Guid.NewGuid(),
+            "Manually resolved value",
+            ResolutionMethod.Manual,
+            "Manually reviewed and resolved"
+        );
+        
+        Console.WriteLine($"Manual resolution status: {manualResolution.Status}");
+        Console.WriteLine($"Resolved value: {manualResolution.ResolvedValue}");
+
+        // Example 9: Merge conflicts
+        Console.WriteLine("\n=== Merging conflicts ===");
+        var mergeConflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            PropertyName = "Tags",
+            LocalValue = "backend,feature",
+            NotionValue = "backend,api"
+        };
+        
+        var mergedResult = conflictResolutionService.MergeConflicts(mergeConflict);
+        Console.WriteLine($"Merge result status: {mergedResult.Status}");
+        Console.WriteLine($"Merged value: {mergedResult.ResolvedValue}");
+    }
+}
+```
+
 ## CryptoHelperTests
 
 The `CryptoHelperTests` class contains unit tests for the `CryptoHelper` utility class, which provides cryptographic operations including SHA-256 and MD5 hashing, HMAC-SHA256 signature generation, and random token generation. These tests ensure the correct behavior and robustness of these security-critical functions, including edge cases like null inputs and invalid length constraints.
