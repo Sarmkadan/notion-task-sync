@@ -1260,6 +1260,67 @@ if (Directory.Exists(localTasksDirectory))
 }
 ```
 
+## CalendarEvent
+
+The `CalendarEvent` class represents calendar events that can be synchronized with tasks' due dates and schedules. It supports two-way synchronization between local tasks and iCal (.ics) calendar files, enabling tasks with due dates to be visible in external calendar applications. Events can originate from local tasks or be imported from external calendar sources.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Domain.Models;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a calendar event from a local task
+        var taskEvent = new CalendarEvent
+        {
+            Title = "Implement Calendar Sync Feature",
+            Description = "Add CalendarEvent documentation to README.md",
+            StartDate = new DateTime(2026, 7, 18, 9, 0, 0), // July 18, 2026 at 9:00 AM
+            EndDate = new DateTime(2026, 7, 18, 17, 0, 0),   // July 18, 2026 at 5:00 PM
+            IsAllDay = false,
+            Location = "Office Conference Room A",
+            Source = CalendarEventSource.Task,
+            LinkedTaskId = Guid.Parse("550e8400-e29b-41d4-a716-446655440000")
+        };
+
+        // Validate the event
+        bool isValid = taskEvent.Validate();
+        Console.WriteLine($"Event validation: {isValid}");
+
+        // Calculate duration
+        var duration = taskEvent.GetDuration();
+        Console.WriteLine($"Event duration: {duration?.TotalHours} hours");
+
+        // Create an all-day event imported from external calendar
+        var importedEvent = new CalendarEvent
+        {
+            Title = "Team Meeting - Q3 Planning",
+            Description = "Quarterly planning session for all teams",
+            StartDate = new DateTime(2026, 7, 20),
+            EndDate = new DateTime(2026, 7, 20),
+            IsAllDay = true,
+            Location = "Virtual",
+            ExternalUid = "ical-uid-12345@example.com",
+            Source = CalendarEventSource.Import
+        };
+
+        // Access event properties
+        Console.WriteLine($"Event: {importedEvent.Title}");
+        Console.WriteLine($"Start: {importedEvent.StartDate:yyyy-MM-dd}");
+        Console.WriteLine($"End: {importedEvent.EndDate?.ToString("yyyy-MM-dd") ?? "N/A"}");
+        Console.WriteLine($"All day: {importedEvent.IsAllDay}");
+        Console.WriteLine($"Location: {importedEvent.Location}");
+        Console.WriteLine($"External UID: {importedEvent.ExternalUid}");
+        Console.WriteLine($"Created: {importedEvent.CreatedAt:u}");
+        Console.WriteLine($"Updated: {importedEvent.UpdatedAt:u}");
+    }
+}
+```
+
 ## BackupServiceTests
 
 The `BackupServiceTests` class contains unit tests for the `BackupService` class, which provides backup functionality for task synchronization workflows. These tests verify backup creation with labels, retrieval of available backups, proper error handling, and validation of backup metadata including timestamps, file counts, and ordering.
