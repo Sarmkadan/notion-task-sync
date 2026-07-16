@@ -928,6 +928,75 @@ class Program
     }
 }
 
+## SyncStatistics
+
+The `SyncStatistics` class aggregates statistics about sync operations for monitoring and reporting. It tracks success rates, performance metrics, and error patterns, making it ideal for generating health reports and identifying performance bottlenecks in task synchronization workflows.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Models;
+using NotionTaskSync.Services;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Create statistics tracker
+        var stats = new SyncStatistics();
+        
+        // Record a successful sync operation
+        var successfulSnapshot = new SyncStatistics.SyncOperationSnapshot
+        {
+            Timestamp = DateTime.UtcNow,
+            DurationMs = 1500,
+            Successful = true,
+            TasksProcessed = 42,
+            ChangesDetected = 15,
+            ConflictsDetected = 3,
+            ConflictsResolved = 3,
+            ErrorMessage = null
+        };
+        
+        stats.RecordOperation(successfulSnapshot);
+        
+        // Record a failed sync operation
+        var failedSnapshot = new SyncStatistics.SyncOperationSnapshot
+        {
+            Timestamp = DateTime.UtcNow.AddMinutes(5),
+            DurationMs = 800,
+            Successful = false,
+            TasksProcessed = 25,
+            ChangesDetected = 8,
+            ConflictsDetected = 1,
+            ConflictsResolved = 0,
+            ErrorMessage = "Network timeout"
+        };
+        
+        stats.RecordOperation(failedSnapshot);
+        
+        // Display statistics
+        Console.WriteLine(stats.ToString());
+        Console.WriteLine($"\nSuccess Rate: {stats.SuccessRate:F1}%");
+        Console.WriteLine($"Conflict Resolution Rate: {stats.ConflictResolutionRate:F1}%");
+        Console.WriteLine($"Average Duration: {stats.AverageSyncDuration:mm\\:ss}");
+        
+        // Reset statistics
+        stats.Reset();
+        Console.WriteLine($"\nStatistics reset at: {stats.LastResetAt:g}");
+        
+        // Create from actual sync result
+        var syncService = new SyncService(...); // Setup with dependencies
+        var config = new SyncConfig(...);
+        var result = await syncService.ExecuteSyncAsync(config);
+        
+        var fromResult = SyncStatistics.SyncOperationSnapshot.FromSyncResult(result);
+        stats.RecordOperation(fromResult);
+    }
+}
+```
+
 ## CryptoHelperTests
 
 The `CryptoHelperTests` class contains unit tests for the `CryptoHelper` utility class, which provides cryptographic operations including SHA-256 and MD5 hashing, HMAC-SHA256 signature generation, and random token generation. These tests ensure the correct behavior and robustness of these security-critical functions, including edge cases like null inputs and invalid length constraints.
