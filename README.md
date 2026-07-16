@@ -1448,6 +1448,74 @@ class Program
 }
 ```
 
+## NotionPage
+
+The `NotionPage` class represents a Notion page entity that can be synchronized with local task storage. It encapsulates all metadata and properties of a Notion page including identification, timestamps, content properties, and synchronization state. This class is central to the bidirectional synchronization workflow between local tasks and Notion databases.
+
+### Usage Example
+
+```csharp
+using Domain.Models;
+using System;
+using System.Collections.Generic;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a Notion page representing a task
+        var notionPage = new NotionPage(
+            pageId: "550e8400-e29b-41d4-a716-446655440000",
+            databaseId: "123e4567-e89b-12d3-a456-426614174000",
+            title: "Implement NotionPage documentation"
+        )
+        {
+            // Set additional properties
+            Properties = new Dictionary<string, object?>
+            {
+                { "Description", "Add NotionPage section to README.md" },
+                { "Status", "In Progress" },
+                { "Priority", 75 },
+                { "Due Date", DateTime.UtcNow.AddDays(3) }
+            };
+            
+            // Access core properties
+            Console.WriteLine($"Page ID: {notionPage.PageId}");
+            Console.WriteLine($"Database ID: {notionPage.DatabaseId}");
+            Console.WriteLine($"Title: {notionPage.Title}");
+            Console.WriteLine($"Created: {notionPage.CreatedTime:u}");
+            Console.WriteLine($"Last edited: {notionPage.LastEditedTime:u}");
+            Console.WriteLine($"URL: {notionPage.Url}");
+            
+            // Access property values
+            var status = notionPage.GetProperty<string>("Status");
+            var priority = notionPage.GetProperty<int>("Priority");
+            Console.WriteLine($"Status: {status}, Priority: {priority}");
+            
+            // Update properties
+            notionPage.SetProperty("Status", "Done");
+            notionPage.SetProperty("Completed", DateTime.UtcNow);
+            
+            // Mark as stale for next sync
+            notionPage.MarkAsStale();
+            
+            // Update sync timestamp
+            notionPage.UpdateSyncTime();
+            
+            // Archive the page
+            notionPage.Archive();
+            
+            // Validate the page
+            bool isValid = notionPage.Validate();
+            Console.WriteLine($"Page validation: {isValid}");
+            
+            // String representation
+            Console.WriteLine($"Page info: {notionPage}");
+        }
+    }
+}
+```
+
 ## CalendarEvent
 
 The `CalendarEvent` class represents calendar events that can be synchronized with tasks' due dates and schedules. It supports two-way synchronization between local tasks and iCal (.ics) calendar files, enabling tasks with due dates to be visible in external calendar applications. Events can originate from local tasks or be imported from external calendar sources.
