@@ -1092,6 +1092,83 @@ class Program
 ```
 ```
 
+## ConflictDiffResult
+
+The `ConflictDiffResult` class represents the result of comparing two conflicting property values between local and Notion systems. It provides a structured diff view with annotated lines ready for terminal or UI rendering, showing exactly what differs between the two versions.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Domain.Models;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a conflict diff result for a property that differs between local and Notion
+        var diffResult = new ConflictDiffResult
+        {
+            ConflictId = Guid.NewGuid(),
+            PropertyName = "Description",
+            LocalValue = "This is the local description\nwith multiple lines\nand some changes",
+            NotionValue = "This is the Notion description\nwith multiple lines\nand SOME CHANGES",
+            GeneratedAt = DateTime.UtcNow
+        };
+
+        // The Lines collection would normally be populated by a diff algorithm
+        // For demonstration, we'll add some sample diff lines
+        diffResult.Lines.Add(new DiffLine
+        {
+            Text = "This is the local description",
+            Kind = DiffLineKind.Context,
+            LocalLineNumber = 1,
+            NotionLineNumber = 1
+        });
+
+        diffResult.Lines.Add(new DiffLine
+        {
+            Text = "with multiple lines",
+            Kind = DiffLineKind.Context,
+            LocalLineNumber = 2,
+            NotionLineNumber = 2
+        });
+
+        diffResult.Lines.Add(new DiffLine
+        {
+            Text = "and some changes",
+            Kind = DiffLineKind.Removed,
+            LocalLineNumber = 3,
+            NotionLineNumber = null
+        });
+
+        diffResult.Lines.Add(new DiffLine
+        {
+            Text = "and SOME CHANGES",
+            Kind = DiffLineKind.Added,
+            LocalLineNumber = null,
+            NotionLineNumber = 3
+        });
+
+        // Access diff statistics
+        Console.WriteLine($"Property: {diffResult.PropertyName}");
+        Console.WriteLine($"Local value: {diffResult.LocalValue}");
+        Console.WriteLine($"Notion value: {diffResult.NotionValue}");
+        Console.WriteLine($"Lines added: {diffResult.AddedCount}");
+        Console.WriteLine($"Lines removed: {diffResult.RemovedCount}");
+        Console.WriteLine($"Is identical: {diffResult.IsIdentical}");
+        Console.WriteLine($"Generated at: {diffResult.GeneratedAt:u}");
+
+        // Render the diff (simplified example)
+        Console.WriteLine("\nDiff view:");
+        foreach (var line in diffResult.Lines)
+        {
+            Console.WriteLine($"{line.Sigil} {line.Text}");
+        }
+    }
+}
+```
+
 ## SyncIntegrationTests
 
 The `SyncIntegrationTests` class contains integration tests for the complete synchronization workflow between local task storage and Notion databases. These tests verify end-to-end scenarios including change detection, conflict resolution, different sync directions, backup creation, and incremental sync operations.
