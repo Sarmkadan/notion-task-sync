@@ -4921,3 +4921,92 @@ class Program
     }
 }
 ```
+
+## CacheProvider
+
+The `CacheProvider` class provides an in-memory caching solution for reducing API calls to Notion by storing frequently accessed data with configurable expiration times. It implements automatic expiration, thread-safe operations, and comprehensive cache statistics for monitoring cache health.
+
+### Public Members
+
+- `public T? Get<T>(string key)` - Retrieves a cached value if it exists and hasn't expired
+- `public void Set<T>(string key, T value, TimeSpan? expiration = null)` - Stores a value in cache with optional expiration
+- `public T GetOrSet<T>(string key, Func<T> factory, TimeSpan? expiration = null)` - Gets cached value or computes and caches it if not found
+- `public async System.Threading.Tasks.Task<T> GetOrSetAsync<T>(string key, Func<System.Threading.Tasks.Task<T>> factory, TimeSpan? expiration = null)` - Async version of GetOrSet
+- `public bool Remove(string key)` - Removes a specific key from cache
+- `public int RemoveByPattern(string pattern)` - Removes all cache entries matching a pattern
+- `public void Clear()` - Clears all cache entries
+- `public int RemoveExpired()` - Removes all expired entries from cache
+- `public CacheStatistics GetStatistics()` - Gets cache statistics
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Caching;
+using Microsoft.Extensions.Logging;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Initialize CacheProvider with logger
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<CacheProvider>();
+        var cacheProvider = new CacheProvider(logger);
+
+        // Example 1: Basic caching with Set and Get
+        cacheProvider.Set("user:123", "John Doe", TimeSpan.FromMinutes(30));
+        var cachedUser = cacheProvider.Get<string>("user:123");
+        Console.WriteLine(cachedUser); // Output: John Doe
+
+        // Example 2: GetOrSet for lazy-loading with automatic caching
+        var task = cacheProvider.GetOrSet("expensive:task", () => {
+            Console.WriteLine("Computing expensive task...");
+            return ComputeExpensiveResult();
+        });
+        
+        // Subsequent calls will use cached value
+        var cachedTask = cacheProvider.GetOrSet("expensive:task", () => {
+            Console.WriteLine("This won't be called - value is cached");
+            return "ignored";
+        });
+
+        // Example 3: Async caching for I/O operations
+        var asyncTask = await cacheProvider.GetOrSetAsync("api:data", async () => {
+            Console.WriteLine("Fetching data from API...");
+            await Task.Delay(100); // Simulate API call
+            return "API Response Data";
+        });
+
+        // Example 4: Cache invalidation
+        cacheProvider.Set("notion:pages", new List<string> { "page1", "page2" });
+        cacheProvider.Remove("notion:pages");
+        var removedValue = cacheProvider.Get<List<string>>("notion:pages");
+        Console.WriteLine(removedValue == null ? "Value removed successfully" : "Still cached");
+
+        // Example 5: Pattern-based invalidation
+        cacheProvider.Set("notion:pages:123", "data1");
+        cacheProvider.Set("notion:pages:456", "data2");
+        cacheProvider.Set("notion:users:789", "user1");
+        
+        var removedCount = cacheProvider.RemoveByPattern("notion:pages");
+        Console.WriteLine($"Removed {removedCount} entries matching 'notion:pages'");
+
+        // Example 6: Get cache statistics
+        var stats = cacheProvider.GetStatistics();
+        Console.WriteLine($"Cache stats - Total: {stats.TotalEntries}, Valid: {stats.ValidEntries}, " +
+                        $"Expired: {stats.ExpiredEntries}, Size: {stats.ApproximateSizeBytes} bytes");
+        Console.WriteLine($"Valid entries: {stats.ValidEntriesPercentage:F1}%");
+
+        // Example 7: Clear entire cache
+        cacheProvider.Clear();
+        var emptyStats = cacheProvider.GetStatistics();
+        Console.WriteLine($"Cache cleared. Total entries: {emptyStats.TotalEntries}");
+    }
+    
+    static string ComputeExpensiveResult()
+    {
+        return "Expensive Result";
+    }
+}
+```
