@@ -710,6 +710,71 @@ class Program
 }
 ```
 
+## BackupService
+
+The `BackupService` class manages task file backups and restoration, providing automated and manual backup functionality with retention policies. It creates timestamped backup directories containing copies of all task markdown files, tracks backup metadata, and automatically cleans up old backups based on a retention limit.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+static async Task Main()
+{
+// Initialize BackupService with backup directory and retention policy
+var backupService = new BackupService(
+backupDirectory: @"./backups",
+maxBackupFiles: 10,
+fileService: new LocalFileService(@"./tasks")
+);
+
+// Create a manual backup with a descriptive label
+var backupInfo = await backupService.CreateBackupAsync("pre-major-sync");
+Console.WriteLine($"Backup created: {backupInfo}");
+Console.WriteLine($"Backup ID: {backupInfo.Id}");
+Console.WriteLine($"Backup path: {backupInfo.Path}");
+Console.WriteLine($"Files backed up: {backupInfo.FileCount}");
+Console.WriteLine($"Backup age: {backupInfo.GetAge().TotalHours:F1} hours");
+
+// Get backup statistics
+var stats = backupService.GetBackupStats();
+Console.WriteLine($"\nBackup Statistics:");
+Console.WriteLine($"Total backups: {stats.TotalBackups}");
+Console.WriteLine($"Total size: {stats.GetTotalSizeMB():F2} MB");
+Console.WriteLine($"Last backup: {stats.LastBackupTime:O}");
+
+// List all available backups
+var allBackups = backupService.GetAvailableBackups();
+Console.WriteLine($"\nAvailable backups ({allBackups.Count}):");
+foreach (var backup in allBackups)
+{
+Console.WriteLine($"- {backup.ToString()}");
+}
+
+// Restore from a specific backup
+if (allBackups.Count > 0)
+{
+var latestBackup = allBackups[0];
+await backupService.RestoreFromBackupAsync(latestBackup.Path);
+Console.WriteLine($"\nRestored from backup: {latestBackup.Label}");
+}
+
+// Delete an old backup
+if (allBackups.Count > 5)
+{
+var backupToDelete = allBackups.Last();
+await backupService.DeleteBackupAsync(backupToDelete.Path);
+Console.WriteLine($"Deleted old backup: {backupToDelete.Label}");
+}
+}
+}
+```
+
 ## BackupServiceExtensions
 
 The `BackupServiceExtensions` class provides utilities for managing backup operations, including creating daily backups, querying backup metadata, and retrieving backups by various criteria like labels, age, and file count.
