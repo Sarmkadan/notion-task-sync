@@ -1409,6 +1409,67 @@ class Program
 }
 ```
 
+## HealthCheckWorker
+
+The `HealthCheckWorker` class provides background monitoring of application health and resource usage. It performs periodic health checks to detect memory leaks, connection issues, and performance degradation by tracking memory usage, thread count, uptime, and connectivity status. The worker runs in the background and logs warnings when thresholds are exceeded.
+
+### Public Members
+
+- `HealthCheckWorker(ILogger<HealthCheckWorker> logger, int checkIntervalSeconds = 300)` - Constructor that initializes the worker with a logger and optional check interval
+- `Start()` - Starts the health check worker in the background
+- `StopAsync()` - Stops the health check worker gracefully
+- `GetStatus()` - Gets the current health status
+- `IsHealthy` - Property indicating if the application is currently healthy
+- `MemoryUsageMb` - Property for current memory usage in megabytes
+- `ThreadCount` - Property for current thread count
+- `UptimeSeconds` - Property for current uptime in seconds
+- `CheckedAt` - Property for timestamp when health was last checked
+- `Dispose()` - Disposes the worker and cleans up resources
+- `ToString()` - Returns a formatted health status string
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Workers;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup logger
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<HealthCheckWorker>();
+
+        // Create health check worker with 60-second interval
+        var healthChecker = new HealthCheckWorker(logger, checkIntervalSeconds: 60);
+
+        // Start the worker
+        healthChecker.Start();
+        Console.WriteLine("Health check worker started");
+
+        // Wait for a few health checks to complete
+        await Task.Delay(TimeSpan.FromSeconds(180));
+
+        // Get current health status
+        var status = healthChecker.GetStatus();
+        Console.WriteLine($"\nHealth Status:");
+        Console.WriteLine($"- Healthy: {status.IsHealthy}");
+        Console.WriteLine($"- Memory Usage: {status.MemoryUsageMb} MB");
+        Console.WriteLine($"- Thread Count: {status.ThreadCount}");
+        Console.WriteLine($"- Uptime: {status.UptimeSeconds} seconds");
+        Console.WriteLine($"- Last Checked: {status.CheckedAt:g}");
+        Console.WriteLine($"\nStatus output:\n{status}");
+
+        // Stop the worker
+        await healthChecker.StopAsync();
+        Console.WriteLine("\nHealth check worker stopped");
+    }
+}
+```
+
 ## LoggerFactory
 
 `LoggerFactory` creates and configures `ILogger` instances for the application, supporting both console and optional file logging. It also provides helpers to validate the log path, rotate oversized log files, and clean up old logs based on a retention policy.
