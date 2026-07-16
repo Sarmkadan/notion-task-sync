@@ -1228,6 +1228,80 @@ class Program
 }
 ```
 
+## CliArgumentParser
+
+`CliArgumentParser` provides command-line argument parsing and help text generation for console applications. It supports registering commands, global options, and positional arguments, then parsing command-line input into a structured format. The parser automatically generates comprehensive help documentation and handles error cases gracefully.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Cli;
+using System;
+using System.Collections.Generic;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        // Create parser with command name and description
+        var parser = new CliArgumentParser(
+            commandName: "sync",
+            description: "Synchronize tasks between local storage and Notion"
+        );
+
+        // Register a command with options and arguments
+        parser.RegisterCommand(
+            commandName: "run",
+            description: "Execute a synchronization cycle",
+            options: new Dictionary<string, string>
+            {
+                {"--database-id", "Notion database ID to sync with"},
+                {"--direction", "Sync direction (local-to-notion, notion-to-local, bidirectional)"},
+                {"--dry-run", "Preview changes without applying them"}
+            },
+            arguments: new List<string> { "config-name" }
+        );
+
+        // Register global options available for all commands
+        parser.RegisterGlobalOption(
+            "--verbose",
+            "Enable verbose logging output"
+        );
+
+        // Parse command line arguments
+        var parsedCommand = parser.Parse(args);
+
+        if (parsedCommand == null || parsedCommand.Error != null)
+        {
+            Console.WriteLine(parser.GenerateHelpText());
+            if (parsedCommand?.Error != null)
+            {
+                Console.WriteLine($"\nError: {parsedCommand.Error}");
+            }
+            return;
+        }
+
+        // Access parsed values
+        Console.WriteLine($"Executing command: {parsedCommand.CommandName}");
+        Console.WriteLine($"Config name: {parsedCommand.Arguments[0]}");
+        
+        if (parsedCommand.Options.TryGetValue("--database-id", out var databaseId))
+        {
+            Console.WriteLine($"Database ID: {databaseId}");
+        }
+        
+        if (parsedCommand.Options.TryGetValue("--verbose", out var _))
+        {
+            Console.WriteLine("Verbose mode enabled");
+        }
+
+        // Execute the command
+        var exitCode = await parsedCommand.ExecuteAsync();
+        Environment.Exit(exitCode);
+    }
+}
+```
+
 ## HttpClientFactory
 
 `HttpClientFactory` centralizes HTTP client creation and configuration for the application, providing specialized clients for different use cases including authenticated requests to external APIs like Notion. It handles client lifecycle management, header configuration, and rate limiting awareness.
