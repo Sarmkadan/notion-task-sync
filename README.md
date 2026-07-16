@@ -1286,6 +1286,74 @@ class Program
 }
 ```
 
+## WebhookHandler
+
+The `WebhookHandler` class processes incoming webhook events from external services like Notion, GitHub, or other integrations. It validates, routes, and publishes domain events based on webhook payloads, enabling real-time reactive synchronization workflows.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Integration;
+using NotionTaskSync.Events;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup logging
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<WebhookHandler>();
+        
+        // Create event bus for publishing domain events
+        var eventBus = new EventBus(logger);
+        
+        // Initialize webhook handler
+        var webhookHandler = new WebhookHandler(eventBus, logger);
+        
+        // Register custom webhook handler
+        webhookHandler.RegisterHandler("custom_event", async (data) =>
+        {
+            Console.WriteLine($"Custom event received with data: {string.Join(", ", data.Select(kvp => $"{kvp.Key}={kvp.Value}"))}");
+            
+            // Publish domain event
+            await eventBus.PublishAsync(new SyncStartedEvent
+            {
+                SyncConfigId = "webhook-triggered-sync",
+                DatabaseId = "550e8400-e29b-41d4-a716-446655440000",
+                StartTime = DateTime.UtcNow
+            });
+        });
+        
+        // Get registered webhook types
+        var registeredTypes = webhookHandler.GetRegisteredWebhookTypes();
+        Console.WriteLine($"Registered webhook types: {string.Join(", ", registeredTypes)}");
+        
+        // Handle a webhook
+        var webhookData = new Dictionary<string, object>
+        {
+            { "page_id", "550e8400-e29b-41d4-a716-446655440000" },
+            { "database_id", "123e4567-e89b-12d3-a456-426614174000" },
+            { "title", "Updated Task Title" }
+        };
+        
+        bool handled = await webhookHandler.HandleWebhookAsync("page_updated", webhookData);
+        Console.WriteLine($"Webhook handled successfully: {handled}");
+        
+        // Validate webhook signature (example with test data)
+        string payload = "{\"page_id\":\"550e8400-e29b-41d4-a716-446655440000\"}";
+        string secret = "test-secret-key";
+        string signature = Utils.CryptoHelper.ComputeHmacSha256(payload, secret);
+        
+        bool isValid = webhookHandler.ValidateWebhookSignature(payload, signature, secret);
+        Console.WriteLine($"Webhook signature valid: {isValid}");
+    }
+}
+```
+
 ## SyncStartedEvent
 
 The `SyncStartedEvent` class represents an event that is published when a synchronization operation is initiated. This event provides essential context about the sync process including configuration details, target database, and start timestamp.
