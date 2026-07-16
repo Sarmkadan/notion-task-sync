@@ -1,594 +1,116 @@
-// =============================================================================
-// Author: Vladyslav Zaiets | https://sarmkadan.com
-// CTO & Software Architect
-// =============================================================================
+# Architecture
 
-# Architecture Overview
+This document describes the actual architecture of Notion Task Sync as it exists in the code today. Everything below maps to real files in the repository - if a component is listed here, you can open it and read it.
 
-This document describes the internal architecture, design patterns, and data flow of Notion Task Sync.
+## What the application is
 
-## System Architecture
+A .NET console application (`Program.cs`) that performs a bidirectional synchronization between a Notion database and a local task store, then exits. There is no web server, no REST API, and no long-running host in the default entry point - one run equals one sync cycle. `Workers/SyncWorker.cs` exists for periodic execution but is not wired into `Program.cs` (see Extension points below).
+
+## High-level flow
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         PRESENTATION LAYER                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
-│  │  CLI Module  │  │  REST API    │  │  Event Bus   │           │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘           │
-└─────────┼────────────────┼────────────────┼──────────────────────┘
-          │                │                │
-┌─────────▼────────────────▼────────────────▼──────────────────────┐
-│                      APPLICATION LAYER                           │
-│  ┌──────────────────────────────────────────────────────┐        │
-│  │  SyncService (Orchestrator)                          │        │
-│  │  - Manages sync workflow                             │        │
-│  │  - Coordinates sub-services                          │        │
-│  └──────────┬──────────────────────────────┬────────────┘        │
-│             │                              │                     │
-│  ┌──────────▼─────────┐    ┌───────────────▼────────┐            │
-│  │ ChangeDetection    │    │ ConflictResolution     │            │
-│  │ Service            │    │ Service                │            │
-│  │ - Diff detection   │    │ - Strategy application │            │
-│  │ - Change tracking  │    │ - Manual resolution    │            │
-│  └──────┬─────────────┘    └──────┬────────────────┘            │
-│         │                         │                              │
-└─────────┼─────────────────────────┼──────────────────────────────┘
-          │                         │
-┌─────────▼─────────────────────────▼──────────────────────────────┐
-│                    BUSINESS LOGIC LAYER                          │
-│  ┌──────────────┐  ┌────────────────────┐  ┌────────────────┐   │
-│  │ Local File   │  │ Notion API Service │  │ Backup Service │   │
-│  │ Service      │  │ - REST client      │  │ - Backup/      │   │
-│  │ - Read/Write │  │ - Caching          │  │   Restore      │   │
-│  └──────┬───────┘  └────────┬───────────┘  └────────┬───────┘   │
-│         │                   │                       │            │
-│  ┌──────▼─────────────────────────────────────────┐ │            │
-│  │ Cache Provider                                │ │            │
-│  │ - In-memory cache                            │ │            │
-│  │ - Expires on TTL or manual invalidation     │ │            │
-│  └──────┬──────────────────────────────────────┘ │            │
-│         │                                        │            │
-└─────────┼────────────────────────────────────────┼────────────┘
-          │                                        │
-┌─────────▼────────────────────────────────────────▼───────────────┐
-│                      DATA ACCESS LAYER                           │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │
-│  │ Local FS     │  │ HTTP Client  │  │ SQLite DB    │            │
-│  │ Read/Write   │  │ REST Calls   │  │ Repository   │            │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘            │
-│         │                │                 │                    │
-└─────────▼─────────────────▼─────────────────▼────────────────────┘
-          │                │                 │
-     Filesystem        Notion API        SQLite DB
+Program.cs
+  └─ builds ServiceCollection by hand (Microsoft.Extensions.DependencyInjection)
+  └─ DependencyInjection.ValidateConfiguration()  - fail fast on missing NotionApi:ApiKey
+  └─ resolves SyncService and calls ExecuteSyncAsync(SyncConfig)
+
+SyncService.ExecuteSyncAsync (Services/SyncService.cs)
+  1. Validate SyncConfig
+  2. Load state:
+       local  -> ITaskRepository.GetAllAsync()
+       notion -> NotionApiService.FetchPagesAsync() or, when config.LastSyncAt
+                 is set, FetchPagesSinceAsync() (incremental, filtered by
+                 last_edited_time on the Notion side)
+  3. ChangeDetectionService.DetectLocalChanges / DetectNotionChanges
+  4. ChangeDetectionService.DetectConflicts(localChanges, notionChanges)
+  5. ConflictResolutionService.ResolveConflictsAsync(conflicts,
+       config.ConflictStrategy, config.FieldConflictStrategies)
+  6. ApplyChangesAsync - pushes/pulls according to SyncDirection
+  7. Persist via ITaskRepository, update sync metadata, return SyncResult
 ```
 
-## Component Description
+Errors inside the cycle do not throw out of `ExecuteSyncAsync`; they are captured into `SyncResult.Status = Failed` plus `ErrorMessage`/`ErrorDetails`. Rationale: the caller always gets a structured result it can log or persist, and one failed cycle never crashes a scheduling host around it.
 
-### Presentation Layer
+## Component breakdown
 
-#### CLI Module (`Cli/CliArgumentParser.cs`)
-- Parses command-line arguments
-- Routes to appropriate commands (sync, configure, status, help)
-- Handles user input validation
-- Formats console output
+### Core sync path (registered in DI, actually executed)
 
-#### Commands (`Commands/`)
-- `ConfigureCommand` - Setup new sync profiles
-- `SyncCommand` - Execute synchronization
-- `StatusCommand` - Display current status
-- `HelpCommand` - Display help information
+| Component | File | Responsibility |
+|---|---|---|
+| `SyncService` | `Services/SyncService.cs` | Orchestrator. Owns the cycle above and the `SyncResult` type (nested class - it is the return shape of this service only, so it lives with it). |
+| `ChangeDetectionService` | `Services/ChangeDetectionService.cs` | Comparison of local tasks vs Notion pages against `LastSyncAt`; produces change lists and conflicts. |
+| `ConflictResolutionService` | `Services/ConflictResolutionService.cs` | Applies `ConflictResolutionStrategy` (`LastWrite`, `LocalWins`, `NotionWins`, `Manual`) with optional per-field overrides from `SyncConfig.FieldConflictStrategies`. `Manual` yields `ResolutionStatus.PendingReview` instead of blocking. |
+| `ConflictDiffService` | `Services/ConflictDiffService.cs` | Field-level diffing used by conflict inspection (`ConflictCommand`). |
+| `NotionApiService` | `Services/NotionApiService.cs` | Notion REST client: Bearer auth, pinned `Notion-Version: 2022-06-28`, cursor-based pagination, `System.Text.Json` parsing. Methods are `virtual` so tests can subclass instead of needing an HTTP fake. |
+| `ITaskRepository` / `TaskRepository` | `Data/Repositories/` | Local task persistence behind an interface. |
+| `IChangeLogRepository` / `ChangeLogRepository` | `Data/Repositories/` | History of sync operations. |
+| `CalendarSyncService`, `BulkOperationService` | `Services/` | Secondary features surfaced through `CalendarCommand` and `BulkCommand`. |
 
-#### Event Bus (`Events/EventBus.cs`)
-- Pub/sub event system
-- Decouples components
-- Handles async event handlers
-- Built-in handlers for ConflictDetected, SyncCompleted
+All registrations live in `Infrastructure/Configuration/DependencyInjection.AddApplicationServices()`. Everything is a singleton - correct for a single-shot console process where there is no request scope to speak of.
 
-### Application Layer
+### Domain layer (`Domain/`)
 
-#### SyncService (`Services/SyncService.cs`)
-The central orchestrator managing the entire sync workflow:
+Plain models with no infrastructure dependencies: `Task`, `NotionPage`, `SyncConfig`, `ChangeLog`, `ConflictDiff`, `ConflictResolution`, plus the `SyncStatus` enum and the `SyncException` hierarchy. `SyncConfig` carries the knobs that drive the whole cycle: `Direction` (`Bidirectional`/`LocalToNotion`/`NotionToLocal`), `ConflictStrategy`, `FieldConflictStrategies`, `LastSyncAt`.
 
-```csharp
-public async Task<SyncResult> ExecuteSyncAsync(SyncConfig config)
-{
-    // 1. Validation
-    ValidateConfiguration(config);
-    
-    // 2. Create backup (if enabled)
-    await BackupService.CreateBackupAsync(config);
-    
-    // 3. Load current state
-    var localTasks = await LocalFileService.LoadTasksAsync();
-    var notionPages = await NotionApiService.FetchPagesAsync();
-    
-    // 4. Detect changes
-    var changes = await ChangeDetectionService.DetectChangesAsync(
-        localTasks, notionPages);
-    
-    // 5. Identify conflicts
-    var conflicts = IdentifyConflicts(changes);
-    
-    // 6. Resolve conflicts
-    var resolutions = await ConflictResolutionService.ResolveAsync(
-        conflicts, config.Strategy);
-    
-    // 7. Apply changes
-    await ApplyChangesAsync(changes, resolutions);
-    
-    // 8. Persist sync state
-    await ChangeLogRepository.RecordChangesAsync(changes);
-    
-    // 9. Publish events
-    await EventBus.PublishAsync(new SyncCompletedEvent(...));
-    
-    return new SyncResult { ... };
-}
-```
+### CLI (`Cli/`, `Commands/`)
 
-#### ChangeDetectionService (`Services/ChangeDetectionService.cs`)
-Compares local and Notion states to identify modifications:
+`CliArgumentParser` plus command classes (`SyncCommand`, `ConfigureCommand`, `StatusCommand`, `BulkCommand`, `CalendarCommand`, `ConflictCommand`, `HelpCommand`). `CalendarCommand`, `BulkCommand` and `ConflictCommand` are DI-registered; the default `Program.Main` currently runs a sync directly rather than dispatching through the parser.
 
-```csharp
-public async Task<List<Change>> DetectChangesAsync(
-    List<Task> local, List<NotionPage> notion)
-{
-    var changes = new List<Change>();
-    
-    // Compare each task
-    foreach (var localTask in local)
-    {
-        var notionPage = notion.FirstOrDefault(p => 
-            p.Id == localTask.NotionPageId);
-        
-        if (notionPage == null)
-            changes.Add(new Change(ChangeType.Deleted, localTask));
-        else if (HasChanged(localTask, notionPage))
-            changes.Add(new Change(ChangeType.Modified, localTask));
-    }
-    
-    // Find new Notion pages not in local
-    foreach (var page in notion)
-    {
-        if (!local.Any(t => t.NotionPageId == page.Id))
-            changes.Add(new Change(ChangeType.Created, page));
-    }
-    
-    return changes;
-}
+### Supporting libraries (present, NOT on the default execution path)
 
-private bool HasChanged(Task local, NotionPage notion)
-    => local.ModifiedAt < notion.LastEditedTime
-    || !FieldsEqual(local, notion);
-```
+These modules compile and are unit-tested, but nothing in `Program.cs`/`DependencyInjection.cs` registers or invokes them. They are building blocks for embedding scenarios (see `examples/`):
 
-#### ConflictResolutionService (`Services/ConflictResolutionService.cs`)
-Applies conflict resolution strategies when changes conflict:
+- `Pipeline/SyncPipeline.cs` - ordered `ISyncStep` execution with a shared `PipelineContext`; the intended seam for composing custom sync stages without touching `SyncService`.
+- `Events/EventBus.cs` - in-process pub/sub (`Subscribe<T>`, `PublishAsync<T>`) with sample handlers in `Events/EventHandlers/`.
+- `Caching/` - `CacheProvider` (in-memory, TTL) and `CacheKey` builder. Note: `NotionApiService` does not use it; caching is opt-in by the embedder.
+- `Middleware/` - error handling, logging and rate limiting wrappers.
+- `Workers/` - `SyncWorker` (loop + cancellation for periodic sync) and `HealthCheckWorker`.
+- `Formatters/` - JSON/CSV/Markdown/XML export of tasks.
+- `Utils/` - `RetryHelper` (retry with backoff), `CryptoHelper`, validation and string/date helpers.
 
-```csharp
-public async Task<List<Resolution>> ResolveAsync(
-    List<Conflict> conflicts, ResolutionStrategy strategy)
-{
-    var resolutions = new List<Resolution>();
-    
-    foreach (var conflict in conflicts)
-    {
-        var resolution = strategy switch
-        {
-            "latest-wins" => conflict.LocalChange.Timestamp > 
-                conflict.NotionChange.Timestamp
-                ? conflict.LocalChange 
-                : conflict.NotionChange,
-            
-            "local-priority" => conflict.LocalChange,
-            
-            "notion-priority" => conflict.NotionChange,
-            
-            "merge" => await MergeChangesAsync(conflict),
-            
-            "manual" => await PromptUserAsync(conflict),
-            
-            _ => throw new InvalidOperationException()
-        };
-        
-        resolutions.Add(new Resolution(conflict, resolution));
-        
-        if (conflict.IsConflict)
-            await EventBus.PublishAsync(
-                new ConflictDetectedEvent(conflict));
-    }
-    
-    return resolutions;
-}
-```
+Documenting this honestly matters: earlier revisions of this file described a layered system where the cache and rate limiter sat inside the API call path. They do not - wire them yourself if you need them.
 
-### Business Logic Layer
+## Key design decisions and trade-offs
 
-#### LocalFileService (`Services/LocalFileService.cs`)
-Manages local task file I/O:
+1. **Single-shot process over hosted service.** Sync is idempotent per cycle and cheap to restart, so cron/systemd-timer/container-scheduler semantics are simpler and more robust than an always-on daemon. Trade-off: no in-process scheduling or webhook push; `SyncWorker` exists if that changes.
 
-```csharp
-public async Task<List<Task>> LoadTasksAsync(string folderPath)
-{
-    var tasks = new List<Task>();
-    var files = Directory.GetFiles(folderPath, "*.json");
-    
-    foreach (var file in files)
-    {
-        var json = await File.ReadAllTextAsync(file);
-        var task = JsonConvert.DeserializeObject<Task>(json);
-        tasks.Add(task);
-    }
-    
-    return tasks;
-}
+2. **Incremental fetch as a first-class mode.** `FetchPagesSinceAsync` pushes the `last_edited_time` filter to Notion instead of fetching everything and diffing locally. For large databases this is the difference between a handful of requests and hundreds. Trade-off: correctness depends on `LastSyncAt` being trustworthy; a lost timestamp degrades to a full sync, which is the safe direction.
 
-public async Task SaveTaskAsync(Task task)
-{
-    task.ModifiedAt = DateTime.UtcNow;
-    var json = JsonConvert.SerializeObject(task, Formatting.Indented);
-    var filePath = Path.Combine(_basePath, $"{task.Id}.json");
-    await File.WriteAllTextAsync(filePath, json);
-}
-```
+3. **Concrete service classes, interfaces only at the persistence boundary.** `ITaskRepository`/`IChangeLogRepository` are interfaces because storage is the most likely thing to be swapped (SQLite vs files vs test doubles). The services are concrete with `virtual` members for test overrides - fewer indirection layers to read through, at the cost of slightly clumsier mocking. Deliberate: interface-per-class was rejected as ceremony.
 
-#### NotionApiService (`Services/NotionApiService.cs`)
-Interfaces with Notion API with caching and rate limiting:
+4. **Conflict resolution is strategy-per-field capable.** A single global strategy is wrong in practice (you usually want `NotionWins` for status but `LocalWins` for notes). `SyncConfig.FieldConflictStrategies` overrides the global `ConflictStrategy` per field name. Trade-off: field names are strings, so a typo means the override silently never matches.
 
-```csharp
-public async Task<List<NotionPage>> FetchPagesAsync(string databaseId)
-{
-    // Check cache first
-    var cacheKey = CacheKey.Build("notion_pages", databaseId);
-    if (_cache.TryGet(cacheKey, out var cached))
-        return cached as List<NotionPage>;
-    
-    // Apply rate limiting
-    await _rateLimiter.AcquireAsync();
-    
-    // Fetch from API
-    var response = await _httpClient.PostAsync(
-        $"/databases/{databaseId}/query",
-        new { filter = new { } });
-    
-    var pages = ParseResponse(response);
-    
-    // Cache result
-    _cache.Set(cacheKey, pages, TimeSpan.FromMinutes(5));
-    
-    return pages;
-}
-```
+5. **Errors become data, not exceptions.** `SyncResult` carries status, counters (created/updated/deleted/unchanged/conflicted) and error details. Only configuration errors throw (`ConfigurationException`) - those are operator mistakes that should fail loudly before any I/O happens.
 
-#### BackupService (`Services/BackupService.cs`)
-Creates and manages backups before sync operations:
+6. **Notion API version is pinned.** `Notion-Version: 2022-06-28` is a constant in `NotionApiService`. Upgrading is a conscious code change with a re-test, never an ambient breakage.
 
-```csharp
-public async Task<string> CreateBackupAsync(
-    string syncConfigId, string backupName)
-{
-    var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-    var backupDir = Path.Combine(_backupPath, 
-        $"{backupName}_{timestamp}");
-    
-    Directory.CreateDirectory(backupDir);
-    
-    // Backup local files
-    await CopyDirectoryAsync(_localPath, 
-        Path.Combine(backupDir, "local"));
-    
-    // Backup database
-    await _database.ExportAsync(
-        Path.Combine(backupDir, "database.db"));
-    
-    // Create manifest
-    var manifest = new BackupManifest
-    {
-        CreatedAt = DateTime.UtcNow,
-        SyncConfigId = syncConfigId,
-        FilesBackedUp = Directory.GetFiles(_localPath).Length
-    };
-    
-    await File.WriteAllTextAsync(
-        Path.Combine(backupDir, "manifest.json"),
-        JsonConvert.SerializeObject(manifest));
-    
-    return backupDir;
-}
-```
+## Data flow (bidirectional apply)
 
-### Data Access Layer
+`SyncService.ApplyChangesAsync` respects `SyncConfig.Direction`:
 
-#### TaskRepository (`Data/Repositories/TaskRepository.cs`)
-Persists task metadata and sync state:
+- **LocalToNotion / Bidirectional:** local tasks with `UpdatedAt > LastSyncAt` are pushed - existing pages via `UpdatePageAsync`, tasks without a `NotionPageId` via `CreatePageAsync` (the returned page id is written back to the task).
+- **NotionToLocal / Bidirectional:** Notion pages with `LastEditedTime > LastSyncAt` are pulled - matched by `NotionPageId`, updated or created locally; `Archived` pages mark the local task deleted.
 
-```csharp
-public async Task<List<Task>> GetAllAsync()
-{
-    using var connection = _dbConnection.GetConnection();
-    var tasks = await connection.QueryAsync<Task>(
-        "SELECT * FROM Tasks ORDER BY CreatedAt DESC");
-    return tasks.ToList();
-}
+The linkage key between the two worlds is `Task.NotionPageId`.
 
-public async Task SaveAsync(Task task)
-{
-    using var connection = _dbConnection.GetConnection();
-    await connection.ExecuteAsync(
-        @"INSERT OR REPLACE INTO Tasks 
-          (Id, Title, Status, Priority, ModifiedAt) 
-          VALUES (@Id, @Title, @Status, @Priority, @ModifiedAt)",
-        task);
-}
-```
+## Extension points
 
-#### ChangeLogRepository (`Data/Repositories/ChangeLogRepository.cs`)
-Tracks all sync operations and changes:
+- **New sync stage:** implement `ISyncStep`, compose via `SyncPipeline` (see `examples/`).
+- **React to sync events:** `EventBus.Subscribe<T>` with the event types in `Events/SyncEvents.cs`.
+- **Different storage:** implement `ITaskRepository` / `IChangeLogRepository`, swap the DI registration.
+- **New export format:** add a formatter alongside `Formatters/JsonFormatter.cs` et al.
+- **Periodic execution:** host `SyncWorker` in a generic host or wire it into `Program.cs`.
 
-```csharp
-public async Task<List<ChangeLog>> GetLatestChangesAsync(
-    string syncConfigId, int limit)
-{
-    using var connection = _dbConnection.GetConnection();
-    var changes = await connection.QueryAsync<ChangeLog>(
-        @"SELECT * FROM ChangeLogs 
-          WHERE SyncConfigId = @ConfigId
-          ORDER BY CreatedAt DESC
-          LIMIT @Limit",
-        new { ConfigId = syncConfigId, Limit = limit });
-    
-    return changes.ToList();
-}
-```
+## Known limitations
 
-## Data Models
+- `Program.Main` runs one hardcoded "Default Sync" config; multi-profile support exists in the model (`SyncConfig`) but not in the entry point.
+- `SyncService.GetSyncHistoryAsync` is a stub returning an empty list - history persistence is not implemented end-to-end.
+- No rate limiting or caching on the live Notion call path (both exist as opt-in components, see above). Notion's ~3 req/s limit is currently respected only by virtue of sequential awaits.
+- `Manual` conflict strategy parks conflicts as `PendingReview`; there is no interactive resolution loop in the console flow yet (`ConflictCommand` covers inspection).
+- Deletion propagation local-to-Notion currently calls `UpdatePageAsync` for deleted tasks rather than archiving pages.
 
-### Task Domain Model
+## Related docs
 
-```csharp
-public class Task
-{
-    public string Id { get; set; }
-    public string NotionPageId { get; set; }
-    public string Title { get; set; }
-    public TaskStatus Status { get; set; }
-    public TaskPriority Priority { get; set; }
-    public DateTime? DueDate { get; set; }
-    public List<string> Tags { get; set; }
-    public string AssigneeId { get; set; }
-    public string Description { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime ModifiedAt { get; set; }
-    public DateTime? SyncedAt { get; set; }
-    
-    public bool Validate() => !string.IsNullOrWhiteSpace(Title);
-}
-```
-
-### Change Tracking
-
-```csharp
-public class Change
-{
-    public string Id { get; set; }
-    public string TaskId { get; set; }
-    public ChangeType Type { get; set; }
-    public string Source { get; set; } // "local" or "notion"
-    public DateTime DetectedAt { get; set; }
-    public Dictionary<string, object> NewValues { get; set; }
-    public Dictionary<string, object> OldValues { get; set; }
-}
-
-public enum ChangeType { Created, Modified, Deleted }
-```
-
-### Conflict Model
-
-```csharp
-public class Conflict
-{
-    public string TaskId { get; set; }
-    public Change LocalChange { get; set; }
-    public Change NotionChange { get; set; }
-    
-    public bool IsConflict => LocalChange != null && NotionChange != null
-        && LocalChange.Timestamp > SyncedAt
-        && NotionChange.Timestamp > SyncedAt;
-}
-```
-
-## Design Patterns Used
-
-### Dependency Injection
-Services are registered in DependencyInjection.cs and injected via constructor:
-
-```csharp
-services.AddScoped<SyncService>();
-services.AddScoped<ChangeDetectionService>();
-services.AddScoped<ConflictResolutionService>();
-```
-
-### Repository Pattern
-Data access abstracted through repository interfaces:
-
-```csharp
-public interface ITaskRepository
-{
-    Task<List<Task>> GetAllAsync();
-    Task SaveAsync(Task task);
-    Task DeleteAsync(string taskId);
-}
-```
-
-### Strategy Pattern
-Conflict resolution strategies implemented as interchangeable algorithms:
-
-```csharp
-public interface IConflictResolutionStrategy
-{
-    Task<Change> ResolveAsync(Conflict conflict);
-}
-
-public class LatestWinsStrategy : IConflictResolutionStrategy
-{
-    public async Task<Change> ResolveAsync(Conflict conflict)
-        => conflict.LocalChange.Timestamp > conflict.NotionChange.Timestamp
-            ? conflict.LocalChange 
-            : conflict.NotionChange;
-}
-```
-
-### Observer Pattern
-Event system for loose coupling:
-
-```csharp
-public interface IEventHandler<T>
-{
-    Task HandleAsync(T @event);
-}
-
-public class ConflictDetectedHandler : IEventHandler<ConflictDetectedEvent>
-{
-    public async Task HandleAsync(ConflictDetectedEvent @event)
-    {
-        // Custom conflict handling logic
-    }
-}
-```
-
-### Caching Strategy
-Decorator pattern for API service caching:
-
-```csharp
-public class CachedNotionApiService : INotionApiService
-{
-    private readonly INotionApiService _inner;
-    private readonly ICacheProvider _cache;
-    
-    public async Task<List<NotionPage>> FetchPagesAsync(string dbId)
-    {
-        var cached = _cache.Get(CacheKey.Build("pages", dbId));
-        if (cached != null) return cached;
-        
-        var result = await _inner.FetchPagesAsync(dbId);
-        _cache.Set(CacheKey.Build("pages", dbId), result, TTL);
-        return result;
-    }
-}
-```
-
-## Concurrency & Threading
-
-### Async/Await
-All I/O operations use async/await for non-blocking execution:
-
-```csharp
-public async Task<SyncResult> ExecuteSyncAsync(SyncConfig config)
-{
-    // Parallel local and Notion loads
-    var localTask = LocalFileService.LoadTasksAsync(config.LocalPath);
-    var notionTask = NotionApiService.FetchPagesAsync(config.DatabaseId);
-    
-    await Task.WhenAll(localTask, notionTask);
-    
-    var local = localTask.Result;
-    var notion = notionTask.Result;
-}
-```
-
-### Rate Limiting
-Semaphore-based rate limiter prevents API throttling:
-
-```csharp
-public class RateLimiter
-{
-    private readonly SemaphoreSlim _semaphore;
-    private readonly int _allowedRequests;
-    private readonly TimeSpan _window;
-    
-    public async Task AcquireAsync()
-    {
-        await _semaphore.WaitAsync();
-        // Reset counter every window
-    }
-}
-```
-
-## Error Handling
-
-### Custom Exceptions
-Domain-specific exceptions for different failure scenarios:
-
-```csharp
-public class SyncException : Exception { }
-public class NotionApiException : SyncException { }
-public class ConfigurationException : SyncException { }
-public class ConflictException : SyncException { }
-```
-
-### Retry Logic
-Transient failures retried with exponential backoff:
-
-```csharp
-public async Task<T> ExecuteWithRetryAsync<T>(
-    Func<Task<T>> operation, int maxRetries = 3)
-{
-    for (int attempt = 0; attempt < maxRetries; attempt++)
-    {
-        try
-        {
-            return await operation();
-        }
-        catch (Exception ex) when (IsTransient(ex) && attempt < maxRetries - 1)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
-        }
-    }
-}
-```
-
-## Performance Considerations
-
-### Caching Strategy
-- **In-memory cache** for frequently accessed data (default TTL: 5 minutes)
-- **Cache invalidation** on successful sync operations
-- **Cache statistics** exposed for monitoring
-
-### Batch Processing
-- Process tasks in batches to reduce memory usage
-- Configurable batch size in configuration
-- Pagination for large datasets
-
-### Connection Pooling
-- HTTP client reused across requests
-- SQLite connection pooling enabled
-- File system operations buffered
-
-## Deployment Architecture
-
-```
-┌──────────────────────────────────────────────────────┐
-│              Kubernetes / Docker Swarm              │
-├──────────────────────────────────────────────────────┤
-│                                                       │
-│  ┌────────────────────────────────────────────────┐  │
-│  │  Notion Task Sync Pod                         │  │
-│  │  ┌──────────────────────────────────────────┐ │  │
-│  │  │ dotnet run -- sync                      │ │  │
-│  │  │ (or web service on port 5000)           │ │  │
-│  │  └──────────────────────────────────────────┘ │  │
-│  └────────────────────────────────────────────────┘  │
-│                       │                              │
-│  ┌────────────────────▼─────────────────────────┐  │
-│  │  Persistent Volume (Tasks & Backups)        │  │
-│  └────────────────────────────────────────────────┘  │
-│                                                       │
-└──────────────────────────────────────────────────────┘
-         │
-         ├─► Notion API (Cloud)
-         └─► SQLite Database (Local/Persistent)
-```
-
----
-
-**Built by [Vladyslav Zaiets](https://sarmkadan.com) - CTO & Software Architect**
+- [GETTING_STARTED.md](GETTING_STARTED.md) - setup and first sync
+- [API_REFERENCE.md](API_REFERENCE.md) - public surface
+- [DEPLOYMENT.md](DEPLOYMENT.md) - Docker / scheduling
