@@ -1317,6 +1317,75 @@ class Program
 }
 ```
 
+## CryptoHelper
+
+The `CryptoHelper` static class provides cryptographic utilities for hashing, encryption, and data integrity verification. It's designed for secure handling of sensitive data like API keys and authentication tokens, with constant-time comparison to prevent timing attacks.
+
+### Public Members
+
+- `HashSha256(string input)` - Computes a SHA256 hash of a string for fingerprinting and verification
+- `HashMd5(string input)` - Computes an MD5 hash of a string for checksums (less secure than SHA256)
+- `GenerateRandomToken(int length = 32)` - Generates a cryptographically secure random token for authentication
+- `VerifyHashSha256(string plaintext, string hash)` - Verifies if a plaintext matches a SHA256 hash
+- `ComputeHmacSha256(string data, string key)` - Computes HMAC-SHA256 signature of data with a key for data integrity
+- `VerifyHmacSha256(string data, string signature, string key)` - Verifies an HMAC-SHA256 signature to detect tampering
+- `GenerateFingerprint(string content)` - Generates a cryptographic fingerprint of content for change detection
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Example 1: Generate secure random tokens for authentication
+        var apiToken = CryptoHelper.GenerateRandomToken();
+        var sessionToken = CryptoHelper.GenerateRandomToken(64);
+        Console.WriteLine($"API Token: {apiToken}");
+        Console.WriteLine($"Session Token: {sessionToken}");
+
+        // Example 2: Hash passwords for secure storage
+        var password = "user-secret-password-123";
+        var passwordHash = CryptoHelper.HashSha256(password);
+        Console.WriteLine($"Password hash: {passwordHash}");
+
+        // Example 3: Verify password without storing plain text
+        var isPasswordValid = CryptoHelper.VerifyHashSha256(password, passwordHash);
+        Console.WriteLine($"Password valid: {isPasswordValid}");
+
+        // Example 4: Generate checksums for data integrity
+        var fileContent = "Important configuration data";
+        var checksum = CryptoHelper.HashMd5(fileContent);
+        Console.WriteLine($"MD5 checksum: {checksum}");
+
+        // Example 5: Create HMAC signatures for API requests
+        var secretKey = "my-secret-api-key";
+        var requestData = "{\"userId\": 123, \"action\": \"update\"}";
+        var signature = CryptoHelper.ComputeHmacSha256(requestData, secretKey);
+        Console.WriteLine($"Request signature: {signature}");
+
+        // Example 6: Verify API request integrity
+        var isSignatureValid = CryptoHelper.VerifyHmacSha256(requestData, signature, secretKey);
+        Console.WriteLine($"Signature valid: {isSignatureValid}");
+
+        // Example 7: Generate fingerprints for change detection
+        var document = "This is the document content that needs fingerprinting";
+        var fingerprint = CryptoHelper.GenerateFingerprint(document);
+        Console.WriteLine($"Document fingerprint: {fingerprint}");
+
+        // Example 8: Use tokens in a realistic scenario
+        var userRegistrationToken = CryptoHelper.GenerateRandomToken(48);
+        Console.WriteLine($"\nUser registration workflow:");
+        Console.WriteLine($"1. Generated secure token: {userRegistrationToken.Substring(0, 16)}...");
+        Console.WriteLine($"2. Stored hash only: {CryptoHelper.HashSha256(userRegistrationToken).Substring(0, 16)}...");
+        Console.WriteLine($"3. Can verify without storing plain token");
+    }
+}
+```
+
 ## AdvancedUsageExtensions
 
 The `AdvancedUsageExtensions` class provides advanced utilities for validating, optimizing, and analyzing task synchronization workflows. It includes methods to validate configuration, optimize sync settings, execute syncs with retry logic, and analyze performance metrics.
