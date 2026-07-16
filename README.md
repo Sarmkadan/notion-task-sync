@@ -437,6 +437,125 @@ class Program
         // Setup logger
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var logger = loggerFactory.CreateLogger<ErrorHandlingMiddleware>();
+
+        // Create middleware instance
+        var errorHandler = new ErrorHandlingMiddleware(logger);
+
+        // Example 1: Handle async operation with error checking
+        var syncResult = await errorHandler.TryExecuteAsync("SyncTaskOperation", async () =>
+        {
+            // Simulate a sync operation that might fail
+            if (DateTime.UtcNow.Second % 3 == 0)
+            {
+                throw new SyncException("Failed to sync with Notion API: rate limit exceeded");
+            }
+
+            return new { TasksSynced = 42, Status = "Success" };
+        });
+
+        if (syncResult.success)
+        {
+            Console.WriteLine($"Operation succeeded: {syncResult.result}");
+        }
+        else
+        {
+            Console.WriteLine($"Operation failed: {syncResult.error}");
+
+            // Get appropriate status code for the error
+            var statusCode = errorHandler.GetStatusCode(new SyncException(syncResult.error!));
+            Console.WriteLine($"HTTP Status Code: {statusCode}");
+
+            // Check if error is retryable
+            var isRetryable = errorHandler.IsRetryable(new SyncException(syncResult.error!));
+            Console.WriteLine($"Is retryable: {isRetryable}");
+        }
+    }
+}
+```
+
+## RateLimitingMiddleware
+
+The `RateLimitingMiddleware` class enforces rate limiting to prevent exceeding API quotas during task synchronization. It tracks API calls within a 60-second sliding window and automatically delays requests when approaching configured rate limits. The middleware supports both synchronous and asynchronous operations, and can process API-provided rate limit headers for intelligent backoff.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Middleware;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup logger
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<RateLimitingMiddleware>();
+
+        // Create rate limiting middleware with 30 requests per minute limit
+        var rateLimiter = new RateLimitingMiddleware(
+            requestsPerMinute: 30,
+            eventBus: new EventBus(),
+            logger: logger
+        );
+
+        // Example 1: Async operation with automatic rate limiting
+        var asyncResult = await rateLimiter.ExecuteWithRateLimitAsync(async () =>
+        {
+            // Simulate API call
+            await Task.Delay(50);
+            return new { Status = "API call successful", Data = "response data" };
+        }, "NotionAPI");
+
+        Console.WriteLine($"Async operation result: {asyncResult.Status}");
+        Console.WriteLine($"Rate limit status: {rateLimiter.GetStatus().RequestsUsed} used, {rateLimiter.GetStatus().RequestsRemaining} remaining");
+
+        // Example 2: Sync operation with rate limiting
+        var syncResult = rateLimiter.ExecuteWithRateLimit(() =>
+        {
+            // Simulate local operation
+            return "Local operation completed";
+        }, "LocalService");
+
+        Console.WriteLine($"Sync operation result: {syncResult}");
+
+        // Example 3: Process API rate limit headers
+        rateLimiter.ProcessRateLimitHeader(
+            remainingRequests: 5,
+            resetEpoch: (int)DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeSeconds(),
+            apiService: "NotionAPI"
+        );
+
+        // Example 4: Check current rate limit status
+        var status = rateLimiter.GetStatus();
+        Console.WriteLine($"Rate limit: {status.RequestsUsed}/{status.LimitPerMinute} used");
+        Console.WriteLine($"Reset at: {status.WindowResetAt:T}");
+        Console.WriteLine($"Critical: {status.IsCritical}, High: {status.IsHigh}");
+
+        // Example 5: Reset rate limiter counters
+        rateLimiter.Reset();
+        Console.WriteLine($"Rate limiter reset. New window started.");
+    }
+}
+```
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Middleware;
+using NotionTaskSync.Domain.Exceptions;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup logger
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<ErrorHandlingMiddleware>();
         
         // Create middleware instance
         var errorHandler = new ErrorHandlingMiddleware(logger);
