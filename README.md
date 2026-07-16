@@ -289,6 +289,96 @@ class Program
 }
 ```
 
+## SyncService
+
+The `SyncService` class orchestrates bidirectional synchronization between Notion databases and local task storage. It coordinates change detection, conflict resolution, and data propagation across both systems according to the configured sync direction and conflict resolution strategy.
+
+### Public Members
+
+- `SyncService(...)` - Constructor that initializes the service with all required dependencies
+- `public async Task<SyncResult> ExecuteSyncAsync(SyncConfig config)` - Executes a full bidirectional sync for a given configuration
+- `public async Task<List<SyncResult>> GetSyncHistoryAsync(Guid configId, int limit = 50)` - Retrieves sync history for a configuration
+- `public sealed class SyncResult` - Contains the results and statistics from a sync operation with properties:
+  - `ConfigId` (Guid)
+  - `StartedAt` (DateTime)
+  - `CompletedAt` (DateTime?)
+  - `Status` (SyncStatus)
+  - `LocalTaskCount` (int)
+  - `NotionPageCount` (int)
+  - `LocalChangesDetected` (int)
+  - `NotionChangesDetected` (int)
+  - `ConflictsDetected` (int)
+  - `ConflictsResolved` (int)
+  - `ConflictsPendingReview` (int)
+  - `Created` (int)
+  - `Updated` (int)
+  - `Deleted` (int)
+  - `Unchanged` (int)
+  - `ErrorMessage` (string?)
+  - `ErrorDetails` (string?)
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+class Program
+{
+    static async Task Main()
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder.AddConsole());
+        services.AddApplicationServices(new ConfigurationBuilder().Build());
+
+        var serviceProvider = services.BuildServiceProvider();
+        var syncService = serviceProvider.GetRequiredService<SyncService>();
+
+        // Create sync configuration
+        var config = new SyncConfig(
+            "DailyTeamSync",
+            "550e8400-e29b-41d4-a716-446655440000", // Notion database ID
+            @"./tasks" // Local folder path
+        );
+
+        // Configure sync direction and strategy
+        config.Direction = SyncDirection.Bidirectional;
+        config.ConflictStrategy = ConflictResolutionStrategy.LocalWins;
+        config.SyncIntervalSeconds = 300; // 5 minutes
+        config.IsEnabled = true;
+
+        // Execute sync with error handling
+        try
+        {
+            var result = await syncService.ExecuteSyncAsync(config);
+
+            Console.WriteLine($"Sync completed: {result.Status}");
+            Console.WriteLine($"Duration: {result.Duration?.TotalSeconds:F1} seconds");
+            Console.WriteLine($"Tasks processed: {result.LocalTaskCount} local, {result.NotionPageCount} Notion");
+            Console.WriteLine($"Changes: {result.LocalChangesDetected} local, {result.NotionChangesDetected} Notion");
+            Console.WriteLine($"Operations: {result.Created} created, {result.Updated} updated, {result.Deleted} deleted");
+            Console.WriteLine($"Conflicts: {result.ConflictsDetected} detected, {result.ConflictsResolved} resolved");
+
+            if (result.Status == SyncStatus.Failed)
+            {
+                Console.WriteLine($"Error: {result.ErrorMessage}");
+            }
+        }
+        catch (ConfigurationException ex)
+        {
+            Console.WriteLine($"Configuration error: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Sync failed: {ex.Message}");
+        }
+    }
+}
+```
+
 ## AdvancedUsageExtensions
 
 The `AdvancedUsageExtensions` class provides advanced utilities for validating, optimizing, and analyzing task synchronization workflows. It includes methods to validate configuration, optimize sync settings, execute syncs with retry logic, and analyze performance metrics.
