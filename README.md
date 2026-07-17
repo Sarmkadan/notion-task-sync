@@ -1443,6 +1443,108 @@ class Program
 }
 ```
 
+## CliArgumentParserValidation
+
+The `CliArgumentParserValidation` static class provides validation utilities for command-line argument parsing results. It validates parsed command structures, option values, argument lists, and error states to ensure CLI commands are properly formed before execution. The validation methods help catch parsing failures, missing required options, invalid option values, and inconsistent error states.
+
+### Public Members
+
+- `Validate(this CliArgumentParser value)` - Validates a parsed command and returns a list of human-readable problems
+- `Validate(this ParsedCommand value)` - Validates a parsed command structure and returns validation problems
+- `IsValid(this CliArgumentParser value)` - Determines if a parsed command is valid
+- `IsValid(this ParsedCommand value)` - Determines if a parsed command structure is valid
+- `EnsureValid(this CliArgumentParser value)` - Validates a parsed command and throws if invalid
+- `EnsureValid(this ParsedCommand value)` - Validates a parsed command structure and throws if invalid
+- `HasRequiredOptions(this IReadOnlyDictionary<string, string> options, params string[] requiredOptionNames)` - Validates that required options are present and non-empty
+- `HasAnyRequiredOption(this IReadOnlyDictionary<string, string> options, params string[] requiredOptionNames)` - Validates that at least one of the required options is present and non-empty
+- `IsValidOption<T>(this IReadOnlyDictionary<string, string> options, string optionName, Func<string, T> parser, string? validationMessage = null)` - Validates that option values can be parsed as specific types
+- `IsValidRangeOption(this IReadOnlyDictionary<string, string> options, string optionName, int minValue, int maxValue, string? validationMessage = null)` - Validates that option values fall within a specific range
+- `IsValidDateOption(this IReadOnlyDictionary<string, string> options, string optionName, string? validationMessage = null)` - Validates that option values are valid dates
+- `IsValidDateTimeOption(this IReadOnlyDictionary<string, string> options, string optionName, string? validationMessage = null)` - Validates that option values are valid date-time values
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Cli;
+using System;
+using System.Collections.Generic;
+
+class Program
+{
+    static void Main()
+    {
+        // Example 1: Validate a parsed command
+        var parser = new CliArgumentParser();
+        var parsedCommand = parser.Parse(new[] { "sync", "--database-id", "test-db-123", "--local-path", @"./tasks" });
+        
+        var validationProblems = parsedCommand.Validate();
+        if (validationProblems.Count > 0)
+        {
+            Console.WriteLine("Validation errors found:");
+            foreach (var problem in validationProblems)
+            {
+                Console.WriteLine($"- {problem}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Command is valid!");
+        }
+        
+        // Example 2: Check if command is valid using IsValid
+        var isValid = parsedCommand.IsValid();
+        Console.WriteLine($"Is command valid: {isValid}");
+        
+        // Example 3: Ensure command is valid (throws if invalid)
+        try
+        {
+            parsedCommand.EnsureValid();
+            Console.WriteLine("Command passed validation!");
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"Validation failed: {ex.Message}");
+        }
+        
+        // Example 4: Validate required options
+        var options = new Dictionary<string, string>
+        {
+            {"database-id", "test-db-123"},
+            {"local-path", @"./tasks"}
+        };
+        
+        var hasRequired = options.HasRequiredOptions("database-id", "local-path");
+        Console.WriteLine($"Has required options: {hasRequired}");
+        
+        // Example 5: Validate option value types
+        var isValidInt = options.IsValidOption("max-retries", int.Parse);
+        Console.WriteLine($"Is 'max-retries' a valid integer: {isValidInt}");
+        
+        // Example 6: Validate option value ranges
+        var isInRange = options.IsValidRangeOption("max-retries", 1, 10);
+        Console.WriteLine($"Is 'max-retries' in range 1-10: {isInRange}");
+        
+        // Example 7: Validate date options
+        var dateOptions = new Dictionary<string, string>
+        {
+            {"due-date", "2024-12-31"}
+        };
+        
+        var isValidDate = dateOptions.IsValidDateOption("due-date");
+        Console.WriteLine($"Is 'due-date' a valid date: {isValidDate}");
+        
+        // Example 8: Validate date-time options
+        var dateTimeOptions = new Dictionary<string, string>
+        {
+            {"start-time", "2024-12-31T14:30:00"}
+        };
+        
+        var isValidDateTime = dateTimeOptions.IsValidDateTimeOption("start-time");
+        Console.WriteLine($"Is 'start-time' a valid date-time: {isValidDateTime}");
+    }
+}
+```
+
 ## CacheKeyBuilder
 
 The `CacheKeyBuilder` class provides a fluent interface for generating consistent and standardized cache keys throughout the application. It ensures cache keys follow a predictable format with a configurable prefix, reducing bugs from inconsistent key generation and making cache invalidation more reliable. The builder supports various entity types and provides both instance methods for dynamic keys and static factory methods for common use cases.
