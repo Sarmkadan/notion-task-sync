@@ -3,7 +3,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =====================================================================
+// ===================================================================
 
 namespace NotionTaskSync.Services;
 
@@ -18,6 +18,10 @@ using NotionTaskSync.Domain.Models;
 /// Provides System.Text.Json serialization extensions for <see cref="ChangeDetectionService"/>
 /// to enable JSON serialization/deserialization of the service's data structures.
 /// </summary>
+/// <remarks>
+/// This class provides convenience methods for serializing and deserializing ChangeDetectionService
+/// and related data models to/from JSON using camelCase naming policy and ignoring cycles.
+/// </remarks>
 public static class ChangeDetectionServiceJsonExtensions
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
@@ -36,23 +40,10 @@ public static class ChangeDetectionServiceJsonExtensions
     /// <returns>A JSON string representation of the service instance.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     public static string ToJson(this ChangeDetectionService value, bool indented = false)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-
-        var options = indented
-            ? new JsonSerializerOptions(_jsonOptions)
-            {
-                WriteIndented = true
-            }
-            : _jsonOptions;
-
-        return JsonSerializer.Serialize(value, options);
-    }
+        => JsonSerializer.Serialize(value, indented ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true } : _jsonOptions);
 
     /// <summary>
     /// Deserializes a JSON string to a <see cref="ChangeDetectionService"/> instance.
-    /// Note: The deserialized service will have null dependencies and should be
-    /// properly initialized before use.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>A <see cref="ChangeDetectionService"/> instance populated from JSON, or null if deserialization fails.</returns>
@@ -60,15 +51,7 @@ public static class ChangeDetectionServiceJsonExtensions
     public static ChangeDetectionService? FromJson(string json)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
-
-        try
-        {
-            return JsonSerializer.Deserialize<ChangeDetectionService>(json, _jsonOptions);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        return JsonSerializer.Deserialize<ChangeDetectionService>(json, _jsonOptions);
     }
 
     /// <summary>
@@ -81,7 +64,6 @@ public static class ChangeDetectionServiceJsonExtensions
     public static bool TryFromJson(string json, out ChangeDetectionService? value)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
-
         try
         {
             value = JsonSerializer.Deserialize<ChangeDetectionService>(json, _jsonOptions);
@@ -102,18 +84,7 @@ public static class ChangeDetectionServiceJsonExtensions
     /// <returns>A JSON string representation of the change logs.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="changes"/> is null.</exception>
     public static string ToJson(this List<ChangeLog> changes, bool indented = false)
-    {
-        ArgumentNullException.ThrowIfNull(changes);
-
-        var options = indented
-            ? new JsonSerializerOptions(_jsonOptions)
-            {
-                WriteIndented = true
-            }
-            : _jsonOptions;
-
-        return JsonSerializer.Serialize(changes, options);
-    }
+        => JsonSerializer.Serialize(changes, indented ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true } : _jsonOptions);
 
     /// <summary>
     /// Deserializes a JSON string to a <see cref="List{T}"/> of <see cref="ChangeLog"/>.
@@ -124,15 +95,7 @@ public static class ChangeDetectionServiceJsonExtensions
     public static List<ChangeLog>? FromJsonToChangeLogList(string json)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
-
-        try
-        {
-            return JsonSerializer.Deserialize<List<ChangeLog>>(json, _jsonOptions);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        return JsonSerializer.Deserialize<List<ChangeLog>>(json, _jsonOptions);
     }
 
     /// <summary>
@@ -145,7 +108,6 @@ public static class ChangeDetectionServiceJsonExtensions
     public static bool TryFromJson(string json, out List<ChangeLog>? value)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
-
         try
         {
             value = JsonSerializer.Deserialize<List<ChangeLog>>(json, _jsonOptions);
@@ -166,18 +128,7 @@ public static class ChangeDetectionServiceJsonExtensions
     /// <returns>A JSON string representation of the conflict resolutions.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="conflicts"/> is null.</exception>
     public static string ToJson(this List<ConflictResolution> conflicts, bool indented = false)
-    {
-        ArgumentNullException.ThrowIfNull(conflicts);
-
-        var options = indented
-            ? new JsonSerializerOptions(_jsonOptions)
-            {
-                WriteIndented = true
-            }
-            : _jsonOptions;
-
-        return JsonSerializer.Serialize(conflicts, options);
-    }
+        => JsonSerializer.Serialize(conflicts, indented ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true } : _jsonOptions);
 
     /// <summary>
     /// Deserializes a JSON string to a <see cref="List{T}"/> of <see cref="ConflictResolution"/>.
@@ -188,15 +139,7 @@ public static class ChangeDetectionServiceJsonExtensions
     public static List<ConflictResolution>? FromJsonToConflictResolutionList(string json)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
-
-        try
-        {
-            return JsonSerializer.Deserialize<List<ConflictResolution>>(json, _jsonOptions);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        return JsonSerializer.Deserialize<List<ConflictResolution>>(json, _jsonOptions);
     }
 
     /// <summary>
@@ -209,7 +152,6 @@ public static class ChangeDetectionServiceJsonExtensions
     public static bool TryFromJson(string json, out List<ConflictResolution>? value)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
-
         try
         {
             value = JsonSerializer.Deserialize<List<ConflictResolution>>(json, _jsonOptions);
