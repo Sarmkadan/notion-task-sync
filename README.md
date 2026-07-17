@@ -1084,6 +1084,81 @@ class Program
 }
 ```
 
+
+## ConflictDiffServiceJsonExtensions
+
+The `ConflictDiffServiceJsonExtensions` static class provides JSON serialization and deserialization extensions for the `ConflictDiffService` and related diff types using System.Text.Json. It enables converting conflict resolution results and diff line information to/from JSON format for storage, transmission, or logging purposes.
+
+### Public Members
+
+- `ToJson(this ConflictDiffService value, bool indented = false)` - Serializes a `ConflictDiffService` instance to a JSON string with optional indentation
+- `FromJson(string json)` - Deserializes a JSON string into a `ConflictDiffService` instance (returns null on failure)
+- `TryFromJson(string json, out ConflictDiffService? value)` - Attempts to deserialize JSON with error handling, returns true on success
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Text.Json;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a conflict diff result
+        var conflictResult = new ConflictDiffResult
+        {
+            ConflictId = Guid.NewGuid(),
+            PropertyName = "Status",
+            LocalValue = "InProgress",
+            NotionValue = "Todo",
+            GeneratedAt = DateTime.UtcNow
+        };
+
+        conflictResult.Lines.Add(new DiffLine
+        {
+            Text = "Local: InProgress",
+            Kind = DiffLineKind.Local,
+            LocalLineNumber = 5,
+            NotionLineNumber = null
+        });
+
+        conflictResult.Lines.Add(new DiffLine
+        {
+            Text = "Remote: Todo",
+            Kind = DiffLineKind.Remote,
+            LocalLineNumber = null,
+            NotionLineNumber = 8
+        });
+
+        // Serialize to JSON
+        var json = conflictResult.ToJson(indented: true);
+        Console.WriteLine("Serialized conflict diff:");
+        Console.WriteLine(json);
+
+        // Deserialize back to object
+        var deserialized = ConflictDiffServiceJsonExtensions.FromJson(json);
+        Console.WriteLine($"
+Deserialized conflict ID: {deserialized?.ConflictId}");
+        Console.WriteLine($"Property: {deserialized?.PropertyName}");
+        Console.WriteLine($"Lines count: {deserialized?.Lines.Count}");
+
+        // Serialize ConflictDiffService
+        var diffService = new ConflictDiffService();
+        var serviceJson = diffService.ToJson();
+        Console.WriteLine($"
+ConflictDiffService JSON length: {serviceJson.Length} characters");
+
+        // TryFromJson with error handling
+        var invalidJson = "{ invalid json }";
+        var success = ConflictDiffServiceJsonExtensions.TryFromJson(invalidJson, out var parsedService);
+        Console.WriteLine($"
+TryFromJson with invalid JSON succeeded: {success}");
+    }
+}
+```
 ## CollectionExtensions
 
 The `CollectionExtensions` static class provides extension methods for collections (lists, enumerables, dictionaries) that simplify common collection operations used throughout the application. It includes utilities for checking collection state, safe access, batching, partitioning, filtering, and transformation operations that reduce repetitive code patterns in data processing pipelines.
