@@ -9,7 +9,6 @@ namespace NotionTaskSync.Cli;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 
 /// <summary>
 /// Provides validation helpers for <see cref="CliArgumentParser"/> instances.
@@ -33,6 +32,10 @@ public static class CliArgumentParserValidation
         if (value.Parse([]) is { } parsedCommand)
         {
             problems.AddRange(parsedCommand.Validate());
+        }
+        else
+        {
+            problems.Add("Parse operation returned null, indicating a critical parsing failure.");
         }
 
         return problems.AsReadOnly();
