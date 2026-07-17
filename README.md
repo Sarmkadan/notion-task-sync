@@ -347,6 +347,114 @@ class Program
 }
 ```
 
+## TimeHelper
+
+The `TimeHelper` static class provides utility methods for working with dates, times, and time intervals in the application. It handles UTC time operations, date formatting, parsing, time comparisons, and synchronization timing calculations. The helper is designed for scenarios involving task scheduling, sync operations, and temporal calculations.
+
+### Public Members
+
+- `GetCurrentUtcTime()` - Gets the current UTC time
+- `FormatDateTime(DateTime dateTime)` - Formats a DateTime as a string using the application's standard format
+- `ParseDateTime(string? dateString)` - Parses a string into a DateTime using the application's standard format
+- `IsPast(DateTime dateTime)` - Determines if a given date is in the past
+- `IsFuture(DateTime dateTime)` - Determines if a given date is in the future
+- `DaysBetween(DateTime from, DateTime to)` - Calculates the number of days between two dates
+- `HoursSince(DateTime dateTime)` - Calculates the number of hours since a given time
+- `IsOverdue(DateTime dueDate)` - Determines if a date is overdue based on current time
+- `FormatTimeSpan(TimeSpan timeSpan)` - Formats a TimeSpan into a human-readable string
+- `GetRelativeTime(DateTime dateTime)` - Gets a human-readable string for how long ago a date was
+- `ShouldSync(DateTime? lastSyncTime, int intervalSeconds)` - Determines if a sync should run based on the last sync time and interval
+- `CalculateNextSyncTime(DateTime? lastSyncTime, int intervalSeconds)` - Calculates when the next sync should occur
+- `GetTodayStart()` - Gets the start of the current day in UTC
+- `GetTodayEnd()` - Gets the end of the current day in UTC
+- `GetWeekStart()` - Gets the start of the current week in UTC
+- `GetMonthStart()` - Gets the start of the current month in UTC
+- `AreWithinInterval(DateTime time1, DateTime time2, TimeSpan interval)` - Determines if two times are within a specified interval of each other
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using System;
+
+class Program
+{
+static void Main()
+{
+// Example 1: Get current UTC time
+var currentTime = TimeHelper.GetCurrentUtcTime();
+Console.WriteLine($"Current UTC time: {currentTime:O}");
+
+// Example 2: Format and parse dates
+var formattedDate = TimeHelper.FormatDateTime(currentTime);
+Console.WriteLine($"Formatted date: {formattedDate}");
+
+var parsedDate = TimeHelper.ParseDateTime(formattedDate);
+Console.WriteLine($"Parsed date: {parsedDate?.ToString("O")}");
+
+// Example 3: Check if dates are past or future
+var yesterday = DateTime.UtcNow.AddDays(-1);
+var tomorrow = DateTime.UtcNow.AddDays(1);
+
+Console.WriteLine($"Yesterday is past: {TimeHelper.IsPast(yesterday)}"); // True
+Console.WriteLine($"Tomorrow is future: {TimeHelper.IsFuture(tomorrow)}"); // True
+
+// Example 4: Calculate time differences
+var startDate = DateTime.UtcNow.AddDays(-5);
+var endDate = DateTime.UtcNow.AddDays(10);
+var daysBetween = TimeHelper.DaysBetween(startDate, endDate);
+Console.WriteLine($"Days between dates: {daysBetween}");
+
+var hoursSince = TimeHelper.HoursSince(startDate);
+Console.WriteLine($"Hours since start date: {hoursSince:F1}");
+
+// Example 5: Check for overdue items
+var dueDate = DateTime.UtcNow.AddDays(-2);
+Console.WriteLine($"Is overdue: {TimeHelper.IsOverdue(dueDate)}"); // True
+
+// Example 6: Format time spans
+var timeSpan = TimeSpan.FromHours(2.5);
+Console.WriteLine($"Formatted time span: {TimeHelper.FormatTimeSpan(timeSpan)}"); // "2h"
+
+var longSpan = TimeSpan.FromDays(3.2);
+Console.WriteLine($"Formatted long span: {TimeHelper.FormatTimeSpan(longSpan)}"); // "3d"
+
+// Example 7: Get relative time descriptions
+var oneHourAgo = DateTime.UtcNow.AddHours(-1);
+Console.WriteLine($"Relative time: {TimeHelper.GetRelativeTime(oneHourAgo)}"); // "1h ago"
+
+var threeDaysAgo = DateTime.UtcNow.AddDays(-3);
+Console.WriteLine($"Relative time: {TimeHelper.GetRelativeTime(threeDaysAgo)}"); // "3d ago"
+
+// Example 8: Sync timing calculations
+DateTime? lastSync = DateTime.UtcNow.AddMinutes(-30);
+int syncInterval = 3600; // 1 hour
+
+Console.WriteLine($"Should sync now: {TimeHelper.ShouldSync(lastSync, syncInterval)}"); // False
+
+var nextSync = TimeHelper.CalculateNextSyncTime(lastSync, syncInterval);
+Console.WriteLine($"Next sync at: {nextSync:O}");
+
+// Example 9: Get day/week/month boundaries
+var todayStart = TimeHelper.GetTodayStart();
+var todayEnd = TimeHelper.GetTodayEnd();
+Console.WriteLine($"Today: {todayStart:yyyy-MM-dd} to {todayEnd:yyyy-MM-dd HH:mm:ss}");
+
+var weekStart = TimeHelper.GetWeekStart();
+Console.WriteLine($"Week starts: {weekStart:yyyy-MM-dd} (Monday)");
+
+var monthStart = TimeHelper.GetMonthStart();
+Console.WriteLine($"Month starts: {monthStart:yyyy-MM-dd}");
+
+// Example 10: Check time intervals
+var time1 = DateTime.UtcNow.AddMinutes(-5);
+var time2 = DateTime.UtcNow.AddMinutes(-4);
+var withinInterval = TimeHelper.AreWithinInterval(time1, time2, TimeSpan.FromMinutes(10));
+Console.WriteLine($"Times are within 10 minute interval: {withinInterval}"); // True
+}
+}
+```
+
 ## ConfigRepository
 
 The `ConfigRepository` class provides persistence and retrieval of sync configurations as JSON files. It enables users to define multiple sync profiles for different Notion databases, supporting configuration export/import for sharing and backup purposes. The repository handles file system operations with proper error handling and logging.
