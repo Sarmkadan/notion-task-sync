@@ -2,12 +2,13 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 namespace NotionTaskSync.Events;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 /// <summary>
@@ -18,6 +19,7 @@ public static class EventBusValidation
 {
     /// <summary>
     /// Validates the specified <see cref="EventBus"/> instance.
+    /// Validates that the event bus is in a valid state with no corrupted internal state.
     /// </summary>
     /// <param name="value">The event bus instance to validate.</param>
     /// <returns>A list of validation problems; empty list if valid.</returns>
@@ -28,24 +30,50 @@ public static class EventBusValidation
 
         var problems = new List<string>();
 
-        // Validate EventBus internal state
-        // Note: EventBus doesn't expose its internal _subscribers field directly,
-        // so we can only validate the public API behavior
-
+        // Validate internal subscribers dictionary state
         try
         {
-            // Test that basic operations don't throw
-            _ = value.GetSubscriberInfo();
+            var subscriberInfo = value.GetSubscriberInfo();
+
+            if (subscriberInfo == null)
+            {
+                problems.Add("GetSubscriberInfo() returned null dictionary");
+            }
+            else
+            {
+                // Check for null or empty keys
+                foreach (var kvp in subscriberInfo)
+                {
+                    if (kvp.Key == null)
+                    {
+                        problems.Add("Subscriber dictionary contains null event type name");
+                    }
+                    else if (string.IsNullOrEmpty(kvp.Key))
+                    {
+                        problems.Add("Subscriber dictionary contains empty event type name");
+                    }
+
+                    if (kvp.Value < 0)
+                    {
+                        problems.Add($"Subscriber count for event type '{kvp.Key}' is negative: {kvp.Value}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            problems.Add($"Failed to validate subscribers: {ex.Message}");
+        }
+
+        // Validate Clear operation
+        try
+        {
             value.Clear();
         }
         catch (Exception ex)
         {
-            problems.Add($"EventBus operations failed: {ex.Message}");
+            problems.Add($"Clear() operation failed: {ex.Message}");
         }
-
-        // Validate that EventId is not empty Guid (if accessible through reflection)
-        // Note: EventBus doesn't expose EventId directly, so this validation
-        // would apply to ApplicationEvent instances, not EventBus itself
 
         return problems.AsReadOnly();
     }
@@ -55,8 +83,10 @@ public static class EventBusValidation
     /// </summary>
     /// <param name="value">The event bus instance to check.</param>
     /// <returns><see langword="true"/> if valid; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     public static bool IsValid(this EventBus value)
     {
+        ArgumentNullException.ThrowIfNull(value);
         return Validate(value).Count == 0;
     }
 
