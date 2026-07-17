@@ -10,29 +10,33 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// System.Text.Json serialization extensions for IntegrationExample type.
-/// Provides methods for converting IntegrationExample instances to/from JSON.
+/// System.Text.Json serialization extensions demonstrating JSON conversion patterns.
+/// This class serves as an example of proper JSON serialization/deserialization
+/// techniques that can be applied to any serializable type in the integration examples.
 /// </summary>
 public static class IntegrationExampleJsonExtensions
 {
     /// <summary>
-    /// JSON serialization options with camelCase naming policy.
+    /// JSON serialization options with camelCase naming policy and optimized settings.
     /// </summary>
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = false,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        PropertyNameCaseInsensitive = true,
+        ReferenceHandler = ReferenceHandler.IgnoreCycles,
     };
 
     /// <summary>
-    /// Converts an IntegrationExample instance to its JSON representation.
+    /// Converts an object instance to its JSON representation.
     /// </summary>
-    /// <param name="value">The IntegrationExample instance to serialize.</param>
+    /// <typeparam name="T">The type of object to serialize.</typeparam>
+    /// <param name="value">The object instance to serialize.</param>
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
-    /// <returns>A JSON string representation of the IntegrationExample.</returns>
+    /// <returns>A JSON string representation of the object.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-    public static string ToJson(this IntegrationExample value, bool indented = false)
+    public static string ToJson<T>(this T value, bool indented = false) where T : notnull
     {
         ArgumentNullException.ThrowIfNull(value);
 
@@ -44,32 +48,31 @@ public static class IntegrationExampleJsonExtensions
     }
 
     /// <summary>
-    /// Deserializes an IntegrationExample instance from JSON.
+    /// Deserializes an object instance from JSON.
     /// </summary>
+    /// <typeparam name="T">The type of object to deserialize.</typeparam>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>An IntegrationExample instance, or null if the JSON is empty or whitespace.</returns>
+    /// <returns>An instance of type T, or null if the JSON is empty or whitespace.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
-    public static IntegrationExample? FromJson(string json)
+    public static T? FromJson<T>(string json) where T : class
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
 
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        return JsonSerializer.Deserialize<IntegrationExample>(json, _jsonOptions);
+        return string.IsNullOrWhiteSpace(json)
+            ? default
+            : JsonSerializer.Deserialize<T>(json, _jsonOptions);
     }
 
     /// <summary>
-    /// Attempts to deserialize an IntegrationExample instance from JSON.
+    /// Attempts to deserialize an object instance from JSON.
     /// </summary>
+    /// <typeparam name="T">The type of object to deserialize.</typeparam>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="value">Receives the deserialized IntegrationExample instance if successful.</param>
+    /// <param name="value">Receives the deserialized object instance if successful.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
-    public static bool TryFromJson(string json, out IntegrationExample? value)
+    public static bool TryFromJson<T>(string json, out T? value) where T : class
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
 
@@ -77,7 +80,7 @@ public static class IntegrationExampleJsonExtensions
 
         try
         {
-            value = JsonSerializer.Deserialize<IntegrationExample>(json, _jsonOptions);
+            value = JsonSerializer.Deserialize<T>(json, _jsonOptions);
             return true;
         }
         catch (JsonException)
