@@ -3,7 +3,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =====================================================================
+// ===================================================================
 
 namespace NotionTaskSync.Infrastructure.Configuration;
 
@@ -20,7 +20,8 @@ public static class NotionApiSettingsJsonExtensions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = false,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
     /// <summary>
@@ -35,10 +36,7 @@ public static class NotionApiSettingsJsonExtensions
         ArgumentNullException.ThrowIfNull(value);
 
         var options = indented
-            ? new JsonSerializerOptions(_jsonSerializerOptions)
-            {
-                WriteIndented = true
-            }
+            ? new JsonSerializerOptions(_jsonSerializerOptions) { WriteIndented = true }
             : _jsonSerializerOptions;
 
         return JsonSerializer.Serialize(value, options);
@@ -48,11 +46,16 @@ public static class NotionApiSettingsJsonExtensions
     /// Deserializes a JSON string to a NotionApiSettings instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>A NotionApiSettings instance, or null if the JSON is invalid.</returns>
+    /// <returns>A NotionApiSettings instance if deserialization succeeds; otherwise, null.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     public static NotionApiSettings? FromJson(string json)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
+
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
 
         try
         {
@@ -68,7 +71,7 @@ public static class NotionApiSettingsJsonExtensions
     /// Attempts to deserialize a JSON string to a NotionApiSettings instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="value">Receives the deserialized NotionApiSettings instance if successful, otherwise null.</param>
+    /// <param name="value">Receives the deserialized NotionApiSettings instance if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     public static bool TryFromJson(string json, out NotionApiSettings? value)
