@@ -89,15 +89,13 @@ namespace NotionTaskSync.Collaboration
         /// </param>
         /// <returns>An estimated size in bytes as a <see cref="long"/>.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> is <c>null</c>.</exception>
-        /// <exception cref="ArgumentException">
+        /// <exception cref="ArgumentOutOfRangeException">
         /// Thrown when <paramref name="averageOperationSizeBytes"/> is less than or equal to zero.
         /// </exception>
         public static long EstimateOperationLogSizeBytes(this CollaborationSessionOptions options, int averageOperationSizeBytes = 256)
         {
             ArgumentNullException.ThrowIfNull(options);
-            ArgumentException.ThrowIfNullOrEmpty(averageOperationSizeBytes.ToString(CultureInfo.InvariantCulture));
-            if (averageOperationSizeBytes <= 0)
-                throw new ArgumentException("Average operation size must be greater than zero.", nameof(averageOperationSizeBytes));
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(averageOperationSizeBytes, 0);
 
             return (long)options.OperationLogCapacity * averageOperationSizeBytes;
         }
