@@ -8,7 +8,6 @@ namespace NotionTaskSync.Domain.Models;
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 /// <summary>
 /// Provides validation helpers for <see cref="CalendarEvent"/> instances.
@@ -44,7 +43,7 @@ public static class CalendarEventValidation
         }
 
         // Validate Description
-        if (value.Description?.Length > 5000)
+        if (value.Description is not null && value.Description.Length > 5000)
         {
             errors.Add("Description cannot exceed 5000 characters.");
         }
@@ -120,13 +119,13 @@ public static class CalendarEventValidation
         // No validation needed for enum - it has a default value
 
         // Validate Location
-        if (value.Location?.Length > 500)
+        if (value.Location is not null && value.Location.Length > 500)
         {
             errors.Add("Location cannot exceed 500 characters.");
         }
 
         // Validate ExternalUid
-        if (value.ExternalUid?.Length > 256)
+        if (value.ExternalUid is not null && value.ExternalUid.Length > 256)
         {
             errors.Add("ExternalUid cannot exceed 256 characters.");
         }
@@ -142,7 +141,7 @@ public static class CalendarEventValidation
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     public static bool IsValid(this CalendarEvent? value)
     {
-        return Validate(value).Count == 0;
+        return value is null ? throw new ArgumentNullException(nameof(value)) : Validate(value).Count == 0;
     }
 
     /// <summary>
@@ -157,12 +156,11 @@ public static class CalendarEventValidation
         ArgumentNullException.ThrowIfNull(value);
 
         var errors = Validate(value);
-        if (errors.Count == 0)
+        if (errors.Count != 0)
         {
-            return;
+            throw new ArgumentException(
+                $"CalendarEvent validation failed:{Environment.NewLine}{string.Join(Environment.NewLine, errors)}");
         }
 
-        throw new ArgumentException(
-            $"CalendarEvent validation failed:{Environment.NewLine}{string.Join(Environment.NewLine, errors)}");
+        }
     }
-}
