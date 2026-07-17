@@ -8,8 +8,6 @@ namespace NotionTaskSync.Services;
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
 using NotionTaskSync.Domain.Models;
 
 /// <summary>
@@ -81,14 +79,11 @@ public static class ConflictDiffServiceValidation
         if (conflict.Id == Guid.Empty)
             errors.Add("ConflictResolution.Id must be a non-empty GUID.");
 
-        if (string.IsNullOrWhiteSpace(conflict.PropertyName))
-            errors.Add("ConflictResolution.PropertyName must not be null or whitespace.");
+        ArgumentException.ThrowIfNullOrEmpty(conflict.PropertyName);
 
-        if (conflict.LocalValue is null)
-            errors.Add("ConflictResolution.LocalValue must not be null.");
+        ArgumentNullException.ThrowIfNull(conflict.LocalValue);
 
-        if (conflict.NotionValue is null)
-            errors.Add("ConflictResolution.NotionValue must not be null.");
+        ArgumentNullException.ThrowIfNull(conflict.NotionValue);
 
         if (conflict.DetectedAt == default)
             errors.Add("ConflictResolution.DetectedAt must be a non-default DateTime.");
@@ -104,6 +99,7 @@ public static class ConflictDiffServiceValidation
     /// <param name="propertyName">The name of the property being compared.</param>
     /// <param name="conflictId">The conflict identifier.</param>
     /// <returns>A list of human-readable validation problems; empty if all parameters are valid.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="propertyName"/> is null or empty.</exception>
     public static IReadOnlyList<string> Validate(
         string? localValue,
         string? notionValue,
@@ -112,8 +108,7 @@ public static class ConflictDiffServiceValidation
     {
         var errors = new List<string>();
 
-        if (string.IsNullOrWhiteSpace(propertyName))
-            errors.Add("propertyName must not be null or whitespace.");
+        ArgumentException.ThrowIfNullOrEmpty(propertyName);
 
         if (conflictId == Guid.Empty)
             errors.Add("conflictId should be a non-empty GUID for traceability.");
@@ -133,14 +128,12 @@ public static class ConflictDiffServiceValidation
 
         var errors = new List<string>();
 
-        if (string.IsNullOrWhiteSpace(diff.PropertyName))
-            errors.Add("ConflictDiffResult.PropertyName must not be null or whitespace.");
+        ArgumentException.ThrowIfNullOrEmpty(diff.PropertyName);
 
         if (diff.GeneratedAt == default)
             errors.Add("ConflictDiffResult.GeneratedAt must be a non-default DateTime.");
 
-        if (diff.Lines is null)
-            errors.Add("ConflictDiffResult.Lines must not be null.");
+        ArgumentNullException.ThrowIfNull(diff.Lines);
 
         return errors.AsReadOnly();
     }
@@ -169,7 +162,7 @@ public static class ConflictDiffServiceValidation
                 continue;
             }
 
-            var conflictErrors = ConflictDiffServiceValidation.Validate(conflict);
+            var conflictErrors = Validate(conflict);
             if (conflictErrors.Count > 0)
             {
                 errors.AddRange(conflictErrors.Select(e => $"conflicts[{i}]: {e}"));
