@@ -999,6 +999,91 @@ Console.WriteLine(deleteSuccess ? "Configuration deleted" : "Failed to delete co
 }
 ```
 
+## SyncServiceTestsValidation
+
+The `SyncServiceTestsValidation` static class provides validation utilities specifically for synchronization configuration objects used in `SyncServiceTests`. It validates null/empty strings, out-of-range numbers, default dates, and other constraints based on the semantic meaning of each member. This validation ensures that test configurations meet the necessary requirements before being used in test scenarios.
+
+### Public Members
+
+- `Validate(SyncConfig config)` - Validates a `SyncConfig` instance and returns a list of validation problems
+- `IsValid(SyncConfig config)` - Determines if a `SyncConfig` instance is valid
+- `EnsureValid(SyncConfig config)` - Validates a `SyncConfig` instance and throws if invalid
+- `Validate(SyncServiceTests tests)` - Validates a `SyncServiceTests` instance and returns a list of validation problems
+- `IsValid(SyncServiceTests tests)` - Determines if a `SyncServiceTests` instance is valid
+- `EnsureValid(SyncServiceTests tests)` - Validates a `SyncServiceTests` instance and throws if invalid
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Tests;
+using NotionTaskSync.Domain.Models;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Example 1: Validate a SyncConfig instance
+        var validConfig = new SyncConfig
+        {
+            Name = "TeamDailySync",
+            NotionDatabaseId = "550e8400-e29b-41d4-a716-446655440000",
+            LocalFolderPath = @"./tasks",
+            SyncIntervalSeconds = 300,
+            MaxRetries = 3,
+            IsEnabled = true
+        };
+
+        var validationErrors = SyncServiceTestsValidation.Validate(validConfig);
+        
+        if (validationErrors.Count == 0)
+        {
+            Console.WriteLine("Configuration is valid!");
+        }
+        else
+        {
+            Console.WriteLine("Validation errors found:");
+            foreach (var error in validationErrors)
+            {
+                Console.WriteLine($"- {error}");
+            }
+        }
+
+        // Example 2: Check if configuration is valid using IsValid
+        var isValid = SyncServiceTestsValidation.IsValid(validConfig);
+        Console.WriteLine($"Is configuration valid: {isValid}");
+
+        // Example 3: Ensure configuration is valid (throws if invalid)
+        try
+        {
+            SyncServiceTestsValidation.EnsureValid(validConfig);
+            Console.WriteLine("Configuration passed validation!");
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"Validation failed: {ex.Message}");
+        }
+
+        // Example 4: Validate an invalid configuration to see error messages
+        var invalidConfig = new SyncConfig
+        {
+            Name = "", // Invalid: empty name
+            NotionDatabaseId = "invalid-id", // Invalid: wrong format
+            LocalFolderPath = @"./nonexistent", // Invalid: directory doesn't exist
+            SyncIntervalSeconds = 0, // Invalid: out of range
+            MaxRetries = 150 // Invalid: out of range
+        };
+
+        var invalidErrors = SyncServiceTestsValidation.Validate(invalidConfig);
+        Console.WriteLine($"\nInvalid configuration has {invalidErrors.Count} validation errors:");
+        foreach (var error in invalidErrors)
+        {
+            Console.WriteLine($"- {error}");
+        }
+    }
+}
+```
+
 ## CollectionExtensions
 
 The `CollectionExtensions` static class provides extension methods for collections (lists, enumerables, dictionaries) that simplify common collection operations used throughout the application. It includes utilities for checking collection state, safe access, batching, partitioning, filtering, and transformation operations that reduce repetitive code patterns in data processing pipelines.
