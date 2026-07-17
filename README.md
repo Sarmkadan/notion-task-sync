@@ -598,7 +598,141 @@ class Program
     }
 }
 ```
+## ChangeDetectionServiceJsonExtensions
 
+The `ChangeDetectionServiceJsonExtensions` class provides System.Text.Json serialization extensions for the `ChangeDetectionService` class and related data models. It enables JSON serialization and deserialization of change detection data structures with camelCase naming policy, cycle reference handling, and null value suppression. This extension class is essential for persisting and transmitting change detection state between application sessions and across service boundaries.
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using System;
+using System.Collections.Generic;
+
+class Program
+{
+    static void Main()
+    {
+        // Example 1: Serialize ChangeDetectionService to JSON
+        var changeDetectionService = new ChangeDetectionService
+        {
+            Id = Guid.NewGuid(),
+            Name = "Task Sync Service",
+            LastSyncTime = DateTime.UtcNow,
+            DetectedChanges = 42,
+            ResolvedConflicts = 3,
+            IsRunning = true
+        };
+
+        // Serialize with compact JSON
+        var jsonCompact = changeDetectionService.ToJson();
+        Console.WriteLine("Compact JSON representation:");
+        Console.WriteLine(jsonCompact);
+
+        // Serialize with pretty-printed JSON
+        var jsonPretty = changeDetectionService.ToJson(indented: true);
+        Console.WriteLine("\nPretty-printed JSON representation:");
+        Console.WriteLine(jsonPretty);
+
+        // Example 2: Deserialize ChangeDetectionService from JSON
+        var jsonInput = @"{
+            \"id\": \"550e8400-e29b-41d4-a716-446655440000\",
+            \"name\": \"Database Sync Service\",
+            \"lastSyncTime\": \"2024-07-19T14:30:00Z\",
+            \"detectedChanges\": 25,
+            \"resolvedConflicts\": 2,
+            \"isRunning\": false
+        }";
+
+        var deserializedService = ChangeDetectionServiceJsonExtensions.FromJson(jsonInput);
+        if (deserializedService != null)
+        {
+            Console.WriteLine($"\nDeserialized service: {deserializedService.Name}");
+            Console.WriteLine($"Last sync: {deserializedService.LastSyncTime}");
+            Console.WriteLine($"Changes detected: {deserializedService.DetectedChanges}");
+        }
+
+        // Example 3: Safe deserialization with error handling
+        var invalidJson = "{ invalid json";
+        var success = ChangeDetectionServiceJsonExtensions.TryFromJson(invalidJson, out var safeResult);
+        Console.WriteLine($"\nSafe deserialization of invalid JSON: {(success ? "Success" : "Failed (as expected)")}");
+
+        // Example 4: Serialize and deserialize ChangeLog list
+        var changeLogs = new List<ChangeLog>
+        {
+            new ChangeLog
+            {
+                TaskId = Guid.NewGuid(),
+                ChangeType = ChangeType.Created,
+                Timestamp = DateTime.UtcNow,
+                PropertyName = "Status",
+                OldValue = "Todo",
+                NewValue = "InProgress"
+            },
+            new ChangeLog
+            {
+                TaskId = Guid.NewGuid(),
+                ChangeType = ChangeType.Updated,
+                Timestamp = DateTime.UtcNow,
+                PropertyName = "Priority",
+                OldValue = "50",
+                NewValue = "75"
+            }
+        };
+
+        var logsJson = changeLogs.ToJson(indented: true);
+        Console.WriteLine("\nChangeLog list as JSON:");
+        Console.WriteLine(logsJson);
+
+        // Example 5: Deserialize ChangeLog list
+        var logsJsonInput = @"[
+            {
+                \"taskId\": \"550e8400-e29b-41d4-a716-446655440001\",
+                \"changeType\": 1,
+                \"timestamp\": \"2024-07-19T14:30:00Z\",
+                \"propertyName\": \"Status\",
+                \"oldValue\": \"Todo\",
+                \"newValue\": \"InProgress\"
+            },
+            {
+                \"taskId\": \"550e8400-e29b-41d4-a716-446655440002\",
+                \"changeType\": 2,
+                \"timestamp\": \"2024-07-19T14:30:05Z\",
+                \"propertyName\": \"Priority\",
+                \"oldValue\": \"50\",
+                \"newValue\": \"75\"
+            }
+        ]";
+
+        var deserializedLogs = ChangeDetectionServiceJsonExtensions.FromJsonToChangeLogList(logsJsonInput);
+        Console.WriteLine($"\nDeserialized {deserializedLogs?.Count ?? 0} change logs");
+
+        // Example 6: Serialize and deserialize ConflictResolution list
+        var conflictResolutions = new List<ConflictResolution>
+        {
+            new ConflictResolution
+            {
+                TaskId = Guid.NewGuid(),
+                ResolutionStrategy = ConflictResolutionStrategy.LocalWins,
+                ResolvedAt = DateTime.UtcNow,
+                ConflictingProperty = "Status"
+            },
+            new ConflictResolution
+            {
+                TaskId = Guid.NewGuid(),
+                ResolutionStrategy = ConflictResolutionStrategy.NotionWins,
+                ResolvedAt = DateTime.UtcNow,
+                ConflictingProperty = "Priority"
+            }
+        };
+
+        var conflictsJson = conflictResolutions.ToJson(indented: true);
+        Console.WriteLine("\nConflictResolution list as JSON:");
+        Console.WriteLine(conflictsJson);
+    }
+}
+```
 ## RetryHelper
 
 The `RetryHelper` class provides retry logic with exponential backoff for handling transient failures. It's essential for API calls that may temporarily fail due to rate limits, network issues, or temporary service unavailability. The helper implements industry-standard retry patterns to improve reliability without requiring caller code duplication.
