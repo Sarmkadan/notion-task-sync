@@ -347,6 +347,101 @@ class Program
 }
 ```
 
+## RetryHelper
+
+The `RetryHelper` class provides retry logic with exponential backoff for handling transient failures. It's essential for API calls that may temporarily fail due to rate limits, network issues, or temporary service unavailability. The helper implements industry-standard retry patterns to improve reliability without requiring caller code duplication.
+
+
+
+### Public Members
+
+- `ExecuteWithRetryAsync<T>(Func<Task<T>> operation, int maxRetries = 3, int initialDelayMs = 1000)` - Executes an operation with automatic retry on failure using exponential backoff
+- `ExecuteWithRetryAsync<T>(Func<Task<T>> operation, Func<Exception, bool> shouldRetry, int maxRetries = 3, int initialDelayMs = 1000)` - Executes an operation with automatic retry, allowing caller to determine if retry should occur
+- `ExecuteWithRetry<T>(Func<T> operation, int maxRetries = 3, int initialDelayMs = 1000)` - Executes a synchronous operation with retry logic
+- `ExecuteWithCircuitBreakerAsync<T>(Func<Task<T>> operation, int maxFailures = 5, int resetTimeoutMs = 30000)` - Implements a circuit breaker pattern that stops retrying after too many failures
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+static async Task Main()
+{
+// Initialize RetryHelper with logger
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<RetryHelper>();
+var retryHelper = new RetryHelper(logger);
+
+// Example 1: Basic async retry with exponential backoff
+var result1 = await retryHelper.ExecuteWithRetryAsync(async () =>
+{
+// Simulate an API call that might fail
+await Task.Delay(100);
+return "API response data";
+});
+
+Console.WriteLine($"Operation succeeded: {result1}");
+
+// Example 2: Async retry with custom retry condition
+var result2 = await retryHelper.ExecuteWithRetryAsync(
+async () =>
+{
+// Simulate an API call
+await Task.Delay(50);
+return 42;
+},
+// Only retry on specific exceptions (e.g., network errors)
+ex => ex is HttpRequestException || ex is TaskCanceledException,
+maxRetries: 5,
+initialDelayMs: 500
+);
+
+Console.WriteLine($"Operation with custom retry succeeded: {result2}");
+
+// Example 3: Synchronous retry (blocks calling thread)
+var result3 = retryHelper.ExecuteWithRetry(() =>
+{
+// Simulate a local operation that might fail
+return DateTime.UtcNow.Second % 2 == 0 ? "Success" : throw new InvalidOperationException("Temporary failure");
+});
+
+Console.WriteLine($"Synchronous operation result: {result3}");
+
+// Example 4: Circuit breaker pattern - stops after too many failures
+var (result4, success4) = await retryHelper.ExecuteWithCircuitBreakerAsync(async () =>
+{
+// Simulate a failing operation
+await Task.Delay(10);
+throw new InvalidOperationException("Service unavailable");
+});
+
+Console.WriteLine($"Circuit breaker result - Success: {success4}, Result: {result4}");
+
+// Example 5: Real-world usage with API calls
+var apiResult = await retryHelper.ExecuteWithRetryAsync(async () =>
+{
+// Simulate calling a Notion API endpoint
+if (DateTime.UtcNow.Second % 4 == 0)
+{
+throw new HttpRequestException("Rate limit exceeded");
+}
+
+return new { Status = "Success", Data = "Notion page data" };
+},
+maxRetries: 3,
+initialDelayMs: 1000
+);
+
+Console.WriteLine($"API call result: {apiResult.Status}");
+}
+}
+```
+
 ## ValidationHelper
 
 The `ValidationHelper` static class provides validation utilities for common data types and patterns used throughout the application. It includes methods for validating Notion IDs, email addresses, file paths, API keys, priorities, URLs, and more. These utilities help ensure data integrity and prevent invalid inputs from propagating through the sync pipeline.
