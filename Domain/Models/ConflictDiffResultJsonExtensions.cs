@@ -3,7 +3,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 namespace NotionTaskSync.Domain.Models;
 
@@ -18,6 +18,10 @@ using System.Text.Json.Serialization;
 /// </summary>
 public static class ConflictDiffResultJsonExtensions
 {
+    /// <summary>
+    /// Gets the default JSON serializer options used for serializing and deserializing
+    /// <see cref="ConflictDiffResult"/> instances.
+    /// </summary>
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -49,6 +53,8 @@ public static class ConflictDiffResultJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>The deserialized diff result instance, or <see langword="null"/> if the JSON is empty or whitespace.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or whitespace.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     public static ConflictDiffResult? FromJson(string json)
     {
@@ -70,7 +76,11 @@ public static class ConflictDiffResultJsonExtensions
     /// <returns><see langword="true"/> if deserialization succeeded; otherwise, <see langword="false"/>.</returns>
     public static bool TryFromJson(string json, out ConflictDiffResult? value)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            value = null;
+            return false;
+        }
 
         try
         {
