@@ -465,6 +465,140 @@ Console.WriteLine($"Title match: {originalTask.Title == roundTripTask.Title}");
 } 
 ```
 
+## JsonFormatter
+
+The `JsonFormatter` class provides JSON serialization and deserialization utilities for task entities, sync configurations, and other domain objects. It handles consistent JSON formatting with camelCase property naming, null value handling, and supports both serialization and deserialization operations. The formatter is critical for API responses, configuration export/import, and inter-system communication.
+
+### Public Members
+
+- `FormatTask(Task task)` - Serializes a single task to JSON string
+- `FormatTasks(List<Task> tasks)` - Serializes a collection of tasks to JSON array string
+- `FormatSyncConfig(SyncConfig config)` - Serializes a sync configuration to JSON
+- `Format<T>(T obj)` - Serializes arbitrary objects to JSON with consistent formatting
+- `DeserializeTask(string json)` - Deserializes a JSON string back into a task object
+- `DeserializeTasks(string json)` - Deserializes a JSON array string into a collection of tasks
+- `Deserialize<T>(string json)` - Deserializes arbitrary JSON into specified type
+- `IsValidJson(string json)` - Validates if a string is valid JSON
+- `Minify(string json)` - Minifies JSON by removing whitespace and formatting
+- `PrettyPrint(string json)` - Pretty-prints JSON by expanding whitespace for readability
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Formatters;
+using NotionTaskSync.Domain.Models;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+
+class Program
+{
+    static void Main()
+    {
+        // Initialize JsonFormatter with logger
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<JsonFormatter>();
+        var jsonFormatter = new JsonFormatter(logger);
+
+        // Example 1: Format a single task as JSON
+        var task = new Task
+        {
+            Id = Guid.NewGuid(),
+            Title = "Implement JsonFormatter documentation",
+            Description = "Add JsonFormatter section to README.md with realistic usage examples",
+            Status = TaskStatus.InProgress,
+            Priority = 75,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            DueDate = DateTime.UtcNow.AddDays(7),
+            AssignedTo = "developer@example.com",
+            Tags = "documentation,json,formatter",
+            NotionPageId = "550e8400-e29b-41d4-a716-446655440000",
+            IsDeleted = false
+        };
+
+        var taskJson = jsonFormatter.FormatTask(task);
+        Console.WriteLine("Formatted task as JSON:");
+        Console.WriteLine(taskJson);
+
+        // Example 2: Format multiple tasks as JSON array
+        var tasks = new List<Task>
+        {
+            new Task
+            {
+                Id = Guid.NewGuid(),
+                Title = "Task 1",
+                Status = TaskStatus.Todo,
+                Priority = 50,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new Task
+            {
+                Id = Guid.NewGuid(),
+                Title = "Task 2",
+                Status = TaskStatus.InProgress,
+                Priority = 75,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                DueDate = DateTime.UtcNow.AddDays(3)
+            }
+        };
+
+        var tasksJson = jsonFormatter.FormatTasks(tasks);
+        Console.WriteLine("\nFormatted tasks as JSON array:");
+        Console.WriteLine(tasksJson);
+
+        // Example 3: Format a sync configuration
+        var config = new SyncConfig
+        {
+            Name = "JsonFormatterSync",
+            NotionDatabaseId = "550e8400-e29b-41d4-a716-446655440000",
+            LocalFolderPath = @"./tasks",
+            NotionApiKey = "secret_test_api_key_1234567890abcdef",
+            Direction = SyncDirection.Bidirectional,
+            ConflictStrategy = ConflictResolutionStrategy.LocalWins,
+            SyncIntervalSeconds = 86400,
+            IsEnabled = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var configJson = jsonFormatter.FormatSyncConfig(config);
+        Console.WriteLine("\nFormatted sync configuration as JSON:");
+        Console.WriteLine(configJson);
+
+        // Example 4: Validate JSON
+        var isValid = jsonFormatter.IsValidJson(taskJson);
+        Console.WriteLine($"\nJSON validation: {isValid}");
+
+        // Example 5: Minify JSON for data transfer
+        var minified = jsonFormatter.Minify(tasksJson);
+        Console.WriteLine($"\nMinified JSON size: {minified.Length} characters");
+
+        // Example 6: Pretty-print JSON for debugging
+        var pretty = jsonFormatter.PrettyPrint(minified);
+        Console.WriteLine("\nPretty-printed JSON:");
+        Console.WriteLine(pretty);
+
+        // Example 7: Deserialize JSON back to objects
+        var deserializedTask = jsonFormatter.DeserializeTask(taskJson);
+        Console.WriteLine($"\nDeserialized task: {deserializedTask?.Title}");
+
+        var deserializedTasks = jsonFormatter.DeserializeTasks(tasksJson);
+        Console.WriteLine($"Deserialized {deserializedTasks?.Count} tasks");
+
+        // Example 8: Generic serialization and deserialization
+        var taskDto = new { Id = task.Id, Title = task.Title, Status = task.Status.ToString() };
+        var dtoJson = jsonFormatter.Format(taskDto);
+        Console.WriteLine($"\nSerialized DTO: {dtoJson}");
+
+        var parsedDto = jsonFormatter.Deserialize<Dictionary<string, object>>(dtoJson);
+        Console.WriteLine($"Deserialized DTO has {parsedDto?.Count} properties");
+    }
+}
+```
+
 ## RetryHelper
 
 The `RetryHelper` class provides retry logic with exponential backoff for handling transient failures. It's essential for API calls that may temporarily fail due to rate limits, network issues, or temporary service unavailability. The helper implements industry-standard retry patterns to improve reliability without requiring caller code duplication.
