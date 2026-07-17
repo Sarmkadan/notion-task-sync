@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using NotionTaskSync.Infrastructure.Configuration;
 
 namespace NotionTaskSync.Infrastructure.Configuration;
 
@@ -13,17 +12,20 @@ public static class AppSettingsExtensions
     /// <summary>
     /// Safely retrieves a sync profile by its name.
     /// </summary>
+    /// <typeparam name="T">The expected type of the sync profile.</typeparam>
     /// <param name="settings">The <see cref="AppSettings"/> instance.</param>
     /// <param name="profileName">The name of the sync profile.</param>
-    /// <returns>The sync profile object if found; otherwise, null.</returns>
+    /// <returns>The sync profile object if found and of the correct type; otherwise, null.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="settings"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="profileName"/> is null or empty.</exception>
-    public static object? GetSyncProfile(this AppSettings settings, string profileName)
+    public static T? GetSyncProfile<T>(this AppSettings settings, string profileName)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentException.ThrowIfNullOrEmpty(profileName);
-        
-        return settings.SyncProfiles.TryGetValue(profileName, out var profile) ? profile : null;
+
+        return settings.SyncProfiles.TryGetValue(profileName, out var profile) && profile is T typedProfile
+            ? typedProfile
+            : default;
     }
 
     /// <summary>
@@ -35,7 +37,7 @@ public static class AppSettingsExtensions
     public static bool IsBackupConfigured(this AppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        
+
         return settings.EnableAutoBackup && !string.IsNullOrWhiteSpace(settings.BackupDirectory);
     }
 
@@ -48,7 +50,7 @@ public static class AppSettingsExtensions
     public static string GetEffectiveLogLevel(this AppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        
+
         return string.IsNullOrWhiteSpace(settings.LogLevel) ? "Information" : settings.LogLevel;
     }
 
@@ -58,10 +60,6 @@ public static class AppSettingsExtensions
     /// <param name="settings">The <see cref="AppSettings"/> instance.</param>
     /// <returns>The formatted API timeout string.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="settings"/> is null.</exception>
-    public static string GetFormattedApiTimeout(this AppSettings settings)
-    {
-        ArgumentNullException.ThrowIfNull(settings);
-        
-        return settings.ApiTimeoutSeconds.ToString(CultureInfo.InvariantCulture);
-    }
+    public static string GetFormattedApiTimeout(this AppSettings settings) =>
+        settings.ApiTimeoutSeconds.ToString(CultureInfo.InvariantCulture);
 }
