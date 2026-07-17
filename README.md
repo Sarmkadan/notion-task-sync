@@ -347,6 +347,124 @@ class Program
 }
 ```
 
+## XmlFormatter
+
+The `XmlFormatter` class provides XML serialization and deserialization for task entities, enabling data interchange with systems that require XML format compatibility. It supports converting task objects to XML elements/documents and parsing XML back into task collections, making it ideal for integration scenarios, API responses, and data export/import workflows.
+
+### Public Members
+
+- `FormatTask(Task task)` - Formats a single task as an XML element
+- `FormatTasks(List<Task> tasks)` - Formats a collection of tasks as an XML document
+- `ParseTasks(string xml)` - Parses an XML string back into task objects
+- `IsValidXml(string xml)` - Validates if a string is valid XML
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Formatters;
+using NotionTaskSync.Domain.Models;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+
+class Program
+{ 
+static void Main()
+{ 
+// Initialize XmlFormatter with logger
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<XmlFormatter>();
+var xmlFormatter = new XmlFormatter(logger);
+
+// Example 1: Format a single task as XML
+var task = new Task
+{ 
+Id = Guid.NewGuid(),
+Title = "Implement XmlFormatter documentation",
+Description = "Add XmlFormatter section to README.md with realistic usage examples",
+Status = TaskStatus.InProgress,
+Priority = 75,
+CreatedAt = DateTime.UtcNow,
+UpdatedAt = DateTime.UtcNow,
+DueDate = DateTime.UtcNow.AddDays(7),
+AssignedTo = "developer@example.com",
+Tags = "documentation,xml,formatter",
+NotionPageId = "550e8400-e29b-41d4-a716-446655440000",
+IsDeleted = false 
+};
+
+var taskElement = xmlFormatter.FormatTask(task);
+Console.WriteLine("Formatted task as XML:");
+Console.WriteLine(taskElement);
+
+// Example 2: Format multiple tasks as XML document
+var tasks = new List<Task>
+{ 
+new Task
+{ 
+Id = Guid.NewGuid(),
+Title = "Task 1",
+Status = TaskStatus.Todo,
+Priority = 50,
+CreatedAt = DateTime.UtcNow,
+UpdatedAt = DateTime.UtcNow 
+},
+new Task
+{ 
+Id = Guid.NewGuid(),
+Title = "Task 2",
+Status = TaskStatus.InProgress,
+Priority = 75,
+CreatedAt = DateTime.UtcNow,
+UpdatedAt = DateTime.UtcNow,
+DueDate = DateTime.UtcNow.AddDays(3) 
+} 
+};
+
+var xmlDocument = xmlFormatter.FormatTasks(tasks);
+Console.WriteLine("\nFormatted tasks as XML document:");
+Console.WriteLine(xmlDocument);
+
+// Example 3: Validate XML format
+var isValid = xmlFormatter.IsValidXml(xmlDocument);
+Console.WriteLine($"\nXML validation: {isValid}");
+
+// Example 4: Parse XML back into tasks
+var parsedTasks = xmlFormatter.ParseTasks(xmlDocument);
+Console.WriteLine($"\nParsed {parsedTasks.Count} tasks from XML");
+foreach (var parsedTask in parsedTasks)
+{ 
+Console.WriteLine($"- {parsedTask.Title} (Status: {parsedTask.Status})"); 
+} 
+
+// Example 5: Round-trip serialization
+var originalTask = new Task
+{ 
+Id = Guid.NewGuid(),
+Title = "Round-trip test",
+Description = "Test XML serialization and deserialization",
+Status = TaskStatus.Done,
+Priority = 100,
+CreatedAt = DateTime.UtcNow,
+UpdatedAt = DateTime.UtcNow,
+CompletedAt = DateTime.UtcNow,
+IsDeleted = false 
+};
+
+var formatted = xmlFormatter.FormatTask(originalTask);
+var xmlString = formatted.ToString();
+var roundTripTasks = xmlFormatter.ParseTasks(xmlString);
+var roundTripTask = roundTripTasks[0];
+
+Console.WriteLine($"\nRound-trip test:");
+Console.WriteLine($"Original ID: {originalTask.Id}");
+Console.WriteLine($"Round-trip ID: {roundTripTask.Id}");
+Console.WriteLine($"IDs match: {originalTask.Id == roundTripTask.Id}");
+Console.WriteLine($"Title match: {originalTask.Title == roundTripTask.Title}"); 
+} 
+} 
+```
+
 ## RetryHelper
 
 The `RetryHelper` class provides retry logic with exponential backoff for handling transient failures. It's essential for API calls that may temporarily fail due to rate limits, network issues, or temporary service unavailability. The helper implements industry-standard retry patterns to improve reliability without requiring caller code duplication.
