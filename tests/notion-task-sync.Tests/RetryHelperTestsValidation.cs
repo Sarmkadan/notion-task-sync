@@ -33,6 +33,12 @@ public static class RetryHelperTestsValidation
         // Since fields are private, we validate the class state through its public contract
         // The constructor should have initialized all required dependencies
 
+        if (value.GetType().GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            .Length == 0)
+        {
+            problems.Add("RetryHelperTests has no private fields - validation cannot be performed");
+        }
+
         return problems.AsReadOnly();
     }
 
@@ -41,10 +47,7 @@ public static class RetryHelperTestsValidation
     /// </summary>
     /// <param name="value">The instance to check.</param>
     /// <returns><see langword="true"/> if the instance is valid; otherwise, <see langword="false"/>.</returns>
-    public static bool IsValid(this RetryHelperTests? value)
-    {
-        return value?.Validate().Count is 0 or null;
-    }
+    public static bool IsValid(this RetryHelperTests? value) => value?.Validate().Count is 0 or null;
 
     /// <summary>
     /// Ensures that the specified <see cref="RetryHelperTests"/> instance is valid.
@@ -57,13 +60,11 @@ public static class RetryHelperTestsValidation
         ArgumentNullException.ThrowIfNull(value);
 
         var problems = value.Validate();
-        if (problems.Count == 0)
+        if (problems.Count > 0)
         {
-            return;
+            throw new ArgumentException(
+                $"RetryHelperTests instance is invalid. Problems: {string.Join("; ", problems)}",
+                nameof(value));
         }
-
-        throw new ArgumentException(
-            $"RetryHelperTests instance is invalid. Problems: {string.Join("; ", problems)}",
-            nameof(value));
     }
 }
