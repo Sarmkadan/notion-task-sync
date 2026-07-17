@@ -49,10 +49,12 @@ public static class ConflictDiffServiceJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>A deserialized <see cref="ConflictDiffService"/> instance, or <see langword="null"/> if the JSON is invalid.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or whitespace.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is malformed or cannot be deserialized.</exception>
     public static ConflictDiffService? FromJson(string json)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        ArgumentException.ThrowIfNullOrEmpty(json.Trim());
 
         return JsonSerializer.Deserialize<ConflictDiffService>(json, _jsonOptions);
     }
@@ -63,9 +65,11 @@ public static class ConflictDiffServiceJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized instance if successful, otherwise <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if deserialization succeeds; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or whitespace.</exception>
     public static bool TryFromJson(string json, out ConflictDiffService? value)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        ArgumentException.ThrowIfNullOrEmpty(json.Trim());
 
         try
         {
@@ -135,7 +139,9 @@ public static class ConflictDiffServiceJsonExtensions
                         line.Kind = options.Converters.OfType<DiffLineKindConverter>()
                             .FirstOrDefault()
                             ?.Read(ref reader, typeof(DiffLineKind), options) ??
-                            Enum.Parse<DiffLineKind>(reader.GetString()!);
+                            (reader.TokenType == JsonTokenType.String
+                                ? Enum.Parse<DiffLineKind>(reader.GetString()!)
+                                : (DiffLineKind)reader.GetInt32());
                         break;
                     case "localLineNumber":
                         line.LocalLineNumber = reader.TokenType == JsonTokenType.Null
@@ -265,6 +271,8 @@ internal static class JsonReaderExtensions
 
     public static DateTime GetDateTime(this ref Utf8JsonReader reader)
     {
+        if (reader.TokenType == JsonTokenType.String && DateTime.TryParse(reader.GetString(), out var dateTime))
+            return dateTime;
         return reader.GetDateTime();
     }
 }
