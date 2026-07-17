@@ -6815,3 +6815,71 @@ class Program
     }
 }
 ```
+## ValidationHelperJsonExtensions
+
+The `ValidationHelperJsonExtensions` class provides System.Text.Json serialization extensions for validation-related data structures. It enables JSON serialization and deserialization of `ValidationResult` instances, making it easy to persist or transmit validation outcomes.
+
+### Public Members
+
+- `ToJson(this ValidationResult result, bool indented = false)` - Serializes a validation result to a JSON string
+- `FromJson(string json)` - Deserializes a JSON string to a ValidationResult instance
+- `TryFromJson(string json, out ValidationResult? result)` - Attempts to deserialize a JSON string to a ValidationResult instance
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using System.Text.Json;
+
+// Example 1: Creating and serializing a successful validation result
+var successResult = ValidationResult.Success(
+    value: "valid-email@example.com", 
+    validationType: "EmailFormat"
+);
+
+string json = successResult.ToJson(indented: true);
+Console.WriteLine("Serialized validation result:");
+Console.WriteLine(json);
+
+// Example 2: Deserializing from JSON
+ValidationResult? deserializedResult = ValidationHelperJsonExtensions.FromJson(json);
+if (deserializedResult != null)
+{
+    Console.WriteLine($"Deserialized - IsValid: {deserializedResult.IsValid}");
+    Console.WriteLine($"Value: {deserializedResult.Value}");
+    Console.WriteLine($"ValidationType: {deserializedResult.ValidationType}");
+}
+
+// Example 3: Using TryFromJson for safe deserialization
+ValidationResult? safeResult = null;
+if (ValidationHelperJsonExtensions.TryFromJson(json, out safeResult))
+{
+    Console.WriteLine($"TryFromJson successful - IsValid: {safeResult.IsValid}");
+    Console.WriteLine($"Value: {safeResult.Value}");
+    Console.WriteLine($"ValidationType: {safeResult.ValidationType}");
+}
+else
+{
+    Console.WriteLine("Failed to deserialize JSON");
+}
+
+// Example 4: Working with failed validation results
+var failureResult = ValidationResult.Failure(
+    errorMessage: "Email format is invalid",
+    value: "invalid-email",
+    validationType: "EmailFormat"
+);
+
+string failureJson = failureResult.ToJson();
+Console.WriteLine("\nFailed validation result JSON:");
+Console.WriteLine(failureJson);
+
+// Example 5: Round-trip serialization
+ValidationResult? roundTripResult = ValidationHelperJsonExtensions.FromJson(failureJson);
+if (roundTripResult != null)
+{
+    Console.WriteLine($"\nRound-trip result - IsValid: {roundTripResult.IsValid}");
+    Console.WriteLine($"ErrorMessage: {roundTripResult.ErrorMessage}");
+    Console.WriteLine($"Value: {roundTripResult.Value}");
+}
+```
