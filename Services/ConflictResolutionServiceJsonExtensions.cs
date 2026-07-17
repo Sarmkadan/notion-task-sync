@@ -14,6 +14,7 @@ using System.Text.Json.Serialization;
 /// <summary>
 /// Provides System.Text.Json serialization extensions for <see cref="ConflictResolutionService"/>.
 /// Enables round-trip serialization of conflict resolution strategies and results.
+/// This class cannot be inherited.
 /// </summary>
 public static class ConflictResolutionServiceJsonExtensions
 {
@@ -29,8 +30,8 @@ public static class ConflictResolutionServiceJsonExtensions
     /// </summary>
     /// <param name="value">The service instance to serialize.</param>
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
-    /// <returns>A JSON string representation of the service.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
+    /// <returns>A JSON string representation of the service using camelCase property naming.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
     public static string ToJson(this ConflictResolutionService value, bool indented = false)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -46,8 +47,8 @@ public static class ConflictResolutionServiceJsonExtensions
     /// Deserializes a JSON string to a <see cref="ConflictResolutionService"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized <see cref="ConflictResolutionService"/> instance, or null if deserialization fails.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+    /// <returns>The deserialized <see cref="ConflictResolutionService"/> instance, or <see langword="null"/> if deserialization fails.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is <see langword="null"/> or empty.</exception>
     public static ConflictResolutionService? FromJson(string json)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
@@ -66,9 +67,9 @@ public static class ConflictResolutionServiceJsonExtensions
     /// Attempts to deserialize a JSON string to a <see cref="ConflictResolutionService"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="value">Receives the deserialized instance if successful; otherwise, null.</param>
-    /// <returns>True if deserialization succeeded; otherwise, false.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+    /// <param name="value">Receives the deserialized instance if successful; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if deserialization succeeded; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is <see langword="null"/> or empty.</exception>
     public static bool TryFromJson(string json, out ConflictResolutionService? value)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
