@@ -14,6 +14,11 @@ using System.Globalization;
 /// <summary>
 /// Provides validation helpers for <see cref="NotionApiServiceTests"/> instances.
 /// </summary>
+/// <remarks>
+/// This validation class exists primarily for API consistency and is intentionally minimal.
+/// <see cref="NotionApiServiceTests"/> is a test fixture class with no public instance state that requires validation.
+/// All actual validation logic is handled at the method level in the <see cref="NotionApiService"/> class being tested.
+/// </remarks>
 public static class NotionApiServiceTestsValidation
 {
     /// <summary>
@@ -26,24 +31,19 @@ public static class NotionApiServiceTestsValidation
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        var problems = new List<string>();
-
         // NotionApiServiceTests is a test fixture class with no public instance state
         // that would require validation. All validation is handled at the method level
         // in the actual NotionApiService methods being tested.
-
-        return problems.AsReadOnly();
+        return Array.Empty<string>();
     }
 
     /// <summary>
     /// Determines whether the specified <see cref="NotionApiServiceTests"/> instance is valid.
     /// </summary>
-    /// <param name="value">The instance to check.</param>
+    /// <param name="value">The instance to validate.</param>
     /// <returns><see langword="true"/> if the instance is valid; otherwise, <see langword="false"/>.</returns>
     public static bool IsValid(this NotionApiServiceTests? value)
-    {
-        return value?.Validate().Count == 0;
-    }
+        => value is not null && value.Validate().Count == 0;
 
     /// <summary>
     /// Ensures that the specified <see cref="NotionApiServiceTests"/> instance is valid.
