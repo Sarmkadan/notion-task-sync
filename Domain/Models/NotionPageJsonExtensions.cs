@@ -16,6 +16,9 @@ using System.Text.Json.Serialization;
 /// <see cref="NotionPage"/> to support JSON serialization scenarios like
 /// configuration binding, API communication, and storage.
 /// </summary>
+/// <remarks>
+/// This static class cannot be inherited and cannot be used as a generic type argument.
+/// </remarks>
 public static class NotionPageJsonExtensions
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
@@ -47,10 +50,10 @@ public static class NotionPageJsonExtensions
     /// <summary>
     /// Deserializes a JSON string to a <see cref="NotionPage"/> instance.
     /// </summary>
-    /// <param name="json">The JSON string to deserialize.</param>
+    /// <param name="json">The JSON string to deserialize. Must not be <see langword="null"/>, empty, or whitespace.</param>
     /// <returns>The deserialized Notion page instance, or <see langword="null"/> if the JSON is empty or whitespace.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized into a <see cref="NotionPage"/> instance.</exception>
     public static NotionPage? FromJson(string json)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
@@ -66,9 +69,10 @@ public static class NotionPageJsonExtensions
     /// <summary>
     /// Attempts to deserialize a JSON string to a <see cref="NotionPage"/> instance.
     /// </summary>
-    /// <param name="json">The JSON string to deserialize.</param>
+    /// <param name="json">The JSON string to deserialize. Must not be <see langword="null"/>, empty, or whitespace.</param>
     /// <param name="value">Receives the deserialized Notion page instance if successful.</param>
     /// <returns><see langword="true"/> if deserialization succeeded; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is <see langword="null"/>, empty, or whitespace.</exception>
     public static bool TryFromJson(string json, out NotionPage? value)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
