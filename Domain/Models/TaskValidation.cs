@@ -7,8 +7,6 @@
 namespace NotionTaskSync.Domain.Models;
 
 using System;
-using System.Collections.Generic;
-using System.Globalization;
 
 /// <summary>
 /// Provides validation helpers for <see cref="Task"/> entities.
@@ -76,16 +74,14 @@ public static class TaskValidation
             }
         }
 
-        // Validate Status
-        // Note: TaskStatus is an enum, so any value is technically valid
-        // But we validate the business logic: Completed tasks should have CompletedAt set
+        // Validate Status consistency with CompletedAt
         if (value.Status == TaskStatus.Done && !value.CompletedAt.HasValue)
         {
             errors.Add("Task.Status is 'Done' but Task.CompletedAt is not set.");
         }
 
         // Validate Priority (0-100 range)
-        if (value.Priority < 0 || value.Priority > 100)
+        if (value.Priority is < 0 or > 100)
         {
             errors.Add("Task.Priority must be between 0 and 100 inclusive.");
         }
@@ -190,7 +186,7 @@ public static class TaskValidation
             }
         }
 
-        // Validate Status/DueDate/CompletedAt consistency
+        // Validate Status/DueDate/CompletedAt consistency using pattern matching
         switch (value.Status)
         {
             case TaskStatus.Done:
@@ -201,7 +197,7 @@ public static class TaskValidation
                 break;
 
             case TaskStatus.Blocked:
-                // Blocked tasks can have DueDate but should typically have one
+                // Blocked tasks with past DueDate are invalid
                 if (value.DueDate.HasValue && value.DueDate.Value < DateTime.UtcNow)
                 {
                     errors.Add("Task.Status is 'Blocked' but Task.DueDate is in the past.");
