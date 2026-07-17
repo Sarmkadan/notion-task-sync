@@ -60,18 +60,19 @@ public static class SyncStatisticsValidation
             errors.Add($"ResolvedConflicts must be non-negative, but was {value.ResolvedConflicts}.");
         }
 
-        // Validate derived relationships
-        if (value.SuccessfulSyncs + value.FailedSyncs != value.TotalSyncs)
+        // Validate derived relationships (only check if values are non-negative to avoid false positives)
+        if (value.TotalSyncs >= 0 && value.SuccessfulSyncs + value.FailedSyncs != value.TotalSyncs)
         {
             errors.Add(
                 $"SuccessfulSyncs + FailedSyncs ({value.SuccessfulSyncs} + {value.FailedSyncs}) " +
                 $"must equal TotalSyncs ({value.TotalSyncs}).");
         }
 
-        if (value.ResolvedConflicts > value.TotalConflicts)
+        if (value.TotalConflicts >= 0 && value.ResolvedConflicts > value.TotalConflicts)
         {
             errors.Add(
-                $"ResolvedConflicts ({value.ResolvedConflicts}) cannot exceed TotalConflicts ({value.TotalConflicts}).");
+                $"ResolvedConflicts ({value.ResolvedConflicts}) " +
+                $"cannot exceed TotalConflicts ({value.TotalConflicts}).");
         }
 
         // Validate LastResetAt (should not be default DateTime)
@@ -80,63 +81,57 @@ public static class SyncStatisticsValidation
             errors.Add("LastResetAt must be set to a valid DateTime, but was default.");
         }
 
-        // Validate Operations collection
-        if (value.Operations is null)
+        // Validate Operations collection - throw if null to fail fast
+        ArgumentNullException.ThrowIfNull(value.Operations);
+
+        if (value.Operations.Count > 100)
         {
-            errors.Add("Operations collection must not be null.");
+            errors.Add($"Operations collection must contain at most 100 items, but had {value.Operations.Count} items.");
         }
-        else
+
+        foreach (var (index, operation) in value.Operations.Index())
         {
-            if (value.Operations.Count > 100)
+            if (operation is null)
             {
-                errors.Add("Operations collection must contain at most 100 items, but had " +
-                         $"{value.Operations.Count} items.");
+                errors.Add($"Operations[{index}] must not be null.");
+                continue;
             }
 
-            foreach (var (index, operation) in value.Operations.Index())
+            if (operation.DurationMs < 0)
             {
-                if (operation is null)
-                {
-                    errors.Add($"Operations[{index}] must not be null.");
-                    continue;
-                }
+                errors.Add($"Operations[{index}].DurationMs must be non-negative, but was {operation.DurationMs}.");
+            }
 
-                if (operation.DurationMs < 0)
-                {
-                    errors.Add($"Operations[{index}].DurationMs must be non-negative, but was {operation.DurationMs}.");
-                }
+            if (operation.TasksProcessed < 0)
+            {
+                errors.Add($"Operations[{index}].TasksProcessed must be non-negative, but was {operation.TasksProcessed}.");
+            }
 
-                if (operation.TasksProcessed < 0)
-                {
-                    errors.Add($"Operations[{index}].TasksProcessed must be non-negative, but was {operation.TasksProcessed}.");
-                }
+            if (operation.ChangesDetected < 0)
+            {
+                errors.Add($"Operations[{index}].ChangesDetected must be non-negative, but was {operation.ChangesDetected}.");
+            }
 
-                if (operation.ChangesDetected < 0)
-                {
-                    errors.Add($"Operations[{index}].ChangesDetected must be non-negative, but was {operation.ChangesDetected}.");
-                }
+            if (operation.ConflictsDetected < 0)
+            {
+                errors.Add($"Operations[{index}].ConflictsDetected must be non-negative, but was {operation.ConflictsDetected}.");
+            }
 
-                if (operation.ConflictsDetected < 0)
-                {
-                    errors.Add($"Operations[{index}].ConflictsDetected must be non-negative, but was {operation.ConflictsDetected}.");
-                }
+            if (operation.ConflictsResolved < 0)
+            {
+                errors.Add($"Operations[{index}].ConflictsResolved must be non-negative, but was {operation.ConflictsResolved}.");
+            }
 
-                if (operation.ConflictsResolved < 0)
-                {
-                    errors.Add($"Operations[{index}].ConflictsResolved must be non-negative, but was {operation.ConflictsResolved}.");
-                }
+            if (operation.ConflictsResolved > operation.ConflictsDetected)
+            {
+                errors.Add(
+                    $"Operations[{index}].ConflictsResolved ({operation.ConflictsResolved}) " +
+                    $"cannot exceed ConflictsDetected ({operation.ConflictsDetected}).");
+            }
 
-                if (operation.ConflictsResolved > operation.ConflictsDetected)
-                {
-                    errors.Add(
-                        $"Operations[{index}].ConflictsResolved ({operation.ConflictsResolved}) " +
-                        $"cannot exceed ConflictsDetected ({operation.ConflictsDetected}).");
-                }
-
-                if (operation.Timestamp == default)
-                {
-                    errors.Add($"Operations[{index}].Timestamp must be set to a valid DateTime, but was default.");
-                }
+            if (operation.Timestamp == default)
+            {
+                errors.Add($"Operations[{index}].Timestamp must be set to a valid DateTime, but was default.");
             }
         }
 
@@ -148,6 +143,7 @@ public static class SyncStatisticsValidation
     /// </summary>
     /// <param name="value">The statistics to check.</param>
     /// <returns>True if valid; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
     public static bool IsValid(this SyncStatistics value)
     {
         return value.Validate().Count == 0;
