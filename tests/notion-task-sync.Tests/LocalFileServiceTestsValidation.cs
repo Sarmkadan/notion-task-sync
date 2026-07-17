@@ -50,8 +50,8 @@ public static class LocalFileServiceTestsValidation
             problems.Add("Task.Description length exceeds maximum of 5000 characters.");
         }
 
-        // Validate Status is a defined enum value
-        if (!Enum.IsDefined(typeof(TaskStatus), value.Status))
+        // Validate Status is a valid enum value
+        if (!Enum.IsDefined(value.Status))
         {
             problems.Add("Task.Status is not a valid TaskStatus enum value.");
         }
@@ -62,57 +62,64 @@ public static class LocalFileServiceTestsValidation
             problems.Add("Task.Priority must be between 0 and 100 inclusive.");
         }
 
-        // Validate CreatedAt
+        // Validate CreatedAt is not default (Unix epoch minimum)
         if (value.CreatedAt == default)
         {
             problems.Add("Task.CreatedAt cannot be the default DateTime value.");
         }
 
-        // Validate UpdatedAt
+        // Validate UpdatedAt is not default (Unix epoch minimum)
         if (value.UpdatedAt == default)
         {
             problems.Add("Task.UpdatedAt cannot be the default DateTime value.");
         }
 
-        // Validate DueDate (if set)
+        // Validate DueDate (if set) - must be after CreatedAt
         if (value.DueDate.HasValue)
         {
             if (value.DueDate.Value == default)
             {
                 problems.Add("Task.DueDate cannot be the default DateTime value when set.");
             }
-            else if (value.DueDate.Value < value.CreatedAt)
+            else if (value.CreatedAt != default && value.DueDate.Value < value.CreatedAt)
             {
                 problems.Add("Task.DueDate cannot be earlier than Task.CreatedAt.");
             }
         }
 
-        // Validate CompletedAt (if set)
+        // Validate CompletedAt (if set) - must be after CreatedAt
         if (value.CompletedAt.HasValue)
         {
             if (value.CompletedAt.Value == default)
             {
                 problems.Add("Task.CompletedAt cannot be the default DateTime value when set.");
             }
-            else if (value.CompletedAt.Value < value.CreatedAt)
+            else if (value.CreatedAt != default && value.CompletedAt.Value < value.CreatedAt)
             {
                 problems.Add("Task.CompletedAt cannot be earlier than Task.CreatedAt.");
             }
         }
 
-        // Validate DeletedAt (if set)
+        // Validate DeletedAt (if set) - must be after CreatedAt
         if (value.DeletedAt.HasValue)
         {
             if (value.DeletedAt.Value == default)
             {
                 problems.Add("Task.DeletedAt cannot be the default DateTime value when set.");
             }
+            else if (value.CreatedAt != default && value.DeletedAt.Value < value.CreatedAt)
+            {
+                problems.Add("Task.DeletedAt cannot be earlier than Task.CreatedAt.");
+            }
         }
 
         // Validate LocalFilePath (if set)
-        if (value.LocalFilePath is not null && string.IsNullOrWhiteSpace(value.LocalFilePath))
+        if (value.LocalFilePath is not null)
         {
-            problems.Add("Task.LocalFilePath cannot be empty or whitespace when set.");
+            if (string.IsNullOrWhiteSpace(value.LocalFilePath))
+            {
+                problems.Add("Task.LocalFilePath cannot be empty or whitespace when set.");
+            }
         }
 
         // Validate AssignedTo length
@@ -168,7 +175,6 @@ public static class LocalFileServiceTestsValidation
         throw new ArgumentException(
             $"Task validation failed with {problems.Count} problem(s):{Environment.NewLine}" +
             $"- {string.Join($"{Environment.NewLine}- ", problems)}",
-            nameof(value),
-            new InvalidOperationException(string.Join("; ", problems)));
+            nameof(value));
     }
 }
