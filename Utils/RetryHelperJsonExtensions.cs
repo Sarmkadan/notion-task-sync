@@ -3,7 +3,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 namespace NotionTaskSync.Utils;
 
@@ -48,9 +48,12 @@ public static class RetryHelperJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>A deserialized <see cref="RetryHelper"/> instance, or null if the JSON is null or empty.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is malformed or cannot be deserialized.</exception>
     public static RetryHelper? FromJson(string json)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         if (string.IsNullOrEmpty(json))
         {
             return null;
@@ -65,8 +68,11 @@ public static class RetryHelperJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized <see cref="RetryHelper"/> instance if successful.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static bool TryFromJson(string json, out RetryHelper? value)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         value = null;
 
         if (string.IsNullOrEmpty(json))
