@@ -3282,6 +3282,81 @@ class Program
 }
 ```
 
+## HealthCheckWorkerValidation
+
+The `HealthCheckWorkerValidation` static class provides validation helpers for health check data, ensuring that `HealthCheckWorker` and `HealthStatus` instances contain valid, non-default values within expected ranges. It helps catch configuration errors, memory leaks, and invalid states early by validating memory usage, thread counts, uptime, and timestamp values.
+
+### Public Members
+
+- `Validate(this HealthCheckWorker value)` - Validates a `HealthCheckWorker` instance and returns a list of validation problems
+- `Validate(this HealthStatus value)` - Validates a `HealthStatus` instance and returns a list of validation problems  
+- `IsValid(this HealthCheckWorker value)` - Determines whether a `HealthCheckWorker` instance is valid
+- `IsValid(this HealthStatus value)` - Determines whether a `HealthStatus` instance is valid
+- `EnsureValid(this HealthCheckWorker value)` - Ensures that a `HealthCheckWorker` instance is valid, throwing if invalid
+- `EnsureValid(this HealthStatus value)` - Ensures that a `HealthStatus` instance is valid, throwing if invalid
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Workers;
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a valid health check worker
+        var healthWorker = new HealthCheckWorker(
+            logger: null, // In real usage, provide a proper ILogger
+            checkIntervalSeconds: 60);
+
+        // Validate the worker
+        var validationProblems = healthWorker.Validate();
+        
+        if (validationProblems.Count > 0)
+        {
+            Console.WriteLine("Validation failed:");
+            foreach (var problem in validationProblems)
+            {
+                Console.WriteLine($"- {problem}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("HealthCheckWorker is valid!");
+        }
+
+        // Validate using IsValid helper
+        bool isValid = healthWorker.IsValid();
+        Console.WriteLine($"IsValid: {isValid}");
+
+        // Validate using EnsureValid (throws if invalid)
+        try
+        {
+            healthWorker.EnsureValid();
+            Console.WriteLine("EnsureValid passed - worker is valid");
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"Validation failed: {ex.Message}");
+        }
+
+        // Validate HealthStatus directly
+        var status = new HealthStatus
+        {
+            IsHealthy = true,
+            MemoryUsageMb = 128,
+            ThreadCount = 10,
+            UptimeSeconds = 3600,
+            CheckedAt = DateTime.UtcNow
+        };
+        
+        var statusProblems = status.Validate();
+        Console.WriteLine($"HealthStatus has {statusProblems.Count} validation problems");
+    }
+}
+```
+
 ## LoggerFactory
 
 `LoggerFactory` creates and configures `ILogger` instances for the application, supporting both console and optional file logging. It also provides helpers to validate the log path, rotate oversized log files, and clean up old logs based on a retention policy.
