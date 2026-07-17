@@ -6883,3 +6883,65 @@ if (roundTripResult != null)
     Console.WriteLine($"Value: {roundTripResult.Value}");
 }
 ```
+## CollectionExtensionsJsonExtensions
+
+The `CollectionExtensionsJsonExtensions` class provides System.Text.Json serialization extensions for collection extension utilities. It contains a serializable marker type that enables JSON serialization of collection extension concepts.
+
+### Public Members
+
+- `CollectionExtensionsMarker` - Serializable marker type representing collection extension utilities
+- `bool Equals(CollectionExtensionsMarker? other)` - Determines whether the specified object is equal to the current object
+- `override bool Equals(object? obj)` - Determines whether the specified object is equal to the current object
+- `override int GetHashCode()` - Returns the hash code for this instance
+- `override string ToString()` - Returns a string representation of the object
+- `static string ToJson(this CollectionExtensionsMarker value, bool indented = false)` - Serializes collection extension utilities to a JSON string
+- `static CollectionExtensionsMarker? FromJson(string json)` - Deserializes a JSON string to a CollectionExtensionsMarker instance
+- `static bool TryFromJson(string json, out CollectionExtensionsMarker? value)` - Attempts to deserialize a JSON string to a CollectionExtensionsMarker instance
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+
+// Example 1: Creating and serializing a collection extensions marker
+var marker = new CollectionExtensionsMarker();
+
+// Serialize to JSON
+string json = marker.ToJson(indented: true);
+Console.WriteLine("Serialized collection extensions marker:");
+Console.WriteLine(json);
+
+// Example 2: Deserializing from JSON
+CollectionExtensionsMarker? deserializedMarker = CollectionExtensionsJsonExtensions.FromJson(json);
+if (deserializedMarker != null)
+{
+    Console.WriteLine($"Deserialized marker type: {deserializedMarker.GetType().Name}");
+    Console.WriteLine($"ToString(): {deserializedMarker.ToString()}");
+}
+
+// Example 3: Using TryFromJson for safe deserialization
+CollectionExtensionsMarker? safeMarker = null;
+if (CollectionExtensionsJsonExtensions.TryFromJson(json, out safeMarker))
+{
+    Console.WriteLine($"TryFromJson successful - Type: {safeMarker?.GetType().Name}");
+}
+else
+{
+    Console.WriteLine("Failed to deserialize JSON");
+}
+
+// Example 4: Equality checks
+var marker1 = new CollectionExtensionsMarker();
+var marker2 = new CollectionExtensionsMarker();
+Console.WriteLine($"Reference equality: {ReferenceEquals(marker1, marker2)}"); // False (different instances)
+Console.WriteLine($"Value equality: {marker1.Equals(marker2)}"); // False (reference equality)
+
+// Example 5: Round-trip serialization
+string roundTripJson = marker1.ToJson();
+CollectionExtensionsMarker? roundTripMarker = CollectionExtensionsJsonExtensions.FromJson(roundTripJson);
+if (roundTripMarker != null)
+{
+    Console.WriteLine($"\nRound-trip marker type: {roundTripMarker.GetType().Name}");
+    Console.WriteLine($"ToString(): {roundTripMarker.ToString()}");
+}
+```
