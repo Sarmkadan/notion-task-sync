@@ -12,6 +12,11 @@ public static class SyncExceptionJsonExtensions
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    private static readonly JsonSerializerOptions _indentedJsonOptions = new(_jsonOptions)
+    {
+        WriteIndented = true
+    };
+
     /// <summary>
     /// Serializes a <see cref="SyncException"/> instance to a JSON string.
     /// </summary>
@@ -22,15 +27,7 @@ public static class SyncExceptionJsonExtensions
     public static string ToJson(this SyncException value, bool indented = false)
     {
         ArgumentNullException.ThrowIfNull(value);
-
-        var options = indented
-            ? new JsonSerializerOptions(_jsonOptions)
-            {
-                WriteIndented = true
-            }
-            : _jsonOptions;
-
-        return JsonSerializer.Serialize(value, options);
+        return JsonSerializer.Serialize(value, indented ? _indentedJsonOptions : _jsonOptions);
     }
 
     /// <summary>
@@ -38,13 +35,11 @@ public static class SyncExceptionJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>The deserialized exception, or null if the JSON is null or empty.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     public static SyncException? FromJson(string json)
     {
-        if (string.IsNullOrEmpty(json))
-        {
-            return null;
-        }
+        ArgumentException.ThrowIfNullOrEmpty(json);
 
         return JsonSerializer.Deserialize<SyncException>(json, _jsonOptions);
     }
