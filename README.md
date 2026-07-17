@@ -5096,6 +5096,102 @@ if (Directory.Exists(localTasksDirectory))
 }
 ```
 
+## ConflictDiffServiceValidation
+
+The `ConflictDiffServiceValidation` class provides comprehensive validation helpers for the `ConflictDiffService` and related conflict resolution types. It ensures that service instances, conflict resolutions, diff results, and method parameters are valid before operations are performed, preventing runtime errors and providing clear validation feedback.
+
+### Key Features
+- Validates `ConflictDiffService` instances for proper initialization
+- Validates `ConflictResolution` objects with comprehensive property checks
+- Validates `ConflictDiffResult` objects for rendering
+- Validates batch conflict collections for bulk operations
+- Provides both boolean checks (`IsValid`) and exception-throwing validation (`EnsureValid`)
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using NotionTaskSync.Domain.Models;
+using System;
+using Microsoft.Extensions.Logging;
+
+class Program
+{
+    static void Main()
+    {
+        // 1. Validate a ConflictDiffService instance
+        var loggerFactory = LoggerFactory.Create(builder => { });
+        var conflictDiffService = new ConflictDiffService(loggerFactory.CreateLogger<ConflictDiffService>());
+        
+        var serviceErrors = conflictDiffService.Validate();
+        if (serviceErrors.Count > 0)
+        {
+            Console.WriteLine("Service validation failed:");
+            foreach (var error in serviceErrors)
+            {
+                Console.WriteLine($"  - {error}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Service instance is valid");
+        }
+        
+        // 2. Validate a ConflictResolution object
+        var conflict = new ConflictResolution
+        {
+            Id = Guid.NewGuid(),
+            PropertyName = "Description",
+            LocalValue = "Local description",
+            NotionValue = "Notion description",
+            DetectedAt = DateTime.UtcNow
+        };
+        
+        var conflictErrors = conflict.Validate();
+        if (conflictErrors.Count > 0)
+        {
+            Console.WriteLine("Conflict validation failed:");
+            foreach (var error in conflictErrors)
+            {
+                Console.WriteLine($"  - {error}");
+            }
+        }
+        
+        // 3. Validate parameters for GenerateDiffForPropertyAsync
+        var paramErrors = ConflictDiffServiceValidation.Validate(
+            localValue: "local data",
+            notionValue: "notion data",
+            propertyName: "Description",
+            conflictId: Guid.NewGuid()
+        );
+        
+        if (paramErrors.Count > 0)
+        {
+            Console.WriteLine("Parameter validation failed:");
+            foreach (var error in paramErrors)
+            {
+                Console.WriteLine($"  - {error}");
+            }
+        }
+        
+        // 4. Use EnsureValid to throw on invalid input
+        try
+        {
+            ConflictDiffServiceValidation.EnsureValid(conflict);
+            Console.WriteLine("Conflict is valid!");
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"Validation error: {ex.Message}");
+        }
+        
+        // 5. Check validity without exceptions
+        bool isValid = conflict.IsValid();
+        Console.WriteLine($"Is conflict valid: {isValid}");
+    }
+}
+```
+
 ## ConflictResolution
 
 The `ConflictResolution` class represents a conflict detected during synchronization between local task storage and Notion databases. It tracks both local and Notion versions of conflicting properties, enabling automatic resolution strategies (like last-write-wins) or manual review workflows. Each conflict maintains timestamps for both local and Notion modifications, allowing precise conflict resolution based on temporal ordering or explicit strategy selection.
