@@ -9,7 +9,6 @@ namespace NotionTaskSync.Workers;
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 /// <summary>
 /// Provides validation helpers for <see cref="HealthCheckWorker"/> and <see cref="HealthStatus"/> classes.
@@ -88,8 +87,19 @@ public static class HealthCheckWorkerValidation
 
         var problems = new List<string>();
 
-        // Validate IsHealthy (should be a valid boolean)
-        // No specific validation needed beyond null check since it's a bool
+        // Validate IsHealthy (should be consistent with actual metrics)
+        if (!value.IsHealthy && value.MemoryUsageMb >= 0 && value.ThreadCount >= 0)
+        {
+            // If marked unhealthy but metrics are valid, check consistency
+            var expectedHealthy = value.MemoryUsageMb < 500 && value.ThreadCount < 50;
+            if (expectedHealthy)
+            {
+                problems.Add(string.Format(
+                    "IsHealthy is false but memory usage ({0}MB) and thread count ({1}) are within acceptable ranges (<500MB, <50 threads).",
+                    value.MemoryUsageMb,
+                    value.ThreadCount));
+            }
+        }
 
         // Validate MemoryUsageMb
         if (value.MemoryUsageMb < 0)
