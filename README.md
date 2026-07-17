@@ -347,6 +347,117 @@ class Program
 }
 ```
 
+## ValidationHelper
+
+The `ValidationHelper` static class provides validation utilities for common data types and patterns used throughout the application. It includes methods for validating Notion IDs, email addresses, file paths, API keys, priorities, URLs, and more. These utilities help ensure data integrity and prevent invalid inputs from propagating through the sync pipeline.
+
+### Public Members
+
+- `IsValidNotionId(string? id)` - Validates that a string is a valid Notion page or database ID format
+- `IsValidEmail(string? email)` - Validates that a string is a valid email address
+- `IsValidFilePath(string? path)` - Validates that a file path is within acceptable bounds
+- `IsValidDirectoryPath(string? path)` - Validates that a string represents a valid directory path
+- `IsValidApiKey(string? apiKey)` - Validates that an API key has the correct format
+- `IsValidPriority(int priority)` - Validates that a task priority is within acceptable range (0-100)
+- `IsInRange(int value, int min, int max)` - Validates that an integer is within a specified range
+- `IsLengthValid(string? value, int minLength, int maxLength)` - Validates that a string length is within bounds
+- `SanitizeString(string? input)` - Sanitizes a string by removing potentially harmful characters
+- `IsValidIdentifierName(string? name)` - Validates that a name follows identifier naming conventions
+- `IsValidUrl(string? url)` - Validates that a URL is properly formatted
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Utils;
+using System;
+
+class Program
+{
+  static void Main()
+  {
+    // Example 1: Validate Notion IDs
+    var validNotionId = "550e8400-e29b-41d4-a716-446655440000";
+    var invalidNotionId = "invalid-id";
+    Console.WriteLine($"Valid Notion ID: {ValidationHelper.IsValidNotionId(validNotionId)}"); // True
+    Console.WriteLine($"Invalid Notion ID: {ValidationHelper.IsValidNotionId(invalidNotionId)}"); // False
+
+    // Example 2: Validate email addresses
+    var validEmail = "user@example.com";
+    var invalidEmail = "not-an-email";
+    Console.WriteLine($"Valid email: {ValidationHelper.IsValidEmail(validEmail)}"); // True
+    Console.WriteLine($"Invalid email: {ValidationHelper.IsValidEmail(invalidEmail)}"); // False
+
+    // Example 3: Validate file and directory paths
+    var validFilePath = @"./tasks/task-config.json";
+    var invalidPath = "";
+    Console.WriteLine($"Valid file path: {ValidationHelper.IsValidFilePath(validFilePath)}"); // True
+    Console.WriteLine($"Invalid file path: {ValidationHelper.IsValidFilePath(invalidPath)}"); // False
+    
+    var validDirPath = @"./tasks";
+    Console.WriteLine($"Valid directory path: {ValidationHelper.IsValidDirectoryPath(validDirPath)}"); // True
+
+    // Example 4: Validate API keys
+    var validApiKey = "sk_1234567890abcdefghijklmnop";
+    var shortApiKey = "short-key";
+    Console.WriteLine($"Valid API key: {ValidationHelper.IsValidApiKey(validApiKey)}"); // True
+    Console.WriteLine($"Short API key: {ValidationHelper.IsValidApiKey(shortApiKey)}"); // False
+
+    // Example 5: Validate task priorities
+    var validPriority = 75;
+    var invalidPriority = 150;
+    Console.WriteLine($"Valid priority (75): {ValidationHelper.IsValidPriority(validPriority)}"); // True
+    Console.WriteLine($"Invalid priority (150): {ValidationHelper.IsValidPriority(invalidPriority)}"); // False
+
+    // Example 6: Validate range constraints
+    var valueInRange = 50;
+    var valueOutOfRange = 150;
+    Console.WriteLine($"Value 50 in range 0-100: {ValidationHelper.IsInRange(valueInRange, 0, 100)}"); // True
+    Console.WriteLine($"Value 150 in range 0-100: {ValidationHelper.IsInRange(valueOutOfRange, 0, 100)}"); // False
+
+    // Example 7: Validate string lengths
+    var text = "This is a task description";
+    Console.WriteLine($"Text length valid (min 10, max 50): {ValidationHelper.IsLengthValid(text, 10, 50)}"); // True
+    Console.WriteLine($"Text length valid (min 100, max 200): {ValidationHelper.IsLengthValid(text, 100, 200)}"); // False
+
+    // Example 8: Sanitize strings
+    var unsafeString = "Task description with\r\ncontrol characters\x00and\x1Finvalid\x7Fdata";
+    var sanitized = ValidationHelper.SanitizeString(unsafeString);
+    Console.WriteLine($"Sanitized string: '{sanitized}'");
+    Console.WriteLine($"Sanitized length: {sanitized.Length}");
+
+    // Example 9: Validate identifier names
+    var validIdentifier = "taskName_123";
+    var invalidIdentifier = "123invalid";
+    Console.WriteLine($"Valid identifier: {ValidationHelper.IsValidIdentifierName(validIdentifier)}"); // True
+    Console.WriteLine($"Invalid identifier: {ValidationHelper.IsValidIdentifierName(invalidIdentifier)}"); // False
+
+    // Example 10: Validate URLs
+    var validUrl = "https://api.example.com/tasks";
+    var invalidUrl = "not-a-url";
+    Console.WriteLine($"Valid URL: {ValidationHelper.IsValidUrl(validUrl)}"); // True
+    Console.WriteLine($"Invalid URL: {ValidationHelper.IsValidUrl(invalidUrl)}"); // False
+
+    // Example 11: Real-world usage in configuration validation
+    var config = new SyncConfig
+    {
+      NotionDatabaseId = "550e8400-e29b-41d4-a716-446655440000",
+      NotionApiKey = "sk_1234567890abcdefghijklmnop",
+      LocalFolderPath = @"./tasks"
+    };
+
+    var isConfigValid = ValidationHelper.IsValidNotionId(config.NotionDatabaseId) &&
+                       ValidationHelper.IsValidApiKey(config.NotionApiKey) &&
+                       ValidationHelper.IsValidDirectoryPath(config.LocalFolderPath);
+    
+    Console.WriteLine($"\nConfiguration validation: {isConfigValid}");
+    if (isConfigValid)
+    {
+      Console.WriteLine("All configuration values are valid!");
+    }
+  }
+}
+```
+
 ## TimeHelper
 
 The `TimeHelper` static class provides utility methods for working with dates, times, and time intervals in the application. It handles UTC time operations, date formatting, parsing, time comparisons, and synchronization timing calculations. The helper is designed for scenarios involving task scheduling, sync operations, and temporal calculations.
