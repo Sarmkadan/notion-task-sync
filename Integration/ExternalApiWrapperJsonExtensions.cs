@@ -33,9 +33,10 @@ public static class ExternalApiWrapperJsonExtensions
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        var options = indented
-            ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
-            : _jsonOptions;
+        var options = new JsonSerializerOptions(_jsonOptions)
+        {
+            WriteIndented = indented
+        };
 
         return JsonSerializer.Serialize(value, options);
     }
@@ -46,6 +47,7 @@ public static class ExternalApiWrapperJsonExtensions
     /// <param name="json">The JSON string to parse.</param>
     /// <returns>An <see cref="ExternalApiWrapper"/> instance deserialized from the JSON, or null if the JSON is empty.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or whitespace.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     public static ExternalApiWrapper? FromJson(string json)
     {
