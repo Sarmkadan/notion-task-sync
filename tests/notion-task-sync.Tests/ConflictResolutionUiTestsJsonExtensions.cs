@@ -42,12 +42,9 @@ public static class ConflictResolutionUiTestsJsonExtensions
     {
         ArgumentNullException.ThrowIfNull(json);
 
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        return JsonSerializer.Deserialize<ConflictResolutionUiTests>(json, _jsonOptions);
+        return string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<ConflictResolutionUiTests>(json, _jsonOptions);
     }
 
     /// <summary>
