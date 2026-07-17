@@ -2104,6 +2104,70 @@ class Program
 }
 ```
 
+## LoggerFactoryExtensions
+
+The `LoggerFactoryExtensions` static class provides extension methods for `ILoggerFactory` that enable file-based logging operations with automatic log rotation and cleanup. These extensions help manage log file directories, rotate logs when they reach maximum size, and clean up old log files based on retention policies, ensuring that logging infrastructure remains reliable and doesn't consume excessive disk space.
+
+### Public Members
+
+- `EnsureLogDirectoryExists(this ILoggerFactory factory, string logFilePath)` - Ensures the directory for log files exists, creating it if necessary
+- `RotateAndCleanupLogs(this ILoggerFactory factory, string logFilePath, long maxSizeBytes = 10485760, int retentionDays = 30)` - Rotates the log file if it exceeds the specified maximum size and cleans up old logs
+- `RotateLogFile(this ILoggerFactory factory, string logFilePath, long maxSizeBytes = 10485760)` - Rotates the log file if it exceeds the specified maximum size, creating a timestamped archive
+- `CleanupOldLogs(this ILoggerFactory factory, string logFilePath, int retentionDays = 30)` - Cleans up old log files based on retention policy
+- `ValidateLogPath(this ILoggerFactory factory, string logFilePath)` - Validates that the log directory is accessible and writable
+
+### Usage Example
+
+```csharp
+using Microsoft.Extensions.Logging;
+using NotionTaskSync.Infrastructure.Logging;
+using System;
+using System.IO;
+
+class Program
+{
+    static void Main()
+    {
+        // Setup logger factory with file logging
+        var loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder
+                .AddConsole()
+                .AddFile("logs/app-logs.txt"); // Requires Microsoft.Extensions.Logging.File extension
+        });
+
+        // Example 1: Ensure log directory exists
+        var logFilePath = @"./logs/application.log";
+        loggerFactory.EnsureLogDirectoryExists(logFilePath);
+        Console.WriteLine("Log directory ensured");
+
+        // Example 2: Validate log path before writing
+        var isPathValid = loggerFactory.ValidateLogPath(logFilePath);
+        Console.WriteLine($"Log path valid: {isPathValid}");
+
+        // Example 3: Rotate and cleanup logs (typically called during application startup)
+        loggerFactory.RotateAndCleanupLogs(logFilePath, maxSizeBytes: 5 * 1024 * 1024, retentionDays: 14);
+        Console.WriteLine("Log rotation and cleanup completed");
+
+        // Example 4: Manual log rotation when file gets too large
+        var logFileInfo = new FileInfo(logFilePath);
+        if (logFileInfo.Exists && logFileInfo.Length > 10 * 1024 * 1024) // 10MB
+        {
+            loggerFactory.RotateLogFile(logFilePath, maxSizeBytes: 10 * 1024 * 1024);
+            Console.WriteLine("Log file rotated due to size limit");
+        }
+
+        // Example 5: Manual cleanup of old logs
+        loggerFactory.CleanupOldLogs(logFilePath, retentionDays: 7);
+        Console.WriteLine("Old logs cleaned up");
+
+        // Get logger and use it
+        var logger = loggerFactory.CreateLogger<Program>();
+        logger.LogInformation("LoggerFactoryExtensions initialized successfully");
+    }
+}
+```
+
 ## LoggingMiddleware
 
 The `LoggingMiddleware` class provides structured logging for all synchronization operations, enabling observability and debugging. It wraps operations with timing, status logging, and error tracking, creating consistent log entries that can be analyzed for performance monitoring and error diagnosis. The middleware supports both synchronous and asynchronous operations with detailed logging at different verbosity levels.
