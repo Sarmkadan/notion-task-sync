@@ -31,6 +31,13 @@ public sealed class AppSettings
     public bool EnableConsoleLogging { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the application should run in dry‑run mode.
+    /// When true, mutation calls to the Notion API are skipped and only planned operations
+    /// are logged.
+    /// </summary>
+    public bool DryRun { get; set; } = false;
+
+    /// <summary>
     /// Gets or sets the log file path (if file logging is enabled).
     /// </summary>
     public string? LogFilePath { get; set; }
