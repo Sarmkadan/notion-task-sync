@@ -246,6 +246,81 @@ public class ConflictResolutionService
                 : 0
         };
     }
+
+    /// <summary>
+    /// Resolves a single conflict using the specified strategy.
+    /// </summary>
+    /// <param name="conflict">The conflict to resolve.</param>
+    /// <param name="strategy">The strategy to use for resolution.</param>
+    /// <returns>The resolved conflict.</returns>
+    public ConflictResolution ResolveWith(ConflictResolution conflict, ConflictStrategy strategy)
+    {
+        ArgumentNullException.ThrowIfNull(conflict);
+
+        return strategy switch
+        {
+            ConflictStrategy.PreferLocal => ResolveWithPreferLocal(conflict),
+            ConflictStrategy.PreferRemote => ResolveWithPreferRemote(conflict),
+            ConflictStrategy.Newest => ResolveWithNewest(conflict),
+            _ => ResolveWithNewest(conflict)
+        };
+    }
+
+    /// <summary>
+    /// Resolves conflict by preferring the local value.
+    /// </summary>
+    private ConflictResolution ResolveWithPreferLocal(ConflictResolution conflict)
+    {
+        conflict.Resolve(
+            conflict.LocalValue ?? string.Empty,
+            ResolutionMethod.LocalWins,
+            "Resolved using PreferLocal strategy: Local value preferred");
+
+        return conflict;
+    }
+
+    /// <summary>
+    /// Resolves conflict by preferring the remote (Notion) value.
+    /// </summary>
+    private ConflictResolution ResolveWithPreferRemote(ConflictResolution conflict)
+    {
+        conflict.Resolve(
+            conflict.NotionValue ?? string.Empty,
+            ResolutionMethod.NotionWins,
+            "Resolved using PreferRemote strategy: Notion value preferred");
+
+        return conflict;
+    }
+
+    /// <summary>
+    /// Resolves conflict by using the newest value based on modification timestamps.
+    /// </summary>
+    private ConflictResolution ResolveWithNewest(ConflictResolution conflict)
+    {
+        var localTimestamp = conflict.LocalModifiedAt ?? DateTime.MinValue;
+        var notionTimestamp = conflict.NotionModifiedAt ?? DateTime.MinValue;
+
+        if (notionTimestamp >= localTimestamp)
+        {
+            conflict.Resolve(
+                conflict.NotionValue ?? string.Empty,
+                ResolutionMethod.LastWrite,
+                $"Resolved using Newest strategy: Notion value is newer " +
+                $"(local: {localTimestamp:O}, notion: {notionTimestamp:O}). " +
+                $"Discarded local value: \"{conflict.LocalValue}\"");
+        }
+        else
+        {
+            conflict.Resolve(
+                conflict.LocalValue ?? string.Empty,
+                ResolutionMethod.LastWrite,
+                $"Resolved using Newest strategy: Local value is newer " +
+                $"(local: {localTimestamp:O}, notion: {notionTimestamp:O}). " +
+                $"Discarded Notion value: \"{conflict.NotionValue}\"");
+        }
+
+        return conflict;
+    }
 }
 
 /// <summary>
