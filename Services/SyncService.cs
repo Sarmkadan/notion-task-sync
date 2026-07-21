@@ -148,25 +148,37 @@ public sealed class SyncService
                 {
                     if (task.IsDeleted)
                     {
-                        await _notionApiService.UpdatePageAsync(page.PageId, task);
+                        if (!config.IsDryRun)
+                        {
+                            await _notionApiService.UpdatePageAsync(page.PageId, task);
+                        }
+                        _logger?.LogInformation("DRY-RUN: Would archive page {PageId} (task {TaskId})", page.PageId, task.Id);
                         deleted++;
                     }
                     else
                     {
-                        await _notionApiService.UpdatePageAsync(page.PageId, task);
+                        if (!config.IsDryRun)
+                        {
+                            await _notionApiService.UpdatePageAsync(page.PageId, task);
+                        }
+                        _logger?.LogInformation("DRY-RUN: Would update page {PageId} with task {TaskId}", page.PageId, task.Id);
                         updated++;
                     }
                 }
                 else if (task.NotionPageId is null)
                 {
-                    var newPage = await _notionApiService.CreatePageAsync(config.NotionDatabaseId, task);
-
-                    if (newPage is not null)
+                    if (!config.IsDryRun)
                     {
-                        task.NotionPageId = newPage.PageId;
-                        await _taskRepository.UpdateAsync(task);
-                        created++;
+                        var newPage = await _notionApiService.CreatePageAsync(config.NotionDatabaseId, task);
+
+                        if (newPage is not null)
+                        {
+                            task.NotionPageId = newPage.PageId;
+                            await _taskRepository.UpdateAsync(task);
+                        }
                     }
+                    _logger?.LogInformation("DRY-RUN: Would create new page in database {DatabaseId} for task {TaskId}", config.NotionDatabaseId, task.Id);
+                    created++;
                 }
             }
         }
@@ -181,7 +193,11 @@ public sealed class SyncService
                 if (task is not null)
                 {
                     UpdateTaskFromPage(task, page);
-                    await _taskRepository.UpdateAsync(task);
+                    if (!config.IsDryRun)
+                    {
+                        await _taskRepository.UpdateAsync(task);
+                    }
+                    _logger?.LogInformation("DRY-RUN: Would update local task {TaskId} from page {PageId}", task.Id, page.PageId);
                     if (page.Archived)
                         deleted++;
                     else
@@ -190,7 +206,11 @@ public sealed class SyncService
                 else
                 {
                     var newTask = CreateTaskFromPage(page);
-                    await _taskRepository.AddAsync(newTask);
+                    if (!config.IsDryRun)
+                    {
+                        await _taskRepository.AddAsync(newTask);
+                    }
+                    _logger?.LogInformation("DRY-RUN: Would create local task {TaskId} from page {PageId}", newTask.Id, page.PageId);
                     created++;
                 }
             }
