@@ -54,6 +54,13 @@ public class SyncConfig
 
     public DateTime? NextScheduledSyncAt { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the sync should run in dry-run mode.
+    /// When true, mutation calls to the Notion API are skipped and only planned operations
+    /// are logged.
+    /// </summary>
+    public bool IsDryRun { get; set; } = false;
+
     public Dictionary<string, string>? FieldMappings { get; set; }
 
     public List<string>? IgnoredFields { get; set; }
@@ -68,8 +75,8 @@ public class SyncConfig
     /// <example>
     /// <code>
     /// "fieldConflictStrategies": {
-    ///   "Title":  "LocalWins",
-    ///   "Status": "NotionWins"
+    /// "Title": "LocalWins",
+    /// "Status": "NotionWins"
     /// }
     /// </code>
     /// </example>

@@ -25,6 +25,9 @@ public class Program
     {
         try
         {
+            // Parse command-line arguments
+            var isDryRun = ParseDryRunFlag(args);
+
             // Load configuration
             var configuration = BuildConfiguration();
 
@@ -48,7 +51,14 @@ public class Program
             // Get logger for the application
             var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
-            logger.LogInformation("Notion Task Sync Application Starting");
+            if (isDryRun)
+            {
+                logger.LogInformation("Notion Task Sync Application Starting (DRY-RUN MODE - No mutations will be executed)");
+            }
+            else
+            {
+                logger.LogInformation("Notion Task Sync Application Starting");
+            }
             logger.LogInformation("Version: {Version}", "1.0.0");
             logger.LogInformation("Environment: {Environment}", "Development");
 
@@ -68,12 +78,27 @@ public class Program
                 return;
             }
 
+            // Pass dry-run flag to sync configuration
+            syncConfig.IsDryRun = isDryRun;
+
             // Execute the sync
-            logger.LogInformation("Starting sync from Notion to local tasks...");
+            if (isDryRun)
+            {
+                logger.LogInformation("Starting sync from Notion to local tasks... (DRY-RUN - Only computing changes)");
+            }
+            else
+            {
+                logger.LogInformation("Starting sync from Notion to local tasks...");
+            }
             var result = await syncService.ExecuteSyncAsync(syncConfig);
 
             // Log results
             LogSyncResults(logger, result);
+
+            if (isDryRun)
+            {
+                logger.LogInformation("DRY-RUN COMPLETED - No changes were applied to Notion or local files");
+            }
 
             logger.LogInformation("Notion Task Sync Application Completed Successfully");
         }
@@ -123,5 +148,16 @@ public class Program
         {
             logger.LogError("- Error: {ErrorMessage}", result.ErrorMessage);
         }
+    }
+
+    /// <summary>
+    /// Parses command-line arguments to check for --dry-run flag.
+    /// </summary>
+    /// <param name="args">Command-line arguments.</param>
+    /// <returns>True if --dry-run flag is present, false otherwise.</returns>
+    private static bool ParseDryRunFlag(string[] args)
+    {
+        return args.Contains("--dry-run", StringComparer.OrdinalIgnoreCase) ||
+               args.Contains("-d", StringComparer.OrdinalIgnoreCase);
     }
 }
