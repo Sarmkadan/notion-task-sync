@@ -37,6 +37,14 @@ public static class DependencyInjection
         services.AddSingleton<ITaskRepository, TaskRepository>();
         services.AddSingleton<IChangeLogRepository, ChangeLogRepository>();
 
+            // Register LocalFileService with base path from configuration
+            services.AddSingleton<LocalFileService>(sp =>
+            {
+                var appSettings = sp.GetRequiredService<AppSettings>();
+                var basePath = appSettings.LocalTasksDirectory ?? "./tasks";
+                return new LocalFileService(basePath);
+            });
+
         // Register services
         services.AddHttpClients();
         services.AddSingleton<NotionApiService>(sp =>
@@ -58,6 +66,19 @@ public static class DependencyInjection
         services.AddSingleton<ConflictDiffService>();
         services.AddSingleton<SyncService>();
 
+
+            // Register backup service with configuration
+            services.AddSingleton<BackupService>(sp =>
+            {
+                var appSettings = sp.GetRequiredService<AppSettings>();
+                var fileService = sp.GetRequiredService<LocalFileService>();
+
+                return new BackupService(
+                    backupDirectory: appSettings.BackupDirectory ?? "./backups",
+                    maxBackupFiles: appSettings.MaxBackupFiles,
+                    fileService: fileService
+                );
+            });
         // Calendar sync
         services.AddSingleton<CalendarSyncService>();
 
