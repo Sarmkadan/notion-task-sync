@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 namespace NotionTaskSync.Services;
 
@@ -12,6 +12,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 /// <summary>
 /// Provides integration with the Notion API for reading and writing task data.
@@ -23,9 +25,10 @@ public class NotionApiService
     internal readonly HttpClient _httpClient;
     internal const string NotionApiBaseUrl = "https://api.notion.com/v1";
     internal const string NotionApiVersion = "2022-06-28";
+    private readonly SemaphoreSlim _concurrencySemaphore = new SemaphoreSlim(4);
 
     public NotionApiService(string? apiKey)
-        : this(apiKey, null)
+    : this(apiKey, null)
     {
     }
 
@@ -47,6 +50,7 @@ public class NotionApiService
     /// <summary>
     /// Fetches all pages from a Notion database with automatic cursor-based pagination.
     /// Continues fetching until all pages are retrieved or an error occurs.
+    /// Uses concurrent fetching with bounded SemaphoreSlim(4) for improved performance.
     /// </summary>
     /// <param name="databaseId">The Notion database UUID to query.</param>
     /// <param name="pageSize">Number of results per API call (max 100). Defaults to 100.</param>
@@ -73,29 +77,40 @@ public class NotionApiService
                     start_cursor = string.IsNullOrEmpty(startCursor) ? null : startCursor
                 };
 
-                var response = await PostAsync(url, payload);
+                // Wait for semaphore slot to become available (bounded concurrency)
+                await _concurrencySemaphore.WaitAsync().ConfigureAwait(false);
 
-                if (response is null)
+                try
                 {
-                    hasMore = false;
-                    continue;
-                }
+                    var response = await PostAsync(url, payload).ConfigureAwait(false);
 
-                using var document = JsonDocument.Parse(response);
-                var root = document.RootElement;
-
-                if (root.TryGetProperty("results", out var results))
-                {
-                    foreach (var result in results.EnumerateArray())
+                    if (response is null)
                     {
-                        pages.Add(ParseNotionPage(result, databaseId));
+                        hasMore = false;
+                        continue;
                     }
-                }
 
-                hasMore = root.TryGetProperty("has_more", out var hasMoreElement) && hasMoreElement.GetBoolean();
-                startCursor = hasMore && root.TryGetProperty("next_cursor", out var cursorElement) && cursorElement.ValueKind == JsonValueKind.String
-                    ? cursorElement.GetString() ?? string.Empty
-                    : string.Empty;
+                    using var document = JsonDocument.Parse(response);
+                    var root = document.RootElement;
+
+                    if (root.TryGetProperty("results", out var results))
+                    {
+                        foreach (var result in results.EnumerateArray())
+                        {
+                            pages.Add(ParseNotionPage(result, databaseId));
+                        }
+                    }
+
+                    hasMore = root.TryGetProperty("has_more", out var hasMoreElement) && hasMoreElement.GetBoolean();
+                    startCursor = hasMore && root.TryGetProperty("next_cursor", out var cursorElement) && cursorElement.ValueKind == JsonValueKind.String
+                        ? cursorElement.GetString() ?? string.Empty
+                        : string.Empty;
+                }
+                finally
+                {
+                    // Release semaphore when batch is complete
+                    _concurrencySemaphore.Release();
+                }
             }
         }
         catch (Exception ex)
@@ -153,29 +168,40 @@ public class NotionApiService
                     }
                 };
 
-                var response = await PostAsync(url, payload);
+                // Wait for semaphore slot to become available (bounded concurrency)
+                await _concurrencySemaphore.WaitAsync().ConfigureAwait(false);
 
-                if (response is null)
+                try
                 {
-                    hasMore = false;
-                    continue;
-                }
+                    var response = await PostAsync(url, payload).ConfigureAwait(false);
 
-                using var document = JsonDocument.Parse(response);
-                var root = document.RootElement;
-
-                if (root.TryGetProperty("results", out var results))
-                {
-                    foreach (var result in results.EnumerateArray())
+                    if (response is null)
                     {
-                        pages.Add(ParseNotionPage(result, databaseId));
+                        hasMore = false;
+                        continue;
                     }
-                }
 
-                hasMore = root.TryGetProperty("has_more", out var hasMoreElement) && hasMoreElement.GetBoolean();
-                startCursor = hasMore && root.TryGetProperty("next_cursor", out var cursorElement) && cursorElement.ValueKind == JsonValueKind.String
-                    ? cursorElement.GetString() ?? string.Empty
-                    : string.Empty;
+                    using var document = JsonDocument.Parse(response);
+                    var root = document.RootElement;
+
+                    if (root.TryGetProperty("results", out var results))
+                    {
+                        foreach (var result in results.EnumerateArray())
+                        {
+                            pages.Add(ParseNotionPage(result, databaseId));
+                        }
+                    }
+
+                    hasMore = root.TryGetProperty("has_more", out var hasMoreElement) && hasMoreElement.GetBoolean();
+                    startCursor = hasMore && root.TryGetProperty("next_cursor", out var cursorElement) && cursorElement.ValueKind == JsonValueKind.String
+                        ? cursorElement.GetString() ?? string.Empty
+                        : string.Empty;
+                }
+                finally
+                {
+                    // Release semaphore when batch is complete
+                    _concurrencySemaphore.Release();
+                }
             }
         }
         catch (Exception ex)
@@ -216,7 +242,7 @@ public class NotionApiService
                 {
                     var extractedTitle = string.Concat(
                         titleArray.EnumerateArray()
-                            .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
+                        .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
 
                     if (!string.IsNullOrEmpty(extractedTitle) && string.IsNullOrEmpty(title))
                         title = extractedTitle;
@@ -227,7 +253,7 @@ public class NotionApiService
                 {
                     properties[property.Name] = string.Concat(
                         richTextArray.EnumerateArray()
-                            .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
+                        .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
                 }
                 else if (propertyValue.TryGetProperty("select", out var selectElement) && selectElement.ValueKind == JsonValueKind.Object)
                 {
@@ -256,14 +282,14 @@ public class NotionApiService
 
         if (element.TryGetProperty("created_time", out var createdTimeElement) &&
             DateTime.TryParse(createdTimeElement.GetString(), System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var createdTime))
+            System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var createdTime))
         {
             page.CreatedTime = createdTime;
         }
 
         if (element.TryGetProperty("last_edited_time", out var lastEditedTimeElement) &&
             DateTime.TryParse(lastEditedTimeElement.GetString(), System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var lastEditedTime))
+            System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var lastEditedTime))
         {
             page.LastEditedTime = lastEditedTime;
         }
@@ -292,7 +318,7 @@ public class NotionApiService
         try
         {
             var url = $"{NotionApiBaseUrl}/pages/{pageId}";
-            var response = await GetAsync(url);
+            var response = await GetAsync(url).ConfigureAwait(false);
 
             if (response is null)
                 throw new NotionApiException($"Notion API returned no content for page {pageId}");
@@ -310,7 +336,7 @@ public class NotionApiService
     /// <summary>
     /// Creates a new page in a Notion database from a task.
     /// </summary>
-    public virtual async Task<NotionPage> CreatePageAsync(string databaseId, Task task)
+    public virtual async Task<NotionPage> CreatePageAsync(string databaseId, global::NotionTaskSync.Domain.Models.Task task)
     {
         if (string.IsNullOrEmpty(databaseId))
             throw new ValidationException("Database ID cannot be empty");
@@ -331,7 +357,7 @@ public class NotionApiService
                 }
             };
 
-            var response = await PostAsync(url, payload);
+            var response = await PostAsync(url, payload).ConfigureAwait(false);
 
             if (response is null)
                 throw new NotionApiException($"Notion API returned no content when creating a page for task {task.Id}");
@@ -349,7 +375,7 @@ public class NotionApiService
     /// <summary>
     /// Updates an existing page in Notion with task data.
     /// </summary>
-    public virtual async Task<NotionPage> UpdatePageAsync(string pageId, Task task)
+    public virtual async Task<NotionPage> UpdatePageAsync(string pageId, global::NotionTaskSync.Domain.Models.Task task)
     {
         if (string.IsNullOrEmpty(pageId))
             throw new ValidationException("Page ID cannot be empty");
@@ -369,7 +395,7 @@ public class NotionApiService
                 }
             };
 
-            var response = await PatchAsync(url, payload);
+            var response = await PatchAsync(url, payload).ConfigureAwait(false);
 
             if (response is null)
                 throw new NotionApiException($"Notion API returned no content when updating page {pageId}");
@@ -397,7 +423,7 @@ public class NotionApiService
             var url = $"{NotionApiBaseUrl}/pages/{pageId}";
             var payload = new { archived = true };
 
-            await PatchAsync(url, payload);
+            await PatchAsync(url, payload).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -414,7 +440,7 @@ public class NotionApiService
         try
         {
             var url = $"{NotionApiBaseUrl}/users/me";
-            var response = await GetAsync(url);
+            var response = await GetAsync(url).ConfigureAwait(false);
             return response is not null;
         }
         catch
@@ -430,9 +456,9 @@ public class NotionApiService
     {
         try
         {
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync(url).ConfigureAwait(false);
             return response.IsSuccessStatusCode
-                ? await response.Content.ReadAsStringAsync()
+                ? await response.Content.ReadAsStringAsync().ConfigureAwait(false)
                 : null;
         }
         catch (Exception ex)
@@ -450,10 +476,10 @@ public class NotionApiService
         {
             var json = System.Text.Json.JsonSerializer.Serialize(payload);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync(url, content);
+            var response = await _httpClient.PostAsync(url, content).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode
-                ? await response.Content.ReadAsStringAsync()
+                ? await response.Content.ReadAsStringAsync().ConfigureAwait(false)
                 : null;
         }
         catch (Exception ex)
@@ -472,10 +498,10 @@ public class NotionApiService
             var json = System.Text.Json.JsonSerializer.Serialize(payload);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             var request = new HttpRequestMessage(HttpMethod.Patch, url) { Content = content };
-            var response = await _httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode
-                ? await response.Content.ReadAsStringAsync()
+                ? await response.Content.ReadAsStringAsync().ConfigureAwait(false)
                 : null;
         }
         catch (Exception ex)
