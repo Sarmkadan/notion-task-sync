@@ -24,6 +24,7 @@ public class NotionApiService
     internal readonly string? _apiKey;
     internal readonly HttpClient _httpClient;
     internal readonly List<string> _includedStatuses;
+    internal readonly AppJsonSerializerContext _jsonContext;
     internal const string NotionApiBaseUrl = "https://api.notion.com/v1";
     internal const string NotionApiVersion = "2022-06-28";
     private readonly SemaphoreSlim _concurrencySemaphore = new SemaphoreSlim(4);
@@ -43,6 +44,7 @@ public class NotionApiService
         _apiKey = apiKey;
         _httpClient = httpClient ?? new HttpClient();
         _includedStatuses = includedStatuses ?? new List<string>();
+        _jsonContext = new AppJsonSerializerContext();
 
         if (!string.IsNullOrEmpty(_apiKey))
         {
@@ -558,7 +560,7 @@ public class NotionApiService
     {
         try
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(payload);
+            var json = _jsonContext.Serialize(payload);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync(url, content).ConfigureAwait(false);
 
@@ -579,7 +581,7 @@ public class NotionApiService
     {
         try
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(payload);
+            var json = _jsonContext.Serialize(payload);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             var request = new HttpRequestMessage(HttpMethod.Patch, url) { Content = content };
             var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
