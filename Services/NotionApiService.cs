@@ -23,19 +23,26 @@ public class NotionApiService
 {
     internal readonly string? _apiKey;
     internal readonly HttpClient _httpClient;
+    internal readonly List<string> _includedStatuses;
     internal const string NotionApiBaseUrl = "https://api.notion.com/v1";
     internal const string NotionApiVersion = "2022-06-28";
     private readonly SemaphoreSlim _concurrencySemaphore = new SemaphoreSlim(4);
 
     public NotionApiService(string? apiKey)
-    : this(apiKey, null)
+    : this(apiKey, null, new List<string>())
     {
     }
 
     public NotionApiService(string? apiKey, HttpClient? httpClient)
+    : this(apiKey, httpClient, new List<string>())
+    {
+    }
+
+    public NotionApiService(string? apiKey, HttpClient? httpClient, List<string> includedStatuses)
     {
         _apiKey = apiKey;
         _httpClient = httpClient ?? new HttpClient();
+        _includedStatuses = includedStatuses ?? new List<string>();
 
         if (!string.IsNullOrEmpty(_apiKey))
         {
@@ -74,7 +81,8 @@ public class NotionApiService
                 var payload = new
                 {
                     page_size = pageSize,
-                    start_cursor = string.IsNullOrEmpty(startCursor) ? null : startCursor
+                    start_cursor = string.IsNullOrEmpty(startCursor) ? null : startCursor,
+                    filter = CreateStatusFilter()
                 };
 
                 // Wait for semaphore slot to become available (bounded concurrency)
@@ -158,14 +166,7 @@ public class NotionApiService
                 {
                     page_size = pageSize,
                     start_cursor = string.IsNullOrEmpty(startCursor) ? null : startCursor,
-                    filter = new
-                    {
-                        timestamp = "last_edited_time",
-                        last_edited_time = new
-                        {
-                            after = since.ToUniversalTime().ToString("o")
-                        }
-                    }
+                    filter = CreateIncrementalFilter(since)
                 };
 
                 // Wait for semaphore slot to become available (bounded concurrency)
@@ -214,6 +215,87 @@ public class NotionApiService
     }
 
     /// <summary>
+    /// Creates a filter object for status-based filtering when fetching all pages.
+    /// Returns null if no status filtering is configured.
+    /// </summary>
+    private object? CreateStatusFilter()
+    {
+        if (_includedStatuses == null || _includedStatuses.Count == 0)
+            return null;
+
+        return new
+        {
+            and = new object[]
+            {
+                new
+                {
+                    property = "Status",
+                    status = new
+                    {
+                        is_not_empty = true
+                    }
+                },
+                new
+                {
+                    or = _includedStatuses.Select(status => new
+                    {
+                        property = "Status",
+                        status = new
+                        {
+                            equals = status
+                        }
+                    }).ToArray()
+                }
+            }
+        };
+    }
+
+    /// <summary>
+    /// Creates a filter object for incremental sync with status filtering.
+    /// </summary>
+    private object CreateIncrementalFilter(DateTime since)
+    {
+        var baseFilter = new
+        {
+            timestamp = "last_edited_time",
+            last_edited_time = new
+            {
+                after = since.ToUniversalTime().ToString("o")
+            }
+        };
+
+        if (_includedStatuses == null || _includedStatuses.Count == 0)
+            return baseFilter;
+
+        return new
+        {
+            and = new object[]
+            {
+                baseFilter,
+                new
+                {
+                    property = "Status",
+                    status = new
+                    {
+                        is_not_empty = true
+                    }
+                },
+                new
+                {
+                    or = _includedStatuses.Select(status => new
+                    {
+                        property = "Status",
+                        status = new
+                        {
+                            equals = status
+                        }
+                    }).ToArray()
+                }
+            }
+        };
+    }
+
+    /// <summary>
     /// Parses a raw Notion "page" JSON object into a <see cref="NotionPage"/>, extracting
     /// the title from the first title-typed property and copying the remaining properties
     /// into <see cref="NotionPage.Properties"/> as plain text/JSON fragments.
@@ -242,7 +324,7 @@ public class NotionApiService
                 {
                     var extractedTitle = string.Concat(
                         titleArray.EnumerateArray()
-                        .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
+                            .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
 
                     if (!string.IsNullOrEmpty(extractedTitle) && string.IsNullOrEmpty(title))
                         title = extractedTitle;
@@ -253,7 +335,7 @@ public class NotionApiService
                 {
                     properties[property.Name] = string.Concat(
                         richTextArray.EnumerateArray()
-                        .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
+                            .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
                 }
                 else if (propertyValue.TryGetProperty("select", out var selectElement) && selectElement.ValueKind == JsonValueKind.Object)
                 {
@@ -282,14 +364,16 @@ public class NotionApiService
 
         if (element.TryGetProperty("created_time", out var createdTimeElement) &&
             DateTime.TryParse(createdTimeElement.GetString(), System.Globalization.CultureInfo.InvariantCulture,
-            System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var createdTime))
+                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
+                out var createdTime))
         {
             page.CreatedTime = createdTime;
         }
 
         if (element.TryGetProperty("last_edited_time", out var lastEditedTimeElement) &&
             DateTime.TryParse(lastEditedTimeElement.GetString(), System.Globalization.CultureInfo.InvariantCulture,
-            System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var lastEditedTime))
+                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
+                out var lastEditedTime))
         {
             page.LastEditedTime = lastEditedTime;
         }
