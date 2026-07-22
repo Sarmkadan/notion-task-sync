@@ -8,16 +8,27 @@ using Xunit;
 
 namespace NotionTaskSync.Tests.Formatters
 {
-    public class CsvFormatterTests
+    /// <summary>
+/// Unit tests for the <see cref="CsvFormatter"/> class that verify CSV formatting behavior.
+/// </summary>
+public class CsvFormatterTests
     {
         private readonly CsvFormatter _formatter;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CsvFormatterTests"/> class.
+        /// </summary>
         public CsvFormatterTests()
         {
             // Use a null logger to avoid needing a real logging infrastructure
             _formatter = new CsvFormatter(NullLogger<CsvFormatter>.Instance);
         }
 
+        /// <summary>
+        /// Tests that the CSV formatter properly escapes special characters in task fields.
+        /// Verifies that commas, quotes, and newlines are correctly wrapped in quotes
+        /// and internal quotes are doubled according to CSV standards.
+        /// </summary>
         [Fact]
         public void FormatTask_EscapesSpecialCharacters()
         {
@@ -72,6 +83,9 @@ namespace NotionTaskSync.Tests.Formatters
             Assert.Equal($"\"{task.Tags}\"", values[10]);
         }
 
+        /// <summary>
+        /// Tests that formatting an empty task list returns only the header row.
+        /// </summary>
         [Fact]
         public void FormatTasks_EmptyList_ReturnsHeaderOnly()
         {
@@ -86,6 +100,9 @@ namespace NotionTaskSync.Tests.Formatters
             Assert.Equal(expected, csv);
         }
 
+        /// <summary>
+        /// Tests that formatting a list of tasks includes the header row in the output.
+        /// </summary>
         [Fact]
         public void FormatTasks_IncludesHeaderRow()
         {
@@ -116,7 +133,12 @@ namespace NotionTaskSync.Tests.Formatters
             Assert.Equal(CsvHeader(), lines[0]);
         }
 
-        // Helper to retrieve the raw CSV values (including any surrounding quotes) using the same logic as CsvFormatter
+        /// <summary>
+        /// Helper method that extracts CSV values from a formatted CSV line.
+        /// Parses comma-separated values while respecting quoted fields that may contain commas.
+        /// </summary>
+        /// <param name="line">The CSV line to parse.</param>
+        /// <returns>An array of string values extracted from the CSV line.</returns>
         private static string[] GetCsvValues(string line)
         {
             var values = new List<string>();
@@ -153,7 +175,11 @@ namespace NotionTaskSync.Tests.Formatters
             return values.ToArray();
         }
 
-        // Duplicate of the private CsvHeader method from CsvFormatter for test verification
+        /// <summary>
+        /// Returns the CSV header row for task data.
+        /// This is a duplicate of the private CsvHeader method from CsvFormatter used for test verification.
+        /// </summary>
+        /// <returns>The CSV header string containing column names.</returns>
         private static string CsvHeader()
         {
             return "Id,Title,Description,Status,Priority,CreatedAt,UpdatedAt,DueDate,CompletedAt,AssignedTo,Tags,IsDeleted";
