@@ -85,6 +85,11 @@ public sealed class NotionApiSettings
     /// </summary>
     public Dictionary<string, string> PropertyMappings { get; set; } = new();
 
+        /// <summary>
+        /// Gets or sets the list of task statuses to include in sync (empty = all statuses).
+        /// </summary>
+        public List<string> IncludedStatuses { get; set; } = new();
+
     /// <summary>
     /// Validates the Notion API settings.
     /// </summary>

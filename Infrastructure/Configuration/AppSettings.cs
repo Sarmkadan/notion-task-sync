@@ -107,6 +107,11 @@ public sealed class AppSettings
     /// </summary>
     public Dictionary<string, object> SyncProfiles { get; set; } = new();
 
+        /// <summary>
+        /// Gets or sets the list of task statuses to include in sync (empty = all statuses).
+        /// </summary>
+        public List<string> IncludedStatuses { get; set; } = new();
+
     /// <summary>
     /// Validates the settings ensuring all paths are configured correctly.
     /// </summary>

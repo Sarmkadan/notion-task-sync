@@ -58,7 +58,11 @@ public static class DependencyInjection
                 .GetRequiredService<System.Net.Http.IHttpClientFactory>()
                 .CreateClient("NotionApi");
 
-            return new NotionApiService(apiKey, httpClient);
+            // Get included statuses from configuration
+            var includedStatusesConfig = notionApiConfig.GetValue<List<string>>("IncludedStatuses");
+            var includedStatuses = includedStatusesConfig ?? new List<string>();
+
+            return new NotionApiService(apiKey, httpClient, includedStatuses);
         });
 
         services.AddSingleton<ChangeDetectionService>();
