@@ -8,33 +8,26 @@ namespace NotionTaskSync.Formatters;
 
 using System;
 using System.Collections.Generic;
-using NotionTaskSync.Domain.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using NotionTaskSync.Domain.Models;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Formats tasks and other domain objects as JSON for API responses and file storage.
 /// Handles serialization with consistent formatting and null handling strategies.
 /// Critical for inter-system communication and data export/import operations.
+/// Uses source-generated JsonSerializerContext for improved performance in hot loops.
 /// </summary>
 public class JsonFormatter
 {
-    private readonly JsonSerializerOptions _options;
+    private readonly AppJsonSerializerContext _jsonContext;
     private readonly ILogger<JsonFormatter> _logger;
 
     public JsonFormatter(ILogger<JsonFormatter> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-        _options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            ReferenceHandler = ReferenceHandler.IgnoreCycles,
-            Converters = { new JsonStringEnumConverter() }
-        };
+        _jsonContext = new AppJsonSerializerContext();
     }
 
     /// <summary>
@@ -44,7 +37,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonSerializer.Serialize(task, _options);
+            return _jsonContext.Serialize(task);
         }
         catch (Exception ex)
         {
@@ -60,7 +53,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonSerializer.Serialize(tasks, _options);
+            return _jsonContext.Serialize(tasks);
         }
         catch (Exception ex)
         {
@@ -77,7 +70,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonSerializer.Serialize(config, _options);
+            return _jsonContext.Serialize(config);
         }
         catch (Exception ex)
         {
@@ -94,7 +87,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonSerializer.Serialize(obj, _options);
+            return _jsonContext.Serialize(obj);
         }
         catch (Exception ex)
         {
@@ -110,7 +103,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonSerializer.Deserialize<Task>(json, _options);
+            return _jsonContext.Deserialize<Task>(json);
         }
         catch (Exception ex)
         {
@@ -126,7 +119,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonSerializer.Deserialize<List<Task>>(json, _options);
+            return _jsonContext.Deserialize<List<Task>>(json);
         }
         catch (Exception ex)
         {
@@ -143,7 +136,7 @@ public class JsonFormatter
     {
         try
         {
-            return JsonSerializer.Deserialize<T>(json, _options);
+            return _jsonContext.Deserialize<T>(json);
         }
         catch (Exception ex)
         {
