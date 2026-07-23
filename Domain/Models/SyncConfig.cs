@@ -61,6 +61,16 @@ public class SyncConfig
     /// </summary>
     public bool IsDryRun { get; set; } = false;
 
+        /// <summary>
+        /// Gets or sets the clock skew tolerance window in milliseconds.
+        /// When the absolute difference between local and Notion timestamps is within this window,
+        /// the timestamps are considered equal for conflict resolution purposes.
+        /// This handles cases where both systems record timestamps with limited precision (e.g., minute-level).
+        /// Default is 60000 (1 minute) to account for Notion's minute-level granularity.
+        /// </summary>
+        [Range(0, 86400000)] // 0 to 24 hours in milliseconds
+        public int ClockSkewToleranceMs { get; set; } = 60000;
+
     public Dictionary<string, string>? FieldMappings { get; set; }
 
     public List<string>? IgnoredFields { get; set; }

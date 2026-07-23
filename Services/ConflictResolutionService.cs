@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 namespace NotionTaskSync.Services;
 
@@ -45,8 +45,8 @@ public class ConflictResolutionService
             var effectiveStrategy = fieldStrategies is not null
                 && !string.IsNullOrEmpty(conflict.PropertyName)
                 && fieldStrategies.TryGetValue(conflict.PropertyName, out var fieldStrategy)
-                    ? fieldStrategy
-                    : strategy;
+                ? fieldStrategy
+                : strategy;
 
             var resolution = effectiveStrategy switch
             {
@@ -104,14 +104,19 @@ public class ConflictResolutionService
     /// Resolves conflict by keeping the value with the newer modification timestamp.
     /// Uses <see cref="ConflictResolution.LocalModifiedAt"/> and
     /// <see cref="ConflictResolution.NotionModifiedAt"/> when available.
+    /// When timestamps are within clock skew tolerance, applies tie-break rule.
     /// Resolution notes record what was discarded so the decision is fully auditable.
     /// </summary>
+    /// <param name="conflict">The conflict to resolve.</param>
+    /// <returns>The resolved conflict.</returns>
     private ConflictResolution ResolveByLastWrite(ConflictResolution conflict)
     {
         var localTimestamp = conflict.LocalModifiedAt ?? DateTime.MinValue;
         var notionTimestamp = conflict.NotionModifiedAt ?? DateTime.MinValue;
 
-        if (notionTimestamp >= localTimestamp)
+        var timestampDifference = Math.Abs((notionTimestamp - localTimestamp).TotalMilliseconds);
+
+        if (notionTimestamp > localTimestamp + TimeSpan.FromMilliseconds(1))
         {
             conflict.Resolve(
                 conflict.NotionValue ?? string.Empty,
@@ -120,7 +125,7 @@ public class ConflictResolutionService
                 $"(local: {localTimestamp:O}, notion: {notionTimestamp:O}). " +
                 $"Discarded local value: \"{conflict.LocalValue}\"");
         }
-        else
+        else if (localTimestamp > notionTimestamp + TimeSpan.FromMilliseconds(1))
         {
             conflict.Resolve(
                 conflict.LocalValue ?? string.Empty,
@@ -128,6 +133,17 @@ public class ConflictResolutionService
                 $"Resolved using last-write-wins: Local value is newer " +
                 $"(local: {localTimestamp:O}, notion: {notionTimestamp:O}). " +
                 $"Discarded Notion value: \"{conflict.NotionValue}\"");
+        }
+        else
+        {
+            // Timestamps are equal or within clock skew tolerance - apply tie-break rule: prefer Notion by default
+            conflict.Resolve(
+                conflict.NotionValue ?? string.Empty,
+                ResolutionMethod.LastWrite,
+                $"Resolved using last-write-wins with tie-break: Timestamps are equal or within clock skew " +
+                $"(local: {localTimestamp:O}, notion: {notionTimestamp:O}, " +
+                $"difference: {timestampDifference}ms). " +
+                $"Preferred Notion value for consistency in distributed sync scenarios.");
         }
 
         return conflict;
@@ -294,13 +310,18 @@ public class ConflictResolutionService
 
     /// <summary>
     /// Resolves conflict by using the newest value based on modification timestamps.
+    /// When timestamps are equal (within clock skew tolerance), uses the configured tie-break rule.
     /// </summary>
+    /// <param name="conflict">The conflict to resolve.</param>
+    /// <returns>The resolved conflict.</returns>
     private ConflictResolution ResolveWithNewest(ConflictResolution conflict)
     {
         var localTimestamp = conflict.LocalModifiedAt ?? DateTime.MinValue;
         var notionTimestamp = conflict.NotionModifiedAt ?? DateTime.MinValue;
 
-        if (notionTimestamp >= localTimestamp)
+        var timestampDifference = Math.Abs((notionTimestamp - localTimestamp).TotalMilliseconds);
+
+        if (notionTimestamp > localTimestamp + TimeSpan.FromMilliseconds(1))
         {
             conflict.Resolve(
                 conflict.NotionValue ?? string.Empty,
@@ -309,7 +330,7 @@ public class ConflictResolutionService
                 $"(local: {localTimestamp:O}, notion: {notionTimestamp:O}). " +
                 $"Discarded local value: \"{conflict.LocalValue}\"");
         }
-        else
+        else if (localTimestamp > notionTimestamp + TimeSpan.FromMilliseconds(1))
         {
             conflict.Resolve(
                 conflict.LocalValue ?? string.Empty,
@@ -317,6 +338,17 @@ public class ConflictResolutionService
                 $"Resolved using Newest strategy: Local value is newer " +
                 $"(local: {localTimestamp:O}, notion: {notionTimestamp:O}). " +
                 $"Discarded Notion value: \"{conflict.NotionValue}\"");
+        }
+        else
+        {
+            // Timestamps are equal or within clock skew tolerance - apply tie-break rule: prefer Notion by default
+            conflict.Resolve(
+                conflict.NotionValue ?? string.Empty,
+                ResolutionMethod.LastWrite,
+                $"Resolved using Newest strategy with tie-break: Timestamps are equal or within clock skew " +
+                $"(local: {localTimestamp:O}, notion: {notionTimestamp:O}, " +
+                $"difference: {timestampDifference}ms). " +
+                $"Preferred Notion value to ensure consistency in distributed sync scenarios.");
         }
 
         return conflict;
