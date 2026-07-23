@@ -63,13 +63,17 @@ public class NotionApiService
     /// </summary>
     /// <param name="databaseId">The Notion database UUID to query.</param>
     /// <param name="pageSize">Number of results per API call (max 100). Defaults to 100.</param>
-    /// <returns>A complete list of <see cref="NotionPage"/> entities from the database.</returns>
+    /// <returns>A complete list of <see cref="NotionPage"/> entities from the database. For large databases, consider using <see cref="FetchPagesSinceAsync"/> for better performance.</returns>
     /// <exception cref="ValidationException">Thrown when <paramref name="databaseId"/> is empty.</exception>
-    /// <exception cref="NotionApiException">Thrown when the Notion API request fails.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="pageSize"/> is not between 1 and 100.</exception>
+/// <exception cref="NotionApiException">Thrown when the Notion API request fails.</exception>
     public virtual async Task<List<NotionPage>> FetchPagesAsync(string databaseId, int pageSize = 100)
     {
         if (string.IsNullOrEmpty(databaseId))
             throw new ValidationException("Database ID cannot be empty");
+
+    if (pageSize < 1 || pageSize > 100)
+        throw new ArgumentOutOfRangeException(nameof(pageSize), pageSize, "Page size must be between 1 and 100");
 
         var pages = new List<NotionPage>();
         var startCursor = string.Empty;
@@ -133,17 +137,18 @@ public class NotionApiService
     }
 
     /// <summary>
-    /// Fetches only pages that have been edited after <paramref name="since"/> (incremental sync).
+    /// Fetches only pages that have been edited on or after <paramref name="since"/> (incremental sync).
     /// Uses Notion's <c>filter</c> parameter with <c>last_edited_time</c> and cursor-based
     /// pagination so that large databases are queried efficiently — only changed entries are
     /// transferred, dramatically reducing API calls and sync duration.
     /// </summary>
     /// <param name="databaseId">The Notion database UUID to query.</param>
-    /// <param name="since">Only pages edited after this timestamp are returned.</param>
+    /// <param name="since">Only pages edited on or after this timestamp are returned. Uses UTC timezone.</param>
     /// <param name="pageSize">Results per API call (max 100). Defaults to 100.</param>
-    /// <returns>Pages whose <c>last_edited_time</c> is strictly after <paramref name="since"/>.</returns>
+    /// <returns>Pages whose <c>last_edited_time</c> is on or after <paramref name="since"/>.</returns>
     /// <exception cref="ValidationException">Thrown when <paramref name="databaseId"/> is empty.</exception>
-    /// <exception cref="NotionApiException">Thrown when the Notion API request fails.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="pageSize"/> is not between 1 and 100.</exception>
+/// <exception cref="NotionApiException">Thrown when the Notion API request fails.</exception>
     public virtual async Task<List<NotionPage>> FetchPagesSinceAsync(
         string databaseId,
         DateTime since,
@@ -151,6 +156,9 @@ public class NotionApiService
     {
         if (string.IsNullOrEmpty(databaseId))
             throw new ValidationException("Database ID cannot be empty");
+
+    if (pageSize < 1 || pageSize > 100)
+        throw new ArgumentOutOfRangeException(nameof(pageSize), pageSize, "Page size must be between 1 and 100");
 
         var pages = new List<NotionPage>();
         var startCursor = string.Empty;
@@ -262,7 +270,7 @@ public class NotionApiService
             timestamp = "last_edited_time",
             last_edited_time = new
             {
-                after = since.ToUniversalTime().ToString("o")
+                on_or_after = since.ToUniversalTime().ToString("o")
             }
         };
 
