@@ -177,4 +177,375 @@ public class ConflictResolutionTests
         result.ResolutionMethod.Should().Be(ResolutionMethod.Merged);
         result.ResolvedValue.Should().Be("same value");
     }
+
+    /// <summary>
+    /// Tests that ResolveByLastWrite handles equal timestamps by preferring Notion value.
+    /// This addresses the classic bidirectional sync tie-breaking problem.
+    /// </summary>
+    [Fact]
+    public void ResolveByLastWrite_WhenTimestampsAreEqual_PrefersNotionValue()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local edited value",
+            NotionValue = "notion edited value",
+            LocalModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0),
+            NotionModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0), // Same timestamp
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        // Act - Use the ResolveWith method with Newest strategy which calls ResolveWithNewest internally
+        var result = service.ResolveWith(conflict, ConflictStrategy.Newest);
+
+        // Assert
+        result.Status.Should().Be(ResolutionStatus.Resolved);
+        result.ResolutionMethod.Should().Be(ResolutionMethod.LastWrite);
+        result.ResolvedValue.Should().Be("notion edited value");
+        result.ResolutionNotes.Should().Contain("clock skew");
+        result.ResolutionNotes.Should().Contain("Preferred Notion value");
+    }
+
+    /// <summary>
+    /// Tests that ResolveByLastWrite handles clock skew scenarios correctly.
+    /// </summary>
+    [Fact]
+    public void ResolveByLastWrite_WhenClockSkewExists_UsesTimestampComparison()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var localTime = new DateTime(2024, 1, 1, 12, 0, 0);
+        var notionTime = localTime.AddSeconds(5); // 5 seconds difference
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local value",
+            NotionValue = "notion value",
+            LocalModifiedAt = localTime,
+            NotionModifiedAt = notionTime,
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        // Act - Use the ResolveWith method with Newest strategy
+        var result = service.ResolveWith(conflict, ConflictStrategy.Newest);
+
+        // Assert
+        result.Status.Should().Be(ResolutionStatus.Resolved);
+        result.ResolvedValue.Should().Be("notion value"); // Notion is newer
+        result.ResolutionNotes.Should().Contain("Notion value is newer");
+    }
+
+    /// <summary>
+    /// Tests conflict resolution when local value is newer than Notion value.
+    /// </summary>
+    [Fact]
+    public void ResolveByLastWrite_WhenLocalIsNewer_PrefersLocalValue()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var localTime = new DateTime(2024, 1, 1, 12, 5, 0);
+        var notionTime = new DateTime(2024, 1, 1, 12, 0, 0);
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local edited value",
+            NotionValue = "notion original value",
+            LocalModifiedAt = localTime,
+            NotionModifiedAt = notionTime,
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        // Act - Use the ResolveWith method with Newest strategy
+        var result = service.ResolveWith(conflict, ConflictStrategy.Newest);
+
+        // Assert
+        result.Status.Should().Be(ResolutionStatus.Resolved);
+        result.ResolvedValue.Should().Be("local edited value");
+        result.ResolutionNotes.Should().Contain("Local value is newer");
+        result.ResolutionNotes.Should().Contain("Discarded Notion value");
+    }
+
+    /// <summary>
+    /// Tests conflict resolution for delete vs edit scenarios.
+    /// </summary>
+    [Fact]
+    public void ResolveByLastWrite_DeleteVsEdit_HandlesGracefully()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "", // Empty means deleted locally
+            NotionValue = "notion edited value",
+            LocalModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0),
+            NotionModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0), // Same timestamp
+            ConflictType = ConflictType.DeletionConflict
+        };
+
+        // Act - Use the ResolveWith method with Newest strategy
+        var result = service.ResolveWith(conflict, ConflictStrategy.Newest);
+
+        // Assert - should prefer Notion value when local is empty (deleted)
+        result.Status.Should().Be(ResolutionStatus.Resolved);
+        result.ResolvedValue.Should().Be("notion edited value");
+        result.ResolutionNotes.Should().Contain("clock skew");
+    }
+
+    /// <summary>
+    /// Tests that ResolveWith method properly delegates to strategy-specific resolvers.
+    /// </summary>
+    [Fact]
+    public void ResolveWith_DelegatesToStrategySpecificResolvers()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local value",
+            NotionValue = "notion value"
+        };
+
+        // Act - Test PreferLocal
+        var preferLocalResult = service.ResolveWith(conflict, ConflictStrategy.PreferLocal);
+        preferLocalResult.ResolutionMethod.Should().Be(ResolutionMethod.LocalWins);
+        preferLocalResult.ResolvedValue.Should().Be("local value");
+
+        // Act - Test PreferRemote
+        var preferRemoteResult = service.ResolveWith(conflict, ConflictStrategy.PreferRemote);
+        preferRemoteResult.ResolutionMethod.Should().Be(ResolutionMethod.NotionWins);
+        preferRemoteResult.ResolvedValue.Should().Be("notion value");
+
+        // Act - Test Newest (this will resolve based on timestamp comparison)
+        var newestResult = service.ResolveWith(conflict, ConflictStrategy.Newest);
+        newestResult.Status.Should().Be(ResolutionStatus.Resolved);
+    }
+
+    /// <summary>
+    /// Tests that ResolveConflictsAsync properly handles multiple conflicts with mixed scenarios.
+    /// </summary>
+    [Fact]
+    public void ResolveConflictsAsync_HandlesMultipleConflictsWithDifferentScenarios()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var conflicts = new List<ConflictResolution>
+        {
+            new()
+            {
+                TaskId = Guid.NewGuid(),
+                LocalValue = "local1",
+                NotionValue = "notion1",
+                LocalModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0),
+                NotionModifiedAt = new DateTime(2024, 1, 1, 12, 0, 1), // Notion is newer
+                ConflictType = ConflictType.ConcurrentModification
+            },
+            new()
+            {
+                TaskId = Guid.NewGuid(),
+                LocalValue = "local2",
+                NotionValue = "notion2",
+                LocalModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0),
+                NotionModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0), // Equal timestamps
+                ConflictType = ConflictType.ConcurrentModification
+            },
+            new()
+            {
+                TaskId = Guid.NewGuid(),
+                LocalValue = "local3",
+                NotionValue = "notion3",
+                LocalModifiedAt = new DateTime(2024, 1, 1, 12, 0, 2),
+                NotionModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0), // Local is newer
+                ConflictType = ConflictType.ConcurrentModification
+            }
+        };
+
+        // Act
+        var results = service.ResolveConflictsAsync(conflicts, ConflictResolutionStrategy.LastWrite).Result;
+
+        // Assert
+        results.Should().HaveCount(3);
+        results[0].ResolvedValue.Should().Be("notion1"); // Notion newer
+        results[1].ResolvedValue.Should().Be("notion2"); // Tie-break to Notion
+        results[2].ResolvedValue.Should().Be("local3"); // Local newer
+
+        results.Should().OnlyContain(r => r.Status == ResolutionStatus.Resolved);
+    }
+
+    /// <summary>
+    /// Tests clock skew tolerance with timestamps within tolerance window.
+    /// When timestamps are within the tolerance window, they should be considered equal.
+    /// </summary>
+    [Fact]
+    public void ResolveWithNewest_WhenTimestampsWithinTolerance_UsesTieBreakRule()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var baseTime = new DateTime(2024, 1, 1, 12, 0, 0);
+
+        // Test with timestamps within default 1-minute tolerance (60000ms)
+        var localTime = baseTime;
+        var notionTime = baseTime.AddMilliseconds(30000); // 30 seconds difference
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local value",
+            NotionValue = "notion value",
+            LocalModifiedAt = localTime,
+            NotionModifiedAt = notionTime,
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        // Act - Use the ResolveWith method with Newest strategy
+        var result = service.ResolveWith(conflict, ConflictStrategy.Newest);
+
+        // Assert - should use tie-break rule since timestamps are within tolerance
+        result.Status.Should().Be(ResolutionStatus.Resolved);
+        result.ResolutionMethod.Should().Be(ResolutionMethod.LastWrite);
+        result.ResolvedValue.Should().Be("notion value"); // Tie-break to Notion
+        result.ResolutionNotes.Should().Contain("clock skew");
+        result.ResolutionNotes.Should().Contain("30000ms");
+    }
+
+    /// <summary>
+    /// Tests clock skew tolerance with timestamps outside tolerance window.
+    /// When timestamps exceed tolerance, the newer timestamp should win.
+    /// </summary>
+    [Fact]
+    public void ResolveWithNewest_WhenTimestampsOutsideTolerance_UsesTimestampComparison()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var baseTime = new DateTime(2024, 1, 1, 12, 0, 0);
+
+        // Test with timestamps exceeding default 1-minute tolerance (60000ms)
+        var localTime = baseTime;
+        var notionTime = baseTime.AddMilliseconds(90000); // 90 seconds difference (exceeds 60s tolerance)
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local value",
+            NotionValue = "notion value",
+            LocalModifiedAt = localTime,
+            NotionModifiedAt = notionTime,
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        // Act - Use the ResolveWith method with Newest strategy
+        var result = service.ResolveWith(conflict, ConflictStrategy.Newest);
+
+        // Assert - should prefer Notion since it's newer and outside tolerance
+        result.Status.Should().Be(ResolutionStatus.Resolved);
+        result.ResolvedValue.Should().Be("notion value");
+        result.ResolutionNotes.Should().Contain("Notion value is newer");
+    }
+
+    /// <summary>
+    /// Tests clock skew tolerance with zero timestamp difference.
+    /// </summary>
+    [Fact]
+    public void ResolveWithNewest_WhenTimestampsAreIdentical_UsesTieBreakRule()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local value",
+            NotionValue = "notion value",
+            LocalModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0),
+            NotionModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0), // Exactly identical
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        // Act - Use the ResolveWith method with Newest strategy
+        var result = service.ResolveWith(conflict, ConflictStrategy.Newest);
+
+        // Assert
+        result.Status.Should().Be(ResolutionStatus.Resolved);
+        result.ResolutionMethod.Should().Be(ResolutionMethod.LastWrite);
+        result.ResolvedValue.Should().Be("notion value"); // Tie-break to Notion
+        result.ResolutionNotes.Should().Contain("clock skew");
+        result.ResolutionNotes.Should().Contain("0ms");
+    }
+
+    /// <summary>
+    /// Tests conflict resolution with ResolveConflictsAsync using LastWrite strategy.
+    /// </summary>
+    [Fact]
+    public void ResolveConflictsAsync_WithClockSkewTolerance_HandlesMixedScenarios()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var baseTime = new DateTime(2024, 1, 1, 12, 0, 0);
+
+        var conflicts = new List<ConflictResolution>
+        {
+            new()
+            {
+                TaskId = Guid.NewGuid(),
+                LocalValue = "local1",
+                NotionValue = "notion1",
+                LocalModifiedAt = baseTime,
+                NotionModifiedAt = baseTime.AddMilliseconds(30000), // 30s difference (within tolerance)
+                ConflictType = ConflictType.ConcurrentModification
+            },
+            new()
+            {
+                TaskId = Guid.NewGuid(),
+                LocalValue = "local2",
+                NotionValue = "notion2",
+                LocalModifiedAt = baseTime,
+                NotionModifiedAt = baseTime.AddMilliseconds(120000), // 120s difference (outside tolerance)
+                ConflictType = ConflictType.ConcurrentModification
+            },
+            new()
+            {
+                TaskId = Guid.NewGuid(),
+                LocalValue = "local3",
+                NotionValue = "notion3",
+                LocalModifiedAt = baseTime.AddMilliseconds(1000), // 1s difference (within tolerance)
+                NotionModifiedAt = baseTime,
+                ConflictType = ConflictType.ConcurrentModification
+            }
+        };
+
+        // Act
+        var results = service.ResolveConflictsAsync(conflicts, ConflictResolutionStrategy.LastWrite).Result;
+
+        // Assert
+        results.Should().HaveCount(3);
+        results[0].ResolvedValue.Should().Be("notion1"); // Tie-break to Notion (30s within tolerance)
+        results[1].ResolvedValue.Should().Be("notion2"); // Notion is newer (120s outside tolerance)
+        results[2].ResolvedValue.Should().Be("local3"); // Local is newer (1s within tolerance)
+
+        results.Should().OnlyContain(r => r.Status == ResolutionStatus.Resolved);
+    }
 }
