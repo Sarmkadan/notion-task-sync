@@ -77,6 +77,15 @@ public sealed class NotionApiSettings
     public int CacheDurationMinutes { get; set; } = 5;
 
     /// <summary>
+    /// Gets or sets the maximum number of pages to fetch in a single API call cycle.
+    /// When set to a positive value, the API client will stop fetching pages after reaching
+    /// this limit to prevent unbounded API calls and memory growth.
+    /// Default is 0 (unlimited) to maintain backward compatibility.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Range(0, 10000)]
+    public int MaxPages { get; set; } = 0;
+
+    /// <summary>
     /// Gets or sets the list of database IDs to sync.
     /// </summary>
     public List<string> DatabaseIds { get; set; } = new();
@@ -117,6 +126,9 @@ public sealed class NotionApiSettings
             return false;
 
         if (CacheDurationMinutes < 0 || CacheDurationMinutes > 1440)
+            return false;
+
+        if (MaxPages < 0 || MaxPages > 10000)
             return false;
 
         // Validate IncludedStatuses

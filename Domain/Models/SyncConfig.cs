@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 namespace NotionTaskSync.Domain.Models;
 
@@ -62,15 +62,24 @@ public class SyncConfig
     /// </summary>
     public bool IsDryRun { get; set; } = false;
 
-        /// <summary>
-        /// Gets or sets the clock skew tolerance window in milliseconds.
-        /// When the absolute difference between local and Notion timestamps is within this window,
-        /// the timestamps are considered equal for conflict resolution purposes.
-        /// This handles cases where both systems record timestamps with limited precision (e.g., minute-level).
-        /// Default is 60000 (1 minute) to account for Notion's minute-level granularity.
-        /// </summary>
-        [Range(0, 86400000)] // 0 to 24 hours in milliseconds
-        public int ClockSkewToleranceMs { get; set; } = 60000;
+    /// <summary>
+    /// Gets or sets the maximum number of pages to fetch in a single sync cycle.
+    /// When set to a positive value, the sync will stop after fetching this many pages
+    /// and throw an exception to prevent unbounded API calls and memory growth.
+    /// Default is 0 (unlimited) to maintain backward compatibility.
+    /// </summary>
+    [Range(0, 10000)]
+    public int MaxPages { get; set; } = 0;
+
+    /// <summary>
+    /// Gets or sets the clock skew tolerance window in milliseconds.
+    /// When the absolute difference between local and Notion timestamps is within this window,
+    /// the timestamps are considered equal for conflict resolution purposes.
+    /// This handles cases where both systems record timestamps with limited precision (e.g., minute-level).
+    /// Default is 60000 (1 minute) to account for Notion's minute-level granularity.
+    /// </summary>
+    [Range(0, 86400000)] // 0 to 24 hours in milliseconds
+    public int ClockSkewToleranceMs { get; set; } = 60000;
 
     public Dictionary<string, string>? FieldMappings { get; set; }
 
@@ -217,6 +226,19 @@ public class SyncConfig
     {
         FieldConflictStrategies ??= new Dictionary<string, ConflictResolutionStrategy>();
         FieldConflictStrategies[fieldName] = strategy;
+    }
+
+    /// <summary>
+    /// Validates that MaxPages is within acceptable bounds if set.
+    /// </summary>
+    /// <returns>True if validation passes; false otherwise.</returns>
+    public bool ValidateMaxPages()
+    {
+        if (MaxPages < 0 || MaxPages > 10000)
+        {
+            return false;
+        }
+        return true;
     }
 }
 
