@@ -32,8 +32,6 @@ public class SyncConfig
     [StringLength(500)]
     public required string LocalFolderPath { get; set; }
 
-    [StringLength(256)]
-    public string? NotionApiKey { get; set; }
 
     public SyncDirection Direction { get; set; } = SyncDirection.Bidirectional;
 
@@ -239,6 +237,23 @@ public class SyncConfig
             return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// Returns a string representation of the SyncConfig for logging and debugging.
+    /// Sensitive fields are masked to prevent accidental exposure in logs.
+    /// </summary>
+    /// <returns>String representation of the configuration.</returns>
+    public override string ToString()
+    {
+        return $"SyncConfig(Id={Id}, Name={Name}, NotionDatabaseId={NotionDatabaseId}, " +
+               $"LocalFolderPath={LocalFolderPath}, Direction={Direction}, " +
+               $"ConflictStrategy={ConflictStrategy}, SyncInterval={SyncIntervalSeconds}s, " +
+               $"MaxRetries={MaxRetries}, IsEnabled={IsEnabled}, " +
+               $"CreatedAt={CreatedAt:yyyy-MM-dd}, UpdatedAt={UpdatedAt:yyyy-MM-dd}, " +
+               $"LastSyncAt={(LastSyncAt.HasValue ? LastSyncAt.Value.ToString("yyyy-MM-dd") : "null")}, " +
+               $"NextScheduledSyncAt={(NextScheduledSyncAt.HasValue ? NextScheduledSyncAt.Value.ToString("yyyy-MM-dd") : "null")}, " +
+               $"IsDryRun={IsDryRun}, MaxPages={MaxPages})";
     }
 }
 
