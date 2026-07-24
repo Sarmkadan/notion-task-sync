@@ -496,4 +496,205 @@ public class RetryHelperTests
         delayTimes[0].Should().BeGreaterThanOrEqualTo(50); // First delay >= initialDelayMs
         delayTimes[1].Should().BeGreaterThan((int)(delayTimes[0] * 1.5)); // Second delay > first delay
     }
+
+    /// <summary>
+    /// Tests that <see cref="RetryHelper.ExecuteWithRetryAsync{T}"/> preserves the original exception
+    /// when all retry attempts are exhausted, ensuring the exception chain is not broken.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteWithRetryAsync_WhenMaxRetriesExhausted_PreservesOriginalException()
+    {
+        // Arrange
+        var expectedException = new InvalidOperationException("Original error message");
+        var capturedException = (Exception?)null;
+
+        async Task<string> operation()
+        {
+            throw expectedException;
+        }
+
+        // Act
+        try
+        {
+            await _retryHelper.ExecuteWithRetryAsync(operation, maxRetries: 3, initialDelayMs: 1);
+        }
+        catch (Exception ex)
+        {
+            capturedException = ex;
+        }
+
+        // Assert
+        capturedException.Should().BeSameAs(expectedException);
+        capturedException.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="RetryHelper.ExecuteWithRetryAsync{T}"/> with maxRetries=1 performs no retries
+    /// and immediately throws the exception on first failure.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteWithRetryAsync_WithMaxRetriesEqualsOne_PerformsNoRetries()
+    {
+        // Arrange
+        var attemptCount = 0;
+        var testException = new TimeoutException("Failure");
+
+        async Task<string> operation()
+        {
+            attemptCount++;
+            throw testException;
+        }
+
+        // Act & Assert
+        await _retryHelper.Invoking(r => r.ExecuteWithRetryAsync(operation, maxRetries: 1, initialDelayMs: 1))
+            .Should()
+            .ThrowAsync<TimeoutException>();
+
+        attemptCount.Should().Be(1); // Should only attempt once
+    }
+
+    /// <summary>
+    /// Tests that <see cref="RetryHelper.ExecuteWithRetryAsync{T}"/> with custom predicate immediately throws
+    /// non-retryable exceptions without waiting or consuming retry attempts.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteWithRetryAsync_WithShouldRetryPredicate_ImmediatelyThrowsNonRetryableException()
+    {
+        // Arrange
+        var attemptCount = 0;
+        var nonRetryableException = new ArgumentNullException("param");
+        var retryableException = new TimeoutException("Timeout");
+
+        async Task<string> operation()
+        {
+            attemptCount++;
+            if (attemptCount == 1)
+                throw retryableException;
+            throw nonRetryableException;
+        }
+
+        bool shouldRetry(Exception ex) => ex is TimeoutException;
+
+        // Act & Assert
+        await _retryHelper.Invoking(r => r.ExecuteWithRetryAsync(operation, shouldRetry, maxRetries: 5, initialDelayMs: 100))
+            .Should()
+            .ThrowAsync<ArgumentNullException>();
+
+        // Should only make 2 attempts (1 retryable + 1 non-retryable), not wait for delays
+        attemptCount.Should().Be(2);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="RetryHelper.ExecuteWithRetryAsync{T}"/> with custom predicate preserves
+    /// the original exception when retrying, not wrapping it in a different exception type.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteWithRetryAsync_WithShouldRetryPredicate_PreservesOriginalExceptionType()
+    {
+        // Arrange
+        var expectedException = new NotSupportedException("Not supported operation");
+        var capturedException = (Exception?)null;
+
+        async Task<string> operation()
+        {
+            throw expectedException;
+        }
+
+        bool shouldRetry(Exception ex) => ex is NotSupportedException;
+
+        // Act
+        try
+        {
+            await _retryHelper.ExecuteWithRetryAsync(operation, shouldRetry, maxRetries: 3, initialDelayMs: 1);
+        }
+        catch (Exception ex)
+        {
+            capturedException = ex;
+        }
+
+        // Assert
+        capturedException.Should().BeSameAs(expectedException);
+        capturedException.Should().BeOfType<NotSupportedException>();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="RetryHelper.ExecuteWithRetry{T}"/> preserves the original exception
+    /// when all retry attempts are exhausted, ensuring the exception chain is not broken.
+    /// </summary>
+    [Fact]
+    public void ExecuteWithRetry_WhenMaxRetriesExhausted_PreservesOriginalException()
+    {
+        // Arrange
+        var expectedException = new InvalidOperationException("Original error message");
+        var capturedException = (Exception?)null;
+
+        string operation()
+        {
+            throw expectedException;
+        }
+
+        // Act
+        try
+        {
+            _retryHelper.ExecuteWithRetry(operation, maxRetries: 3, initialDelayMs: 1);
+        }
+        catch (Exception ex)
+        {
+            capturedException = ex;
+        }
+
+        // Assert
+        capturedException.Should().BeSameAs(expectedException);
+        capturedException.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="RetryHelper.ExecuteWithRetry{T}"/> with maxRetries=1 performs no retries
+    /// and immediately throws the exception on first failure.
+    /// </summary>
+    [Fact]
+    public void ExecuteWithRetry_WithMaxRetriesEqualsOne_PerformsNoRetries()
+    {
+        // Arrange
+        var attemptCount = 0;
+        var testException = new TimeoutException("Failure");
+
+        string operation()
+        {
+            attemptCount++;
+            throw testException;
+        }
+
+        // Act & Assert
+        _retryHelper.Invoking(r => r.ExecuteWithRetry(operation, maxRetries: 1, initialDelayMs: 1))
+            .Should()
+            .Throw<TimeoutException>();
+
+        attemptCount.Should().Be(1); // Should only attempt once
+    }
+
+    /// <summary>
+    /// Tests that <see cref="RetryHelper.ExecuteWithRetry{T}"/> with maxRetries=2 retries once
+    /// and throws the exception on second failure without waiting for additional retries.
+    /// </summary>
+    [Fact]
+    public void ExecuteWithRetry_WithMaxRetriesEqualsTwo_RetriesOnce()
+    {
+        // Arrange
+        var attemptCount = 0;
+        var testException = new TimeoutException("Failure");
+
+        string operation()
+        {
+            attemptCount++;
+            throw testException;
+        }
+
+        // Act & Assert
+        _retryHelper.Invoking(r => r.ExecuteWithRetry(operation, maxRetries: 2, initialDelayMs: 1))
+            .Should()
+            .Throw<TimeoutException>();
+
+        attemptCount.Should().Be(2); // Should attempt twice (1 initial + 1 retry)
+    }
 }
