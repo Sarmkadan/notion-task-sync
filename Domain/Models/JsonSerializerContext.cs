@@ -36,6 +36,18 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(List<Task>))]
 [JsonSerializable(typeof(List<ConflictResolution>))]
 [JsonSerializable(typeof(List<ChangeLog>))]
+[JsonSerializable(typeof(NotionRichTextObject))]
+[JsonSerializable(typeof(NotionTextObject))]
+[JsonSerializable(typeof(NotionRichTextAnnotations))]
+[JsonSerializable(typeof(NotionSelectOption))]
+[JsonSerializable(typeof(NotionStatusOption))]
+[JsonSerializable(typeof(NotionDateValue))]
+[JsonSerializable(typeof(NotionMultiSelectValue))]
+[JsonSerializable(typeof(NotionNumberValue))]
+[JsonSerializable(typeof(NotionCheckboxValue))]
+[JsonSerializable(typeof(NotionUrlValue))]
+[JsonSerializable(typeof(NotionEmailValue))]
+[JsonSerializable(typeof(NotionPhoneNumberValue))]
 public partial class AppJsonSerializerContext : JsonSerializerContext
 {
     /// <summary>
