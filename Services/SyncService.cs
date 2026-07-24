@@ -27,21 +27,49 @@ public sealed class SyncService
     private readonly ITaskRepository _taskRepository;
     private readonly IChangeLogRepository _changeLogRepository;
     private readonly ILogger<SyncService>? _logger;
+    private readonly ISyncCheckpointStore? _checkpointStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SyncService"/> class.
+    /// </summary>
+    /// <param name="changeDetectionService">Service used to detect local and Notion changes.</param>
+    /// <param name="conflictResolutionService">Service used to resolve concurrent-edit conflicts.</param>
+    /// <param name="notionApiService">Client used to read from and write to Notion.</param>
+    /// <param name="taskRepository">Repository for locally persisted tasks.</param>
+    /// <param name="changeLogRepository">Repository for the change audit trail.</param>
+    /// <param name="logger">Optional logger for sync diagnostics.</param>
+    /// <param name="checkpointStore">
+    /// Optional checkpoint store used to record items as they are applied and to skip
+    /// items already applied by a prior cycle that crashed partway through. When omitted,
+    /// no crash-resume protection is applied.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// Any of <paramref name="changeDetectionService"/>, <paramref name="conflictResolutionService"/>,
+    /// <paramref name="notionApiService"/>, <paramref name="taskRepository"/> or
+    /// <paramref name="changeLogRepository"/> is <see langword="null"/>.
+    /// </exception>
     public SyncService(
         ChangeDetectionService changeDetectionService,
         ConflictResolutionService conflictResolutionService,
         NotionApiService notionApiService,
         ITaskRepository taskRepository,
         IChangeLogRepository changeLogRepository,
-        ILogger<SyncService>? logger = null)
+        ILogger<SyncService>? logger = null,
+        ISyncCheckpointStore? checkpointStore = null)
     {
+        ArgumentNullException.ThrowIfNull(changeDetectionService);
+        ArgumentNullException.ThrowIfNull(conflictResolutionService);
+        ArgumentNullException.ThrowIfNull(notionApiService);
+        ArgumentNullException.ThrowIfNull(taskRepository);
+        ArgumentNullException.ThrowIfNull(changeLogRepository);
+
         _changeDetectionService = changeDetectionService;
         _conflictResolutionService = conflictResolutionService;
         _notionApiService = notionApiService;
         _taskRepository = taskRepository;
         _changeLogRepository = changeLogRepository;
         _logger = logger;
+        _checkpointStore = checkpointStore;
     }
 
     /// <summary>
@@ -81,6 +109,14 @@ public sealed class SyncService
                 notionPages,
                 config.LastSyncAt ?? DateTime.MinValue);
 
+            // Drop items already applied by a previous cycle that crashed before
+            // completing, so they are not pushed/pulled a second time.
+            if (_checkpointStore is not null && config.Id != Guid.Empty)
+            {
+                localChanges = _changeDetectionService.FilterAlreadyApplied(localChanges, config.Id);
+                notionChanges = _changeDetectionService.FilterAlreadyApplied(notionChanges, config.Id);
+            }
+
             result.LocalChangesDetected = localChanges.Count;
             result.NotionChangesDetected = notionChanges.Count;
 
@@ -113,6 +149,12 @@ public sealed class SyncService
             config.UpdateSyncStatus();
             await _taskRepository.SaveAsync();
 
+            // The cycle reached the end without crashing: advance the checkpoint's
+            // last-successful timestamp and drop the per-item markers accumulated
+            // above, since they are now covered by config.LastSyncAt.
+            if (_checkpointStore is not null && config.Id != Guid.Empty)
+                _checkpointStore.CompleteCycle(config.Id, config.LastSyncAt ?? DateTime.UtcNow);
+
             result.Status = SyncStatus.Completed;
             result.CompletedAt = DateTime.UtcNow;
 
@@ -136,6 +178,7 @@ public sealed class SyncService
     private async Task<(int Created, int Updated, int Deleted)> ApplyChangesAsync(List<Task> localTasks, List<NotionPage> notionPages, SyncConfig config)
     {
         int created = 0, updated = 0, deleted = 0;
+        var since = config.LastSyncAt ?? DateTime.MinValue;
 
         if (config.Direction == SyncDirection.Bidirectional || config.Direction == SyncDirection.LocalToNotion)
         {
@@ -151,6 +194,7 @@ public sealed class SyncService
                         if (!config.IsDryRun)
                         {
                             await _notionApiService.UpdatePageAsync(page.PageId, task);
+                            MarkLocalTaskApplied(config.Id, task, since);
                         }
                         _logger?.LogInformation("DRY-RUN: Would archive page {PageId} (task {TaskId})", page.PageId, task.Id);
                         deleted++;
@@ -160,6 +204,7 @@ public sealed class SyncService
                         if (!config.IsDryRun)
                         {
                             await _notionApiService.UpdatePageAsync(page.PageId, task);
+                            MarkLocalTaskApplied(config.Id, task, since);
                         }
                         _logger?.LogInformation("DRY-RUN: Would update page {PageId} with task {TaskId}", page.PageId, task.Id);
                         updated++;
@@ -175,6 +220,7 @@ public sealed class SyncService
                         {
                             task.NotionPageId = newPage.PageId;
                             await _taskRepository.UpdateAsync(task);
+                            MarkLocalTaskApplied(config.Id, task, since);
                         }
                     }
                     _logger?.LogInformation("DRY-RUN: Would create new page in database {DatabaseId} for task {TaskId}", config.NotionDatabaseId, task.Id);
@@ -196,6 +242,7 @@ public sealed class SyncService
                     if (!config.IsDryRun)
                     {
                         await _taskRepository.UpdateAsync(task);
+                        MarkNotionPageApplied(config.Id, task.Id, page, since);
                     }
                     _logger?.LogInformation("DRY-RUN: Would update local task {TaskId} from page {PageId}", task.Id, page.PageId);
                     if (page.Archived)
@@ -209,6 +256,7 @@ public sealed class SyncService
                     if (!config.IsDryRun)
                     {
                         await _taskRepository.AddAsync(newTask);
+                        MarkNotionPageApplied(config.Id, newTask.Id, page, since);
                     }
                     _logger?.LogInformation("DRY-RUN: Would create local task {TaskId} from page {PageId}", newTask.Id, page.PageId);
                     created++;
@@ -217,6 +265,34 @@ public sealed class SyncService
         }
 
         return (created, updated, deleted);
+    }
+
+    /// <summary>
+    /// Records a locally-originated push as applied in the checkpoint store, if one is
+    /// configured, so a crash later in the cycle does not cause it to be re-pushed on the
+    /// next run.
+    /// </summary>
+    private void MarkLocalTaskApplied(Guid configId, Task task, DateTime since)
+    {
+        if (_checkpointStore is null || configId == Guid.Empty)
+            return;
+
+        foreach (var key in ChangeDetectionService.BuildLocalItemKeys(task, since))
+            _checkpointStore.MarkItemApplied(configId, key);
+    }
+
+    /// <summary>
+    /// Records a Notion-originated pull as applied in the checkpoint store, if one is
+    /// configured, so a crash later in the cycle does not cause it to be re-pulled on the
+    /// next run.
+    /// </summary>
+    private void MarkNotionPageApplied(Guid configId, Guid taskId, NotionPage page, DateTime since)
+    {
+        if (_checkpointStore is null || configId == Guid.Empty)
+            return;
+
+        foreach (var key in ChangeDetectionService.BuildNotionItemKeys(taskId, page, since))
+            _checkpointStore.MarkItemApplied(configId, key);
     }
 
     /// <summary>
