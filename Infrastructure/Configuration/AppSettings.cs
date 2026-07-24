@@ -2,12 +2,13 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 namespace NotionTaskSync.Infrastructure.Configuration;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
 /// Application-wide settings loaded from appsettings.json.
@@ -107,14 +108,16 @@ public sealed class AppSettings
     /// </summary>
     public Dictionary<string, object> SyncProfiles { get; set; } = new();
 
-        /// <summary>
-        /// Gets or sets the list of task statuses to include in sync (empty = all statuses).
-        /// </summary>
-        public List<string> IncludedStatuses { get; set; } = new();
+    /// <summary>
+    /// Gets or sets the list of task statuses to include in sync (empty = all statuses).
+    /// Valid values are: "Todo", "InProgress", "Done", "Blocked", "Archived".
+    /// </summary>
+    public List<string> IncludedStatuses { get; set; } = new();
 
     /// <summary>
-    /// Validates the settings ensuring all paths are configured correctly.
+    /// Validates the settings ensuring all paths are configured correctly and status values are valid.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when IncludedStatuses contains invalid status values.</exception>
     public bool Validate()
     {
         if (string.IsNullOrWhiteSpace(LocalTasksDirectory))
@@ -135,7 +138,36 @@ public sealed class AppSettings
         if (MaxBackupFiles < 1 || MaxBackupFiles > 1000)
             return false;
 
+        // Validate IncludedStatuses
+        ValidateIncludedStatuses();
+
         return true;
+    }
+
+    /// <summary>
+    /// Validates that all status values in IncludedStatuses are valid TaskStatus enum values.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when IncludedStatuses contains invalid status values.</exception>
+    private void ValidateIncludedStatuses()
+    {
+        if (IncludedStatuses == null || IncludedStatuses.Count == 0)
+            return;
+
+        var validStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Todo", "InProgress", "Done", "Blocked", "Archived"
+        };
+
+        var invalidStatuses = IncludedStatuses
+            .Where(status => !validStatuses.Contains(status))
+            .ToList();
+
+        if (invalidStatuses.Count > 0)
+        {
+            throw new ArgumentException(
+                $"Invalid status values in IncludedStatuses: {string.Join(", ", invalidStatuses)}. " +
+                $"Valid status values are: Todo, InProgress, Done, Blocked, Archived.");
+        }
     }
 
     /// <summary>
