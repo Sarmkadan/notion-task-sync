@@ -178,6 +178,7 @@ public class ConflictResolutionService
     {
         conflict.MarkForManualReview(
             $"Conflict requires manual resolution: {conflict.GetConflictSummary()}");
+        conflict.ResolutionMethod = ResolutionMethod.Manual;
 
         return conflict;
     }

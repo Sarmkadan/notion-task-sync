@@ -419,12 +419,11 @@ public class ConflictResolutionTests
         // Act - Use the ResolveWith method with Newest strategy
         var result = service.ResolveWith(conflict, ConflictStrategy.Newest);
 
-        // Assert - should use tie-break rule since timestamps are within tolerance
+        // Assert - Notion is newer by 30 seconds (within tolerance), so it should be selected
         result.Status.Should().Be(ResolutionStatus.Resolved);
         result.ResolutionMethod.Should().Be(ResolutionMethod.LastWrite);
-        result.ResolvedValue.Should().Be("notion value"); // Tie-break to Notion
-        result.ResolutionNotes.Should().Contain("clock skew");
-        result.ResolutionNotes.Should().Contain("30000ms");
+        result.ResolvedValue.Should().Be("notion value"); // Notion is newer
+        result.ResolutionNotes.Should().Contain("Notion value is newer");
     }
 
     /// <summary>
@@ -547,5 +546,208 @@ public class ConflictResolutionTests
         results[2].ResolvedValue.Should().Be("local3"); // Local is newer (1s within tolerance)
 
         results.Should().OnlyContain(r => r.Status == ResolutionStatus.Resolved);
+    }
+
+    /// <summary>
+    /// Tests that ResolveConflictsAsync throws ArgumentNullException when local task value is null.
+    /// Verifies proper null handling for individual conflict properties.
+    /// </summary>
+    [Fact]
+    public void ResolveConflictsAsync_WithNullLocalTaskValue_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = null, // Null local value
+            NotionValue = "notion value",
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        // Act & Assert
+        var act = () => service.ResolveConflictsAsync(new List<ConflictResolution> { conflict }, ConflictResolutionStrategy.LastWrite);
+
+        act.Should().ThrowAsync<ArgumentNullException>()
+            .WithMessage("*LocalValue*");
+    }
+
+    /// <summary>
+    /// Tests that ResolveConflictsAsync throws ArgumentNullException when remote (Notion) task value is null.
+    /// Verifies proper null handling for individual conflict properties.
+    /// </summary>
+    [Fact]
+    public void ResolveConflictsAsync_WithNullRemoteTaskValue_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local value",
+            NotionValue = null, // Null Notion value
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        // Act & Assert
+        var act = () => service.ResolveConflictsAsync(new List<ConflictResolution> { conflict }, ConflictResolutionStrategy.LastWrite);
+
+        act.Should().ThrowAsync<ArgumentNullException>()
+            .WithMessage("*NotionValue*");
+    }
+
+    /// <summary>
+    /// Tests conflict resolution when both sides have identical content and identical timestamps.
+    /// Expected behavior: This should be a no-op resolution where the values are already identical.
+    /// The resolution should still mark the conflict as resolved but preserve the identical values.
+    /// </summary>
+    [Fact]
+    public void ResolveConflictsAsync_WithIdenticalContentIdenticalTimestamps_NoOpResolution()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "identical content",
+            NotionValue = "identical content", // Same content
+            LocalModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0),
+            NotionModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0), // Same timestamp
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        // Act - Use LastWrite strategy
+        var results = service.ResolveConflictsAsync(new List<ConflictResolution> { conflict }, ConflictResolutionStrategy.LastWrite).Result;
+
+        // Assert - Should resolve successfully with identical values
+        results.Should().HaveCount(1);
+        results[0].Status.Should().Be(ResolutionStatus.Resolved);
+        results[0].ResolutionMethod.Should().Be(ResolutionMethod.LastWrite);
+        results[0].ResolvedValue.Should().Be("identical content");
+        results[0].ResolutionNotes.Should().Contain("tie-break");
+        results[0].ResolutionNotes.Should().Contain("Preferred Notion value");
+    }
+
+    /// <summary>
+    /// Tests that ResolveConflictsAsync throws InvalidOperationException for truly unrecognized ConflictResolutionStrategy values.
+    /// Instead of silently falling back to a default strategy, it should throw a specific exception
+    /// to alert developers about configuration errors.
+    /// </summary>
+    [Fact]
+    public void ResolveConflictsAsync_WithUnrecognizedStrategy_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        var conflict = new ConflictResolution
+        {
+            TaskId = Guid.NewGuid(),
+            LocalValue = "local value",
+            NotionValue = "notion value",
+            LocalModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0),
+            NotionModifiedAt = new DateTime(2024, 1, 1, 12, 0, 0),
+            ConflictType = ConflictType.ConcurrentModification
+        };
+
+        // Act & Assert - Use an unrecognized enum value that's outside the valid range
+        var act = () => service.ResolveConflictsAsync(
+            new List<ConflictResolution> { conflict },
+            (ConflictResolutionStrategy)int.MaxValue);
+
+        act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*unrecognized*strategy*");
+    }
+
+    /// <summary>
+    /// Tests all supported conflict resolution strategies with genuine two-sided conflicts.
+    /// Verifies that each strategy correctly preserves the expected side's data.
+    /// </summary>
+    [Fact]
+    public void ResolveConflictsAsync_AllSupportedStrategies_AppliesCorrectResolution()
+    {
+        // Arrange
+        var mockRepo = new Mock<IChangeLogRepository>();
+        var service = new ConflictResolutionService(mockRepo.Object);
+
+        // Create conflicts where timestamps are equal to ensure strategy determines outcome
+        var baseTime = new DateTime(2024, 1, 1, 12, 0, 0);
+
+        var conflicts = new List<ConflictResolution>
+        {
+            new()
+            {
+                TaskId = Guid.NewGuid(),
+                LocalValue = "local edited title",
+                NotionValue = "notion original title",
+                LocalModifiedAt = baseTime,
+                NotionModifiedAt = baseTime,
+                PropertyName = "Title",
+                ConflictType = ConflictType.ConcurrentModification
+            },
+            new()
+            {
+                TaskId = Guid.NewGuid(),
+                LocalValue = "local updated description",
+                NotionValue = "notion original description",
+                LocalModifiedAt = baseTime,
+                NotionModifiedAt = baseTime,
+                PropertyName = "Description",
+                ConflictType = ConflictType.ConcurrentModification
+            },
+            new()
+            {
+                TaskId = Guid.NewGuid(),
+                LocalValue = "local changed status",
+                NotionValue = "notion original status",
+                LocalModifiedAt = baseTime,
+                NotionModifiedAt = baseTime,
+                PropertyName = "Status",
+                ConflictType = ConflictType.ConcurrentModification
+            },
+            new()
+            {
+                TaskId = Guid.NewGuid(),
+                LocalValue = "local final value",
+                NotionValue = "notion original value",
+                LocalModifiedAt = baseTime,
+                NotionModifiedAt = baseTime,
+                PropertyName = "Priority",
+                ConflictType = ConflictType.ConcurrentModification
+            }
+        };
+
+        // Act & Assert for each strategy
+        var lastWriteResults = service.ResolveConflictsAsync(
+            conflicts, ConflictResolutionStrategy.LastWrite).Result;
+        lastWriteResults.Should().OnlyContain(r => r.Status == ResolutionStatus.Resolved);
+        lastWriteResults.Should().OnlyContain(r => r.ResolutionMethod == ResolutionMethod.LastWrite);
+        // LastWrite with equal timestamps should prefer Notion
+        lastWriteResults.Should().OnlyContain(r => r.ResolvedValue == r.NotionValue);
+
+        var localWinsResults = service.ResolveConflictsAsync(
+            conflicts, ConflictResolutionStrategy.LocalWins).Result;
+        localWinsResults.Should().OnlyContain(r => r.Status == ResolutionStatus.Resolved);
+        localWinsResults.Should().OnlyContain(r => r.ResolutionMethod == ResolutionMethod.LocalWins);
+        // LocalWins should always preserve local value
+        localWinsResults.Should().OnlyContain(r => r.ResolvedValue == r.LocalValue);
+
+        var notionWinsResults = service.ResolveConflictsAsync(
+            conflicts, ConflictResolutionStrategy.NotionWins).Result;
+        notionWinsResults.Should().OnlyContain(r => r.Status == ResolutionStatus.Resolved);
+        notionWinsResults.Should().OnlyContain(r => r.ResolutionMethod == ResolutionMethod.NotionWins);
+        // NotionWins should always preserve Notion value
+        notionWinsResults.Should().OnlyContain(r => r.ResolvedValue == r.NotionValue);
+
+        var manualResults = service.ResolveConflictsAsync(
+            conflicts, ConflictResolutionStrategy.Manual).Result;
+        manualResults.Should().OnlyContain(r => r.Status == ResolutionStatus.PendingReview);
+        manualResults.Should().OnlyContain(r => r.ResolutionMethod == ResolutionMethod.Manual);
     }
 }

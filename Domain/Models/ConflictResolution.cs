@@ -97,6 +97,7 @@ public class ConflictResolution
     public void MarkForManualReview(string reason)
     {
         Status = ResolutionStatus.PendingReview;
+        ResolutionMethod = ResolutionMethod.Manual;
         ResolutionNotes = reason;
     }
 
