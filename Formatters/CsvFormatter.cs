@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 namespace NotionTaskSync.Formatters;
 
@@ -18,10 +18,15 @@ using Microsoft.Extensions.Logging;
 /// Handles proper escaping of values containing commas, quotes, and line breaks.
 /// Provides easy integration with Excel and other spreadsheet applications.
 /// </summary>
-public class CsvFormatter
+public class CsvFormatter : IFormatter
 {
     private readonly ILogger<CsvFormatter> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CsvFormatter"/> class.
+    /// </summary>
+    /// <param name="logger">Logger instance for error reporting. Must not be null.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> is null.</exception>
     public CsvFormatter(ILogger<CsvFormatter> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -30,8 +35,13 @@ public class CsvFormatter
     /// <summary>
     /// Formats a collection of tasks as CSV with header row.
     /// </summary>
+    /// <param name="tasks">Collection of tasks to format. Must not be null.</param>
+    /// <returns>CSV formatted string with header row and task data.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="tasks"/> is null.</exception>
     public string FormatTasks(List<Task> tasks)
     {
+        ArgumentNullException.ThrowIfNull(tasks);
+
         try
         {
             var csv = new StringBuilder();
@@ -57,8 +67,13 @@ public class CsvFormatter
     /// <summary>
     /// Formats a single task as a CSV row.
     /// </summary>
+    /// <param name="task">Task to format. Must not be null.</param>
+    /// <returns>CSV formatted string with header row and task data.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="task"/> is null.</exception>
     public string FormatTask(Task task)
     {
+        ArgumentNullException.ThrowIfNull(task);
+
         try
         {
             var header = CsvHeader();
@@ -76,8 +91,13 @@ public class CsvFormatter
     /// Parses a CSV string into task objects.
     /// Expects header row; returns list of parsed tasks.
     /// </summary>
+    /// <param name="csv">CSV string to parse. Must not be null.</param>
+    /// <returns>List of parsed tasks. Never throws; returns empty list on errors.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="csv"/> is null.</exception>
     public List<Task> ParseTasks(string csv)
     {
+        ArgumentNullException.ThrowIfNull(csv);
+
         var tasks = new List<Task>();
 
         try
