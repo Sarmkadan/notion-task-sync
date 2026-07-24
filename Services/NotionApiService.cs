@@ -41,9 +41,21 @@ public class NotionApiService
 
     public NotionApiService(string? apiKey, HttpClient? httpClient, List<string> includedStatuses)
     {
+        if (apiKey != null && string.IsNullOrWhiteSpace(apiKey))
+            throw new ArgumentException("API key cannot be empty or whitespace.", nameof(apiKey));
+
+        if (httpClient == null)
+            throw new ArgumentNullException(nameof(httpClient), "HTTP client cannot be null.");
+
+        if (includedStatuses == null)
+            throw new ArgumentNullException(nameof(includedStatuses), "Status list cannot be null.");
+
+        // Validate status values before using them
+        ValidateStatusList(includedStatuses);
+
         _apiKey = apiKey;
-        _httpClient = httpClient ?? new HttpClient();
-        _includedStatuses = includedStatuses ?? new List<string>();
+        _httpClient = httpClient;
+        _includedStatuses = includedStatuses;
         _jsonContext = new AppJsonSerializerContext();
 
         if (!string.IsNullOrEmpty(_apiKey))
@@ -57,6 +69,33 @@ public class NotionApiService
     }
 
     /// <summary>
+    /// Validates that all status values in the list are valid TaskStatus enum values.
+    /// </summary>
+    /// <param name="statuses">The list of status strings to validate.</param>
+    /// <exception cref="ArgumentException">Thrown when statuses contains invalid values.</exception>
+    private static void ValidateStatusList(List<string> statuses)
+    {
+        if (statuses.Count == 0)
+            return;
+
+        var validStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Todo", "InProgress", "Done", "Blocked", "Archived"
+        };
+
+        var invalidStatuses = statuses
+            .Where(status => !validStatuses.Contains(status))
+            .ToList();
+
+        if (invalidStatuses.Count > 0)
+        {
+            throw new ArgumentException(
+                $"Invalid status values: {string.Join(", ", invalidStatuses)}. " +
+                $"Valid status values are: Todo, InProgress, Done, Blocked, Archived.");
+        }
+    }
+
+    /// <summary>
     /// Fetches all pages from a Notion database with automatic cursor-based pagination.
     /// Continues fetching until all pages are retrieved or an error occurs.
     /// Uses concurrent fetching with bounded SemaphoreSlim(4) for improved performance.
@@ -66,14 +105,14 @@ public class NotionApiService
     /// <returns>A complete list of <see cref="NotionPage"/> entities from the database. For large databases, consider using <see cref="FetchPagesSinceAsync"/> for better performance.</returns>
     /// <exception cref="ValidationException">Thrown when <paramref name="databaseId"/> is empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="pageSize"/> is not between 1 and 100.</exception>
-/// <exception cref="NotionApiException">Thrown when the Notion API request fails.</exception>
+    /// <exception cref="NotionApiException">Thrown when the Notion API request fails.</exception>
     public virtual async Task<List<NotionPage>> FetchPagesAsync(string databaseId, int pageSize = 100)
     {
         if (string.IsNullOrEmpty(databaseId))
             throw new ValidationException("Database ID cannot be empty");
 
-    if (pageSize < 1 || pageSize > 100)
-        throw new ArgumentOutOfRangeException(nameof(pageSize), pageSize, "Page size must be between 1 and 100");
+        if (pageSize < 1 || pageSize > 100)
+            throw new ArgumentOutOfRangeException(nameof(pageSize), pageSize, "Page size must be between 1 and 100");
 
         var pages = new List<NotionPage>();
         var startCursor = string.Empty;
@@ -148,7 +187,7 @@ public class NotionApiService
     /// <returns>Pages whose <c>last_edited_time</c> is on or after <paramref name="since"/>.</returns>
     /// <exception cref="ValidationException">Thrown when <paramref name="databaseId"/> is empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="pageSize"/> is not between 1 and 100.</exception>
-/// <exception cref="NotionApiException">Thrown when the Notion API request fails.</exception>
+    /// <exception cref="NotionApiException">Thrown when the Notion API request fails.</exception>
     public virtual async Task<List<NotionPage>> FetchPagesSinceAsync(
         string databaseId,
         DateTime since,
@@ -157,8 +196,8 @@ public class NotionApiService
         if (string.IsNullOrEmpty(databaseId))
             throw new ValidationException("Database ID cannot be empty");
 
-    if (pageSize < 1 || pageSize > 100)
-        throw new ArgumentOutOfRangeException(nameof(pageSize), pageSize, "Page size must be between 1 and 100");
+        if (pageSize < 1 || pageSize > 100)
+            throw new ArgumentOutOfRangeException(nameof(pageSize), pageSize, "Page size must be between 1 and 100");
 
         var pages = new List<NotionPage>();
         var startCursor = string.Empty;
@@ -334,7 +373,8 @@ public class NotionApiService
                 {
                     var extractedTitle = string.Concat(
                         titleArray.EnumerateArray()
-                            .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
+                        .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
+
 
                     if (!string.IsNullOrEmpty(extractedTitle) && string.IsNullOrEmpty(title))
                         title = extractedTitle;
@@ -345,7 +385,7 @@ public class NotionApiService
                 {
                     properties[property.Name] = string.Concat(
                         richTextArray.EnumerateArray()
-                            .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
+                        .Select(t => t.TryGetProperty("plain_text", out var plainText) ? plainText.GetString() : null));
                 }
                 else if (propertyValue.TryGetProperty("select", out var selectElement) && selectElement.ValueKind == JsonValueKind.Object)
                 {
@@ -372,18 +412,12 @@ public class NotionApiService
             Url = element.TryGetProperty("url", out var urlElement) ? urlElement.GetString() : null
         };
 
-        if (element.TryGetProperty("created_time", out var createdTimeElement) &&
-            DateTime.TryParse(createdTimeElement.GetString(), System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
-                out var createdTime))
+        if (element.TryGetProperty("created_time", out var createdTimeElement) && DateTime.TryParse(createdTimeElement.GetString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var createdTime))
         {
             page.CreatedTime = createdTime;
         }
 
-        if (element.TryGetProperty("last_edited_time", out var lastEditedTimeElement) &&
-            DateTime.TryParse(lastEditedTimeElement.GetString(), System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
-                out var lastEditedTime))
+        if (element.TryGetProperty("last_edited_time", out var lastEditedTimeElement) && DateTime.TryParse(lastEditedTimeElement.GetString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var lastEditedTime))
         {
             page.LastEditedTime = lastEditedTime;
         }
