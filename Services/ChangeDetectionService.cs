@@ -20,10 +20,129 @@ using System.Linq;
 public class ChangeDetectionService
 {
     private readonly IChangeLogRepository _changeLogRepository;
+    private readonly ISyncCheckpointStore? _checkpointStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChangeDetectionService"/> class without
+    /// crash-resume protection; <see cref="FilterAlreadyApplied"/> becomes a no-op.
+    /// </summary>
+    /// <param name="changeLogRepository">Repository used to read persisted change history.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="changeLogRepository"/> is <see langword="null"/>.</exception>
     public ChangeDetectionService(IChangeLogRepository changeLogRepository)
+        : this(changeLogRepository, checkpointStore: null)
     {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChangeDetectionService"/> class.
+    /// </summary>
+    /// <param name="changeLogRepository">Repository used to read persisted change history.</param>
+    /// <param name="checkpointStore">
+    /// Checkpoint store consulted by <see cref="FilterAlreadyApplied"/> to skip items that
+    /// were already applied in a prior, possibly crashed, sync cycle. May be <see langword="null"/>
+    /// to disable filtering.
+    /// </param>
+    /// <exception cref="ArgumentNullException"><paramref name="changeLogRepository"/> is <see langword="null"/>.</exception>
+    public ChangeDetectionService(IChangeLogRepository changeLogRepository, ISyncCheckpointStore? checkpointStore)
+    {
+        ArgumentNullException.ThrowIfNull(changeLogRepository);
+
         _changeLogRepository = changeLogRepository;
+        _checkpointStore = checkpointStore;
+    }
+
+    /// <summary>
+    /// Builds the stable, deterministic key used to identify a change as "already applied"
+    /// in the checkpoint store.
+    /// </summary>
+    /// <param name="change">The change to build a key for.</param>
+    /// <returns>A stable string key combining source, task id, change type and timestamp.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="change"/> is <see langword="null"/>.</exception>
+    public static string BuildItemKey(ChangeLog change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        return $"{change.Source}:{change.TaskId}:{change.ChangeType}:{change.Timestamp:O}";
+    }
+
+    /// <summary>
+    /// Removes changes that were already applied during a previous, possibly crashed, sync
+    /// cycle for the given configuration, as recorded in the checkpoint store. If no
+    /// checkpoint store was configured, all changes are returned unfiltered.
+    /// </summary>
+    /// <param name="changes">The candidate changes detected for the current cycle.</param>
+    /// <param name="configId">Identifier of the sync configuration the changes belong to.</param>
+    /// <returns>The subset of <paramref name="changes"/> not already marked as applied.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="changes"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="configId"/> is <see cref="Guid.Empty"/>.</exception>
+    public virtual List<ChangeLog> FilterAlreadyApplied(List<ChangeLog> changes, Guid configId)
+    {
+        ArgumentNullException.ThrowIfNull(changes);
+        if (configId == Guid.Empty)
+            throw new ArgumentException("Configuration id must not be empty.", nameof(configId));
+
+        if (_checkpointStore is null)
+            return changes;
+
+        var checkpoint = _checkpointStore.LoadCheckpoint(configId);
+        if (checkpoint.AppliedItemKeys.Count == 0)
+            return changes;
+
+        return changes.Where(c => !checkpoint.AppliedItemKeys.Contains(BuildItemKey(c))).ToList();
+    }
+
+    /// <summary>
+    /// Builds the checkpoint item key(s) that <see cref="DetectLocalChanges"/> would produce
+    /// for a single local task relative to <paramref name="since"/>, without running full
+    /// detection over the whole task list. Intended for callers that apply a task
+    /// individually and want to mark it applied for checkpointing purposes right away.
+    /// </summary>
+    /// <param name="task">The local task that was just applied.</param>
+    /// <param name="since">The timestamp changes are being detected relative to.</param>
+    /// <returns>Zero, one or two item keys covering the task's creation/update and deletion.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="task"/> is <see langword="null"/>.</exception>
+    public static IReadOnlyList<string> BuildLocalItemKeys(Task task, DateTime since)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+
+        var keys = new List<string>();
+
+        if (task.CreatedAt >= since && task.UpdatedAt == task.CreatedAt)
+            keys.Add(BuildItemKey(new ChangeLog { TaskId = task.Id, ChangeType = "Created", Source = ChangeSource.Local, Timestamp = task.CreatedAt }));
+        else if (task.UpdatedAt >= since)
+            keys.Add(BuildItemKey(new ChangeLog { TaskId = task.Id, ChangeType = "Updated", Source = ChangeSource.Local, Timestamp = task.UpdatedAt }));
+
+        if (task.IsDeleted && task.DeletedAt >= since)
+            keys.Add(BuildItemKey(new ChangeLog { TaskId = task.Id, ChangeType = "Deleted", Source = ChangeSource.Local, Timestamp = task.DeletedAt ?? DateTime.UtcNow }));
+
+        return keys;
+    }
+
+    /// <summary>
+    /// Builds the checkpoint item key(s) that <see cref="DetectNotionChanges"/> would produce
+    /// for a single Notion page relative to <paramref name="since"/>, without running full
+    /// detection over the whole page list. Intended for callers that apply a page individually
+    /// and want to mark it applied for checkpointing purposes right away.
+    /// </summary>
+    /// <param name="taskId">The local task id the page was mapped to.</param>
+    /// <param name="page">The Notion page that was just applied.</param>
+    /// <param name="since">The timestamp changes are being detected relative to.</param>
+    /// <returns>Zero, one or two item keys covering the page's creation/update and archival.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="page"/> is <see langword="null"/>.</exception>
+    public static IReadOnlyList<string> BuildNotionItemKeys(Guid taskId, NotionPage page, DateTime since)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+
+        var keys = new List<string>();
+
+        if (page.CreatedTime >= since && page.LastEditedTime == page.CreatedTime)
+            keys.Add(BuildItemKey(new ChangeLog { TaskId = taskId, ChangeType = "Created", Source = ChangeSource.Notion, Timestamp = page.CreatedTime }));
+        else if (page.LastEditedTime >= since)
+            keys.Add(BuildItemKey(new ChangeLog { TaskId = taskId, ChangeType = "Updated", Source = ChangeSource.Notion, Timestamp = page.LastEditedTime }));
+
+        if (page.Archived)
+            keys.Add(BuildItemKey(new ChangeLog { TaskId = taskId, ChangeType = "Deleted", Source = ChangeSource.Notion, Timestamp = page.LastEditedTime }));
+
+        return keys;
     }
 
     /// <summary>

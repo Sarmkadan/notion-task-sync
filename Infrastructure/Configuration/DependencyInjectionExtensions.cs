@@ -41,6 +41,7 @@ public static class DependencyInjectionExtensions
         services.Configure<AppSettings>(configuration.GetSection("AppSettings"));
 
         // Register additional services that extend existing functionality
+        services.AddSingleton<ISyncCheckpointStore>(new SyncCheckpointStore());
         services.AddSingleton<ChangeDetectionService>();
         services.AddSingleton<ConflictResolutionService>();
         services.AddSingleton<ConflictDiffService>();

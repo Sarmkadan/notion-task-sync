@@ -65,6 +65,7 @@ public static class DependencyInjection
             return new NotionApiService(apiKey, httpClient, includedStatuses);
         });
 
+        services.AddSingleton<ISyncCheckpointStore>(new SyncCheckpointStore());
         services.AddSingleton<ChangeDetectionService>();
         services.AddSingleton<ConflictResolutionService>();
         services.AddSingleton<ConflictDiffService>();
