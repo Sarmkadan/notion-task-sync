@@ -29,16 +29,15 @@ public static class CollectionExtensions
     /// <typeparam name="T">The type of elements in the collection.</typeparam>
     /// <param name="collection">The collection to check.</param>
     /// <returns><see langword="true"/> if the collection is null or empty; otherwise, <see langword="false"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="collection"/> is <see langword="null"/>.</exception>
     public static bool IsNullOrEmpty<T>(this IEnumerable<T>? collection)
     {
-        ArgumentNullException.ThrowIfNull(collection);
-        return !collection.Any();
+        // If the collection itself is null we treat it as empty.
+        return collection == null || !collection.Any();
     }
 
     /// <summary>
     /// Determines if a collection has elements with meaningful content.
-    /// Opposite of IsNullOrEmpty for improved readability.
+    /// Opposite of <see cref="IsNullOrEmpty{T}"/> for improved readability.
     /// </summary>
     /// <typeparam name="T">The type of elements in the collection.</typeparam>
     /// <param name="collection">The collection to check.</param>
@@ -101,6 +100,24 @@ public static class CollectionExtensions
 
         if (batch.Count > 0)
             yield return batch;
+    }
+
+    /// <summary>
+    /// Convenience overload that returns the batches as concrete <see cref="IList{T}"/> collections.
+    /// This is handy when callers need mutable lists rather than read‑only enumerables.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the collection.</typeparam>
+    /// <param name="items">The collection to batch.</param>
+    /// <param name="batchSize">The maximum size of each batch (must be positive).</param>
+    /// <returns>An enumerable of <see cref="IList{T}"/> batches.</returns>
+    public static IEnumerable<IList<T>> BatchChunks<T>(this IEnumerable<T> items, int batchSize)
+    {
+        // Re‑use the existing Batch implementation and cast each batch to IList<T>.
+        foreach (var batch in items.Batch(batchSize))
+        {
+            // The Batch method already returns a List<T>, which implements IList<T>.
+            yield return (IList<T>)batch;
+        }
     }
 
     /// <summary>
