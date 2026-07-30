@@ -184,6 +184,24 @@ public static class StringExtensions
     }
 
     /// <summary>
+    /// Determines if two strings are equal, ignoring case.
+    /// Handles null values gracefully.
+    /// </summary>
+    /// <param name="str">The first string.</param>
+    /// <param name="other">The second string.</param>
+    /// <returns>True if both strings are equal ignoring case, or both null; otherwise false.</returns>
+    public static bool EqualsIgnoreCase(this string? str, string? other)
+    {
+        if (ReferenceEquals(str, other))
+            return true;
+
+        if (str is null || other is null)
+            return false;
+
+        return str.Equals(other, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Normalizes line endings to a consistent format (Unix style \n).
     /// Prevents line-ending-based change detection false positives.
     /// </summary>
