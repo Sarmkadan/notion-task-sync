@@ -19,34 +19,34 @@ public sealed class CryptoHelper
 {
     /// <summary>
     /// Computes a SHA256 hash of a string.
-    /// Useful for fingerprinting data and verification.
+    /// Uses the modern static <c>SHA256.HashData</c> API (available since .NET 6)
+    /// to avoid the older <c>SHA256.Create()</c> disposable pattern.
+    /// Output format (Base64) is unchanged for compatibility with persisted data.
     /// </summary>
     public static string HashSha256(string input)
     {
         if (string.IsNullOrEmpty(input))
             return string.Empty;
 
-        using (var sha256 = SHA256.Create())
-        {
-            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
-            return Convert.ToBase64String(hashedBytes);
-        }
+        // Convert input to UTF‑8 bytes and compute hash using the static API.
+        var inputBytes = Encoding.UTF8.GetBytes(input);
+        var hashedBytes = SHA256.HashData(inputBytes);
+        return Convert.ToBase64String(hashedBytes);
     }
 
     /// <summary>
     /// Computes an MD5 hash of a string.
-    /// Less secure than SHA256 but useful for checksums.
+    /// Uses the modern static <c>MD5.HashData</c> API (available since .NET 6).
+    /// Output format (Base64) is unchanged for compatibility.
     /// </summary>
     public static string HashMd5(string input)
     {
         if (string.IsNullOrEmpty(input))
             return string.Empty;
 
-        using (var md5 = MD5.Create())
-        {
-            var hashedBytes = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
-            return Convert.ToBase64String(hashedBytes);
-        }
+        var inputBytes = Encoding.UTF8.GetBytes(input);
+        var hashedBytes = MD5.HashData(inputBytes);
+        return Convert.ToBase64String(hashedBytes);
     }
 
     /// <summary>
@@ -77,23 +77,23 @@ public sealed class CryptoHelper
     }
 
     /// <summary>
-    /// Computes HMAC-SHA256 signature of data with a key.
-    /// Used for data integrity and authenticity verification.
+    /// Computes HMAC‑SHA256 signature of data with a key.
+    /// Uses the modern static <c>HMACSHA256.HashData</c> API (available since .NET 6).
+    /// Output format (Base64) is unchanged for compatibility.
     /// </summary>
     public static string ComputeHmacSha256(string data, string key)
     {
         if (string.IsNullOrEmpty(data) || string.IsNullOrEmpty(key))
             return string.Empty;
 
-        using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(key)))
-        {
-            var signedBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
-            return Convert.ToBase64String(signedBytes);
-        }
+        var keyBytes = Encoding.UTF8.GetBytes(key);
+        var dataBytes = Encoding.UTF8.GetBytes(data);
+        var signedBytes = HMACSHA256.HashData(keyBytes, dataBytes);
+        return Convert.ToBase64String(signedBytes);
     }
 
     /// <summary>
-    /// Verifies an HMAC-SHA256 signature.
+    /// Verifies an HMAC‑SHA256 signature.
     /// Checks if data hasn't been tampered with.
     /// </summary>
     public static bool VerifyHmacSha256(string data, string signature, string key)
