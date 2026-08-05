@@ -580,13 +580,71 @@ public class NotionApiService
     }
 
     /// <summary>
+    /// Maximum number of retry attempts for requests throttled with HTTP 429.
+    /// </summary>
+    private const int MaxRateLimitRetries = 3;
+
+    /// <summary>
+    /// Fallback delay used when a 429 response does not include a usable
+    /// <c>Retry-After</c> header.
+    /// </summary>
+    private static readonly TimeSpan DefaultRateLimitDelay = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Sends an HTTP request and, on a 429 (Too Many Requests) response, honors the
+    /// server-provided <c>Retry-After</c> header before retrying instead of using a
+    /// fixed backoff delay. Falls back to <see cref="DefaultRateLimitDelay"/> only when
+    /// the header is missing or unparsable.
+    /// </summary>
+    private async System.Threading.Tasks.Task<HttpResponseMessage> SendWithRateLimitRetryAsync(Func<HttpRequestMessage> requestFactory)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            using var request = requestFactory();
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+
+            if (response.StatusCode != HttpStatusCode.TooManyRequests || attempt >= MaxRateLimitRetries)
+                return response;
+
+            var delay = GetRetryAfterDelay(response) ?? DefaultRateLimitDelay;
+            response.Dispose();
+
+            await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Extracts the delay requested by a 429 response's <c>Retry-After</c> header.
+    /// Supports both the delta-seconds and HTTP-date forms of the header.
+    /// </summary>
+    private static TimeSpan? GetRetryAfterDelay(HttpResponseMessage response)
+    {
+        var retryAfter = response.Headers.RetryAfter;
+        if (retryAfter is null)
+            return null;
+
+        if (retryAfter.Delta.HasValue)
+            return retryAfter.Delta.Value > TimeSpan.Zero ? retryAfter.Delta.Value : TimeSpan.Zero;
+
+        if (retryAfter.Date.HasValue)
+        {
+            var delta = retryAfter.Date.Value - DateTimeOffset.UtcNow;
+            return delta > TimeSpan.Zero ? delta : TimeSpan.Zero;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Makes a GET request to the Notion API.
     /// </summary>
     private async Task<string?> GetAsync(string url)
     {
         try
         {
-            var response = await _httpClient.GetAsync(url).ConfigureAwait(false);
+            using var response = await SendWithRateLimitRetryAsync(
+                () => new HttpRequestMessage(HttpMethod.Get, url)).ConfigureAwait(false);
+
             return response.IsSuccessStatusCode
                 ? await response.Content.ReadAsStringAsync().ConfigureAwait(false)
                 : null;
@@ -605,8 +663,12 @@ public class NotionApiService
         try
         {
             var json = _jsonContext.Serialize(payload);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync(url, content).ConfigureAwait(false);
+
+            using var response = await SendWithRateLimitRetryAsync(() =>
+                new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                }).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode
                 ? await response.Content.ReadAsStringAsync().ConfigureAwait(false)
@@ -626,9 +688,12 @@ public class NotionApiService
         try
         {
             var json = _jsonContext.Serialize(payload);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Patch, url) { Content = content };
-            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+
+            using var response = await SendWithRateLimitRetryAsync(() =>
+                new HttpRequestMessage(HttpMethod.Patch, url)
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                }).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode
                 ? await response.Content.ReadAsStringAsync().ConfigureAwait(false)
