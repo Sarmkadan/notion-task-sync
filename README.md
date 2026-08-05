@@ -6945,3 +6945,45 @@ if (roundTripMarker != null)
     Console.WriteLine($"ToString(): {roundTripMarker.ToString()}");
 }
 ```
+
+## JsonFormatterTests
+
+The `JsonFormatterTests` class contains unit tests for the `JsonFormatter` class, covering JSON serialization and deserialization of tasks, validity checks via `IsValidJson`, and whitespace formatting via `Minify` and `PrettyPrint`. It also verifies edge cases such as empty task lists, null values, unicode characters, and special-character escaping.
+
+### Usage Example
+
+```csharp
+using Microsoft.Extensions.Logging;
+using Moq;
+using NotionTaskSync.Tests.Formatters;
+using Xunit;
+
+// Run all tests in the class via the standard xUnit test runner:
+//   dotnet test --filter "FullyQualifiedName~JsonFormatterTests"
+
+// The class sets up a JsonFormatter with a mocked logger in its constructor
+// and exercises it through individual [Fact] test methods, e.g.:
+public class JsonFormatterTestsDemo
+{
+    public void RunKeyChecks()
+    {
+        var tests = new JsonFormatterTests();
+
+        tests.FormatTask_SerializesTaskToValidJson();
+        tests.FormatTasks_SerializesTaskListToValidJsonArray();
+        tests.FormatTasks_HandlesEmptyTaskList();
+        tests.DeserializeTask_DeserializesValidJsonToTask();
+        tests.DeserializeTasks_DeserializesValidJsonArrayToTaskList();
+        tests.IsValidJson_IdentifiesValidJson();
+        tests.IsValidJson_IdentifiesInvalidJson();
+        tests.IsValidJson_HandlesNullAndEmptyStrings();
+        tests.Minify_RemovesWhitespaceFromJson();
+        tests.PrettyPrint_AddsWhitespaceToJson();
+        tests.FormatTask_HandlesAllStatusValues();
+        tests.FormatTask_EscapesSpecialCharactersInJson();
+        tests.FormatTasks_EmptyListProducesValidEmptyArray();
+        tests.FormatTask_HandlesNullValuesInTask();
+        tests.FormatTask_HandlesUnicodeCharacters();
+    }
+}
+```
