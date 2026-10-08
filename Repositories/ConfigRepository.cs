@@ -22,6 +22,9 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class ConfigRepository
 {
+    private const string ConfigFileExtension = ".json";
+    private const string ConfigFileSearchPattern = "*" + ConfigFileExtension;
+
     private readonly string _configDirectory;
     private readonly FileSystemHelper _fileSystemHelper;
     private readonly JsonFormatter _jsonFormatter;
@@ -111,7 +114,7 @@ public class ConfigRepository
             if (!directory.Exists)
                 return configs;
 
-            foreach (var file in directory.GetFiles("*.json"))
+            foreach (var file in directory.GetFiles(ConfigFileSearchPattern))
             {
                 var json = await _fileSystemHelper.ReadFileAsync(file.FullName);
                 if (json is not null)
@@ -233,6 +236,6 @@ public class ConfigRepository
     private string GetConfigFileName(string configName)
     {
         var sanitized = configName.SanitizeForFilename();
-        return $"{sanitized}.json";
+        return $"{sanitized}{ConfigFileExtension}";
     }
 }
