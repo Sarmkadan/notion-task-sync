@@ -54,6 +54,9 @@ public class WebhookHandler
     {
         try
         {
+            ArgumentNullException.ThrowIfNull(webhookType);
+            ArgumentNullException.ThrowIfNull(data);
+
             _logger.LogInformation("Webhook received: {WebhookType}", webhookType);
 
             if (!_webhookHandlers.TryGetValue(webhookType, out var handler))
@@ -77,6 +80,9 @@ public class WebhookHandler
     /// </summary>
     public void RegisterHandler(string webhookType, Func<Dictionary<string, object>, Task> handler)
     {
+        ArgumentNullException.ThrowIfNull(webhookType);
+        ArgumentNullException.ThrowIfNull(handler);
+
         _webhookHandlers[webhookType] = handler;
         _logger.LogInformation("Webhook handler registered for: {WebhookType}", webhookType);
     }
@@ -148,6 +154,10 @@ public class WebhookHandler
     {
         try
         {
+            ArgumentNullException.ThrowIfNull(payload);
+            ArgumentNullException.ThrowIfNull(signature);
+            ArgumentNullException.ThrowIfNull(secret);
+
             // Compute expected signature
             var expectedSignature = Utils.CryptoHelper.ComputeHmacSha256(payload, secret);
 

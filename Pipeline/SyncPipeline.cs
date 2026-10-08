@@ -50,6 +50,8 @@ public class SyncPipeline
     /// <returns>A <see cref="PipelineResult"/> containing the outcome of the pipeline execution.</returns>
     public async Task<PipelineResult> ExecuteAsync(PipelineContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         var result = new PipelineResult();
 
         _logger.LogInformation("Starting sync pipeline with {StepCount} steps", _steps.Count);
@@ -182,6 +184,8 @@ public class PipelineContext
     /// </summary>
     public T? GetData<T>(string key)
     {
+        ArgumentNullException.ThrowIfNull(key);
+
         if (Data.TryGetValue(key, out var value))
             return (T?)value;
         return default;
@@ -192,6 +196,8 @@ public class PipelineContext
     /// </summary>
     public void SetData<T>(string key, T value)
     {
+        ArgumentNullException.ThrowIfNull(key);
+
         Data[key] = value;
     }
 
@@ -200,6 +206,8 @@ public class PipelineContext
     /// </summary>
     public void AddMessage(string message)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
         Messages.Add($"[{DateTime.UtcNow.ToString(MessageTimestampFormat)}] {message}");
     }
 }
