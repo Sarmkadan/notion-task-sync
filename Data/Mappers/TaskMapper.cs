@@ -15,13 +15,33 @@ using System;
 /// </summary>
 public static class TaskMapper
 {
+    // Notion property names
+    private const string TitleKey = "Title";
+    private const string DescriptionKey = "Description";
+    private const string StatusKey = "Status";
+    private const string DueDateKey = "DueDate";
+    private const string PriorityKey = "Priority";
+    private const string AssignedToKey = "AssignedTo";
+    private const string TagsKey = "Tags";
+    private const string CreatedAtKey = "CreatedAt";
+    private const string UpdatedAtKey = "UpdatedAt";
+
+    // Error messages
+    private const string InvalidNotionPageMessage = "Invalid Notion page provided";
+    private const string InvalidTaskMessage = "Invalid task provided";
+
+    // Date/time serialization format (round-trip)
+    private const string IsoDateTimeFormat = "O";
+
     /// <summary>
     /// Creates a task from a Notion page.
     /// </summary>
     public static Task MapFromNotionPage(NotionPage page)
     {
+        ArgumentNullException.ThrowIfNull(page);
+
         if (!page.Validate())
-            throw new ArgumentException("Invalid Notion page provided");
+            throw new ArgumentException(InvalidNotionPageMessage);
 
         var task = new Task
         {
@@ -34,37 +54,37 @@ public static class TaskMapper
         };
 
         // Extract description if available
-        if (page.Properties is not null && page.Properties.ContainsKey("Description"))
+        if (page.Properties is not null && page.Properties.ContainsKey(DescriptionKey))
         {
-            task.Description = page.Properties["Description"]?.ToString();
+            task.Description = page.Properties[DescriptionKey]?.ToString();
         }
 
         // Extract status if available
-        if (page.Properties is not null && page.Properties.ContainsKey("Status"))
+        if (page.Properties is not null && page.Properties.ContainsKey(StatusKey))
         {
-            var status = page.Properties["Status"]?.ToString();
+            var status = page.Properties[StatusKey]?.ToString();
             if (Enum.TryParse<TaskStatus>(status, out var parsedStatus))
                 task.Status = parsedStatus;
         }
 
         // Extract due date if available
-        if (page.Properties is not null && page.Properties.ContainsKey("DueDate"))
+        if (page.Properties is not null && page.Properties.ContainsKey(DueDateKey))
         {
-            if (DateTime.TryParse(page.Properties["DueDate"]?.ToString(), out var dueDate))
+            if (DateTime.TryParse(page.Properties[DueDateKey]?.ToString(), out var dueDate))
                 task.DueDate = dueDate;
         }
 
         // Extract priority if available
-        if (page.Properties is not null && page.Properties.ContainsKey("Priority"))
+        if (page.Properties is not null && page.Properties.ContainsKey(PriorityKey))
         {
-            if (int.TryParse(page.Properties["Priority"]?.ToString(), out var priority))
+            if (int.TryParse(page.Properties[PriorityKey]?.ToString(), out var priority))
                 task.Priority = priority;
         }
 
         // Extract assigned to if available
-        if (page.Properties is not null && page.Properties.ContainsKey("AssignedTo"))
+        if (page.Properties is not null && page.Properties.ContainsKey(AssignedToKey))
         {
-            task.AssignedTo = page.Properties["AssignedTo"]?.ToString();
+            task.AssignedTo = page.Properties[AssignedToKey]?.ToString();
         }
 
         return task;
@@ -75,8 +95,11 @@ public static class TaskMapper
     /// </summary>
     public static void UpdateTaskFromPage(Task task, NotionPage page)
     {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentNullException.ThrowIfNull(page);
+
         if (!page.Validate())
-            throw new ArgumentException("Invalid Notion page provided");
+            throw new ArgumentException(InvalidNotionPageMessage);
 
         task.Title = page.Title;
         task.UpdatedAt = page.LastEditedTime;
@@ -84,30 +107,30 @@ public static class TaskMapper
 
         if (page.Properties is not null)
         {
-            if (page.Properties.ContainsKey("Description"))
-                task.Description = page.Properties["Description"]?.ToString();
+            if (page.Properties.ContainsKey(DescriptionKey))
+                task.Description = page.Properties[DescriptionKey]?.ToString();
 
-            if (page.Properties.ContainsKey("Status"))
+            if (page.Properties.ContainsKey(StatusKey))
             {
-                var status = page.Properties["Status"]?.ToString();
+                var status = page.Properties[StatusKey]?.ToString();
                 if (Enum.TryParse<TaskStatus>(status, out var parsedStatus))
                     task.Status = parsedStatus;
             }
 
-            if (page.Properties.ContainsKey("Priority"))
+            if (page.Properties.ContainsKey(PriorityKey))
             {
-                if (int.TryParse(page.Properties["Priority"]?.ToString(), out var priority))
+                if (int.TryParse(page.Properties[PriorityKey]?.ToString(), out var priority))
                     task.Priority = priority;
             }
 
-            if (page.Properties.ContainsKey("DueDate"))
+            if (page.Properties.ContainsKey(DueDateKey))
             {
-                if (DateTime.TryParse(page.Properties["DueDate"]?.ToString(), out var dueDate))
+                if (DateTime.TryParse(page.Properties[DueDateKey]?.ToString(), out var dueDate))
                     task.DueDate = dueDate;
             }
 
-            if (page.Properties.ContainsKey("AssignedTo"))
-                task.AssignedTo = page.Properties["AssignedTo"]?.ToString();
+            if (page.Properties.ContainsKey(AssignedToKey))
+                task.AssignedTo = page.Properties[AssignedToKey]?.ToString();
         }
     }
 
@@ -116,8 +139,11 @@ public static class TaskMapper
     /// </summary>
     public static NotionPage MapToNotionPage(Task task, string databaseId)
     {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentNullException.ThrowIfNull(databaseId);
+
         if (!task.Validate())
-            throw new ArgumentException("Invalid task provided");
+            throw new ArgumentException(InvalidTaskMessage);
 
         var page = new NotionPage(
             pageId: task.NotionPageId ?? Guid.NewGuid().ToString(),
@@ -131,15 +157,15 @@ public static class TaskMapper
 
         page.Properties = new()
         {
-            ["Title"] = task.Title,
-            ["Description"] = task.Description,
-            ["Status"] = task.Status.ToString(),
-            ["Priority"] = task.Priority,
-            ["DueDate"] = task.DueDate?.ToString("O"),
-            ["AssignedTo"] = task.AssignedTo,
-            ["Tags"] = task.Tags,
-            ["CreatedAt"] = task.CreatedAt.ToString("O"),
-            ["UpdatedAt"] = task.UpdatedAt.ToString("O")
+            [TitleKey] = task.Title,
+            [DescriptionKey] = task.Description,
+            [StatusKey] = task.Status.ToString(),
+            [PriorityKey] = task.Priority,
+            [DueDateKey] = task.DueDate?.ToString(IsoDateTimeFormat),
+            [AssignedToKey] = task.AssignedTo,
+            [TagsKey] = task.Tags,
+            [CreatedAtKey] = task.CreatedAt.ToString(IsoDateTimeFormat),
+            [UpdatedAtKey] = task.UpdatedAt.ToString(IsoDateTimeFormat)
         };
 
         return page;
@@ -150,6 +176,8 @@ public static class TaskMapper
     /// </summary>
     public static TaskDto MapToDto(Task task)
     {
+        ArgumentNullException.ThrowIfNull(task);
+
         return new TaskDto
         {
             Id = task.Id,
