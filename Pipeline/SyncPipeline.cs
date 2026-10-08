@@ -18,6 +18,9 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class SyncPipeline
 {
+    private const string CriticalStepFailedMessageFormat = "Critical step '{0}' failed. Pipeline aborted.";
+    private const string ExceptionInCriticalStepMessageFormat = "Exception in critical step '{0}': {1}";
+
     private readonly List<ISyncStep> _steps = new();
     private readonly ILogger<SyncPipeline> _logger;
 
@@ -75,7 +78,7 @@ public class SyncPipeline
                 if (!stepResult && step.IsCritical)
                 {
                     result.Success = false;
-                    result.ErrorMessage = $"Critical step '{step.Name}' failed. Pipeline aborted.";
+                    result.ErrorMessage = string.Format(CriticalStepFailedMessageFormat, step.Name);
                     _logger.LogError(result.ErrorMessage);
                     break;
                 }
@@ -102,7 +105,7 @@ public class SyncPipeline
                 if (step.IsCritical)
                 {
                     result.Success = false;
-                    result.ErrorMessage = $"Exception in critical step '{step.Name}': {ex.Message}";
+                    result.ErrorMessage = string.Format(ExceptionInCriticalStepMessageFormat, step.Name, ex.Message);
                     break;
                 }
             }
@@ -162,6 +165,8 @@ public interface ISyncStep
 /// </summary>
 public class PipelineContext
 {
+    private const string MessageTimestampFormat = "HH:mm:ss";
+
     /// <summary>
     /// Shared data dictionary for passing information between steps.
     /// </summary>
@@ -195,7 +200,7 @@ public class PipelineContext
     /// </summary>
     public void AddMessage(string message)
     {
-        Messages.Add($"[{DateTime.UtcNow:HH:mm:ss}] {message}");
+        Messages.Add($"[{DateTime.UtcNow.ToString(MessageTimestampFormat)}] {message}");
     }
 }
 
