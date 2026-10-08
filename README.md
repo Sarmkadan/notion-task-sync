@@ -4856,6 +4856,19 @@ class Program
 
 The `ConflictResolutionService` class handles conflicts detected during synchronization between local task storage and Notion databases. It provides multiple resolution strategies including last-write-wins, local-wins, notion-wins, and manual review workflows. The service tracks resolution methods, timestamps, and automatically logs discarded local changes for auditability.
 
+### Strategies
+
+`ResolveConflictsAsync` accepts a `ConflictResolutionStrategy` (`SyncConfig.cs`) that applies to every conflict in the batch. An optional `Dictionary<string, ConflictResolutionStrategy>` keyed by property name overrides the global strategy for individual fields.
+
+- `LastWrite` (0) - keeps the value with the newer modification timestamp. Ties within clock-skew tolerance resolve to the Notion value.
+- `LocalWins` (1) - always keeps the local value.
+- `NotionWins` (2) - always keeps the Notion value.
+- `Manual` (3) - marks the conflict as `PendingReview` without changing the value.
+
+Whenever a local value is discarded, the service writes a `LocalChangeDiscarded` entry to the change log through `IChangeLogRepository`.
+
+The single-conflict method `ResolveWith` takes a `ConflictStrategy` (`Services/ConflictStrategy.cs`) with the values `PreferLocal`, `PreferRemote`, and `Newest`.
+
 ### Usage Example
 
 ```csharp
