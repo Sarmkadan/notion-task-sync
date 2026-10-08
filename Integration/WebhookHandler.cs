@@ -19,6 +19,21 @@ using NotionTaskSync.Events;
 /// </summary>
 public class WebhookHandler
 {
+    // Webhook type identifiers
+    private const string PageUpdatedWebhookType = "page_updated";
+    private const string PageCreatedWebhookType = "page_created";
+    private const string PageDeletedWebhookType = "page_deleted";
+
+    // Payload keys
+    private const string PageIdKey = "page_id";
+    private const string DatabaseIdKey = "database_id";
+
+    // ChangeDetectedEvent change types and source
+    private const string ChangeTypeUpdated = "Updated";
+    private const string ChangeTypeCreated = "Created";
+    private const string ChangeTypeDeleted = "Deleted";
+    private const string ChangeSourceRemote = "Remote";
+
     private readonly EventBus _eventBus;
     private readonly ILogger<WebhookHandler> _logger;
     private readonly Dictionary<string, Func<Dictionary<string, object>, Task>> _webhookHandlers;
@@ -72,16 +87,16 @@ public class WebhookHandler
     private void RegisterDefaultHandlers()
     {
         // Handler for page updates from Notion
-        RegisterHandler("page_updated", async (data) =>
+        RegisterHandler(PageUpdatedWebhookType, async (data) =>
         {
-            if (data.TryGetValue("page_id", out var pageId) &&
-                data.TryGetValue("database_id", out var databaseId))
+            if (data.TryGetValue(PageIdKey, out var pageId) &&
+                data.TryGetValue(DatabaseIdKey, out var databaseId))
             {
                 await _eventBus.PublishAsync(new ChangeDetectedEvent
                 {
                     TaskId = Guid.TryParse(pageId.ToString(), out var id) ? id : Guid.NewGuid(),
-                    ChangeType = "Updated",
-                    Source = "Remote",
+                    ChangeType = ChangeTypeUpdated,
+                    Source = ChangeSourceRemote,
                     ChangedAt = DateTime.UtcNow,
                     ChangedProperties = data
                 });
@@ -89,26 +104,26 @@ public class WebhookHandler
         });
 
         // Handler for page creations
-        RegisterHandler("page_created", async (data) =>
+        RegisterHandler(PageCreatedWebhookType, async (data) =>
         {
             await _eventBus.PublishAsync(new ChangeDetectedEvent
             {
-                TaskId = Guid.TryParse(data["page_id"].ToString(), out var id) ? id : Guid.NewGuid(),
-                ChangeType = "Created",
-                Source = "Remote",
+                TaskId = Guid.TryParse(data[PageIdKey].ToString(), out var id) ? id : Guid.NewGuid(),
+                ChangeType = ChangeTypeCreated,
+                Source = ChangeSourceRemote,
                 ChangedAt = DateTime.UtcNow,
                 ChangedProperties = data
             });
         });
 
         // Handler for page deletions
-        RegisterHandler("page_deleted", async (data) =>
+        RegisterHandler(PageDeletedWebhookType, async (data) =>
         {
             await _eventBus.PublishAsync(new ChangeDetectedEvent
             {
-                TaskId = Guid.TryParse(data["page_id"].ToString(), out var id) ? id : Guid.NewGuid(),
-                ChangeType = "Deleted",
-                Source = "Remote",
+                TaskId = Guid.TryParse(data[PageIdKey].ToString(), out var id) ? id : Guid.NewGuid(),
+                ChangeType = ChangeTypeDeleted,
+                Source = ChangeSourceRemote,
                 ChangedAt = DateTime.UtcNow
             });
         });
@@ -152,6 +167,8 @@ public class WebhookHandler
 /// </summary>
 public class WebhookConfig
 {
+    private const int DefaultMaxPayloadSizeBytes = 1024 * 1024; // 1MB
+
     /// <summary>
     /// Secret key for validating webhook signatures.
     /// </summary>
@@ -166,7 +183,7 @@ public class WebhookConfig
     /// <summary>
     /// Maximum payload size in bytes.
     /// </summary>
-    public int MaxPayloadSizeBytes { get; set; } = 1024 * 1024; // 1MB
+    public int MaxPayloadSizeBytes { get; set; } = DefaultMaxPayloadSizeBytes;
 
     /// <summary>
     /// Whether to validate webhook signatures.
