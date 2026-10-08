@@ -3113,66 +3113,61 @@ class Program
 
 ## BackupService
 
-The `BackupService` class manages task file backups and restoration, providing automated and manual backup functionality with retention policies. It creates timestamped backup directories containing copies of all task markdown files, tracks backup metadata, and automatically cleans up old backups based on a retention limit.
+### Purpose
+
+`BackupService` (`Services/BackupService.cs`) copies the task markdown files (`*.md`) from the task directory into timestamped backup folders, keeps only the newest N backups, and can restore tasks from a chosen backup or delete a backup. It also reports simple statistics (count, total size, last backup time).
+
+It depends on `LocalFileService` for the source directory (`GetBasePath()`) and for the actual copy (`BackupTasksAsync`). Failures are wrapped in `SyncException`.
+
+### Backup and Restore Flow
+
+1. **Create** (`CreateBackupAsync(label?)`):
+   - Ensures the backup root directory exists.
+   - Creates `backup_{yyyyMMdd_HHmmss}_{label}` (UTC time, label defaults to `auto`).
+   - Calls `LocalFileService.BackupTasksAsync`, which copies every `*.md` file into a nested `tasks_backup_{yyyyMMdd_HHmmss}` folder inside that directory and returns the nested path.
+   - Returns a `BackupInfo` whose `Path` is the nested folder and whose `FileCount` is the number of files in it.
+   - Runs retention cleanup: if there are more than `maxBackupFiles` backup folders, the oldest ones are deleted recursively. Cleanup errors are ignored.
+2. **List** (`GetAvailableBackups()`): returns the `backup_*` folders, newest first, with the label parsed from the folder name.
+3. **Restore** (`RestoreFromBackupAsync(path)`): copies every `*.md` file from `path` into the task directory, overwriting existing files with the same name. It does not delete files that are not in the backup.
+4. **Delete** (`DeleteBackupAsync(path)`): recursively deletes the given folder if it exists.
+5. **Stats** (`GetBackupStats()`): counts `backup_*` folders and sums file sizes under the backup root. Errors are ignored and default values are returned.
+
+### Caveats
+
+- **Path mismatch in restore.** `CreateBackupAsync` returns the nested `tasks_backup_*` path, which holds the `.md` files. `GetAvailableBackups()` returns the outer `backup_*` folder, and its `FileCount` is always `0` because the files sit one level deeper. `RestoreFromBackupAsync` looks for `*.md` directly in the folder it receives, so pass it the path from `CreateBackupAsync` (or the nested folder), not the outer folder from `GetAvailableBackups()`. Restoring from the outer folder finds no files and copies nothing, without an error.
+- **Retention counts folders.** `maxBackupFiles` limits the number of `backup_*` folders, not files.
+- **Silent failures.** `GetAvailableBackups`, `GetBackupStats` and cleanup catch all exceptions and return partial or empty results.
+- **Label parsing.** Labels are read from the folder name by skipping the `backup_` prefix and the 15-character timestamp. Folders with other names are returned as-is.
 
 ### Usage Example
 
 ```csharp
 using NotionTaskSync.Services;
-using NotionTaskSync.Domain.Models;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
-class Program
-{
-static async Task Main()
-{
-// Initialize BackupService with backup directory and retention policy
-var backupService = new BackupService(
-backupDirectory: @"./backups",
-maxBackupFiles: 10,
-fileService: new LocalFileService(@"./tasks")
-);
+// Keep the 10 newest backups of ./tasks in ./backups
+var fileService = new LocalFileService("./tasks");
+var backupService = new BackupService("./backups", maxBackupFiles: 10, fileService);
 
-// Create a manual backup with a descriptive label
-var backupInfo = await backupService.CreateBackupAsync("pre-major-sync");
-Console.WriteLine($"Backup created: {backupInfo}");
-Console.WriteLine($"Backup ID: {backupInfo.Id}");
-Console.WriteLine($"Backup path: {backupInfo.Path}");
-Console.WriteLine($"Files backed up: {backupInfo.FileCount}");
-Console.WriteLine($"Backup age: {backupInfo.GetAge().TotalHours:F1} hours");
+// Manual backup with a label
+var info = await backupService.CreateBackupAsync("pre-major-sync");
+Console.WriteLine($"Created {info.Label}: {info.FileCount} files at {info.Path}");
 
-// Get backup statistics
+// Statistics
 var stats = backupService.GetBackupStats();
-Console.WriteLine($"\nBackup Statistics:");
-Console.WriteLine($"Total backups: {stats.TotalBackups}");
-Console.WriteLine($"Total size: {stats.GetTotalSizeMB():F2} MB");
-Console.WriteLine($"Last backup: {stats.LastBackupTime:O}");
+Console.WriteLine($"Backups: {stats.TotalBackups}, size: {stats.GetTotalSizeMB():F2} MB, last: {stats.LastBackupTime:O}");
 
-// List all available backups
-var allBackups = backupService.GetAvailableBackups();
-Console.WriteLine($"\nAvailable backups ({allBackups.Count}):");
-foreach (var backup in allBackups)
-{
-Console.WriteLine($"- {backup.ToString()}");
-}
+// Restore from the backup just created (use the path returned by CreateBackupAsync)
+await backupService.RestoreFromBackupAsync(info.Path!);
+Console.WriteLine("Tasks restored.");
 
-// Restore from a specific backup
-if (allBackups.Count > 0)
+// Delete the oldest backup folder, if there is more than one
+var backups = backupService.GetAvailableBackups();
+if (backups.Count > 1)
 {
-var latestBackup = allBackups[0];
-await backupService.RestoreFromBackupAsync(latestBackup.Path);
-Console.WriteLine($"\nRestored from backup: {latestBackup.Label}");
-}
-
-// Delete an old backup
-if (allBackups.Count > 5)
-{
-var backupToDelete = allBackups.Last();
-await backupService.DeleteBackupAsync(backupToDelete.Path);
-Console.WriteLine($"Deleted old backup: {backupToDelete.Label}");
-}
-}
+    await backupService.DeleteBackupAsync(backups.Last().Path!);
 }
 ```
 
@@ -4340,132 +4335,52 @@ class Program
 
 ## BulkOperationService
 
-The `BulkOperationService` class provides batch operations for managing multiple tasks simultaneously. It enables efficient bulk updates including status changes, tag management, assignee assignment, priority setting, and soft deletion across multiple tasks in a single operation. The service tracks operation statistics including requested items, successfully affected items, and skipped items that couldn't be processed.
+`BulkOperationService` (`Services/BulkOperationService.cs`, namespace `NotionTaskSync.Services`) applies one change to many tasks in a single call. It is the backend of the `bulk` CLI command. Each method loads tasks by GUID through `ITaskRepository`, applies the change, and calls `SaveAsync()` once at the end. IDs that do not exist are counted as skipped, not thrown. The service returns a `BulkResult` with counts for each call.
 
-### Public Members
+Purpose:
+- Update status, tags, assignee, or priority for a list of tasks without writing per-task code.
+- Soft-delete a list of tasks.
+- Build an ID list with `QueryAsync` before running a bulk operation.
 
-- `BulkOperationService(ITaskRepository taskRepository, ILogger<BulkOperationService> logger)` - Constructor that initializes the service with task repository and logger
-- `public async Task<BulkResult> UpdateStatusAsync(Guid[] taskIds, TaskStatus newStatus)` - Updates the status of multiple tasks
-- `public async Task<BulkResult> AddTagAsync(Guid[] taskIds, string tag)` - Adds a tag to multiple tasks (avoids duplicates)
-- `public async Task<BulkResult> RemoveTagAsync(Guid[] taskIds, string tag)` - Removes a tag from multiple tasks
-- `public async Task<BulkResult> AssignAsync(Guid[] taskIds, string assigneeEmail)` - Assigns multiple tasks to a person
-- `public async Task<BulkResult> SetPriorityAsync(Guid[] taskIds, int priority)` - Sets priority for multiple tasks
-- `public async Task<BulkResult> DeleteAsync(Guid[] taskIds)` - Soft deletes multiple tasks
-- `public async Task<List<Domain.Models.Task>> QueryAsync(Func<Domain.Models.Task, bool> predicate)` - Queries tasks with a filter predicate
-- `public string Operation` - Gets the current operation name
-- `public int Requested` - Gets the number of tasks requested for the operation
-- `public int Affected` - Gets the number of tasks successfully affected
-- `public int Skipped` - Gets the number of tasks skipped (missing or invalid)
+### Key Methods
+
+- `Task<BulkResult> UpdateStatusAsync(IEnumerable<Guid> taskIds, TaskStatus newStatus)` - Sets `Status`. When the new status is `Done` and `CompletedAt` is empty, it sets `CompletedAt` to UTC now.
+- `Task<BulkResult> AddTagAsync(IEnumerable<Guid> taskIds, string tag)` - Adds a trimmed, lower-cased tag. Tasks that already have it are skipped. Throws `ArgumentException` for an empty tag.
+- `Task<BulkResult> RemoveTagAsync(IEnumerable<Guid> taskIds, string tag)` - Removes the tag. Tasks without it are skipped. Throws `ArgumentException` for an empty tag.
+- `Task<BulkResult> AssignAsync(IEnumerable<Guid> taskIds, string assignee)` - Sets `AssignedTo` (trimmed). An empty or blank string clears the assignment.
+- `Task<BulkResult> SetPriorityAsync(IEnumerable<Guid> taskIds, int priority)` - Sets `Priority`. Throws `ArgumentOutOfRangeException` outside 0 to 100.
+- `Task<BulkResult> DeleteAsync(IEnumerable<Guid> taskIds)` - Soft-deletes each task with `MarkAsDeleted()`.
+- `Task<List<Domain.Models.Task>> QueryAsync(Func<Domain.Models.Task, bool> filter)` - Returns non-deleted tasks that match the predicate. It does not modify anything.
+
+### BulkResult
+
+`BulkResult` is defined in the same file.
+
+- `string Operation` - Name of the operation, for example `"UpdateStatus"` or `"AddTag"`.
+- `int Requested` - Number of IDs passed in.
+- `int Affected` - Number of tasks changed.
+- `int Skipped` - Number of tasks not found, or already in the target state (for tags).
+- `bool IsFullSuccess` - True when `Skipped == 0` and `Affected == Requested`.
 
 ### Usage Example
 
 ```csharp
 using NotionTaskSync.Services;
 using NotionTaskSync.Domain.Models;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 
-class Program
-{
-    static async Task Main()
-    {
-        // Setup dependency injection
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole());
-        services.AddSingleton<ITaskRepository, InMemoryTaskRepository>();
-        services.AddSingleton<BulkOperationService>();
-        
-        var serviceProvider = services.BuildServiceProvider();
-        var bulkService = serviceProvider.GetRequiredService<BulkOperationService>();
-        var taskRepository = serviceProvider.GetRequiredService<ITaskRepository>();
+// bulkService is resolved from DI (registered as a singleton)
+var bulkService = serviceProvider.GetRequiredService<BulkOperationService>();
 
-        // Create sample tasks
-        var task1 = new Domain.Models.Task
-        {
-            Id = Guid.NewGuid(),
-            Title = "Implement BulkOperationService feature",
-            Status = TaskStatus.Todo,
-            Priority = 50,
-            Tags = "backend,feature"
-        };
+// Select open tasks tagged "bug", then mark them done and tag them
+var ids = (await bulkService.QueryAsync(t => t.Status != TaskStatus.Done && t.Tags.Contains("bug")))
+    .Select(t => t.Id)
+    .ToList();
 
-        var task2 = new Domain.Models.Task
-        {
-            Id = Guid.NewGuid(),
-            Title = "Write documentation",
-            Status = TaskStatus.InProgress,
-            Priority = 75,
-            Tags = "docs"
-        };
+var done = await bulkService.UpdateStatusAsync(ids, TaskStatus.Done);
+Console.WriteLine($"{done.Operation}: {done.Affected}/{done.Requested} affected, {done.Skipped} skipped");
 
-        var task3 = new Domain.Models.Task
-        {
-            Id = Guid.NewGuid(),
-            Title = "Fix critical bug",
-            Status = TaskStatus.Todo,
-            Priority = 25,
-            Tags = "bug,urgent"
-        };
-
-        await taskRepository.SaveAsync(task1);
-        await taskRepository.SaveAsync(task2);
-        await taskRepository.SaveAsync(task3);
-
-        // Example 1: Update status for multiple tasks
-        var statusResult = await bulkService.UpdateStatusAsync(
-            new[] { task1.Id, task2.Id, task3.Id },
-            TaskStatus.Done
-        );
-        Console.WriteLine($"Updated {statusResult.Affected} tasks, skipped {statusResult.Skipped} missing tasks");
-
-        // Example 2: Add tags to tasks (avoids duplicates)
-        var tagResult = await bulkService.AddTagAsync(
-            new[] { task1.Id, task2.Id },
-            "high-priority"
-        );
-        Console.WriteLine($"Added tag to {tagResult.Affected} tasks");
-
-        // Example 3: Remove a tag from tasks
-        var removeResult = await bulkService.RemoveTagAsync(
-            new[] { task3.Id },
-            "urgent"
-        );
-        Console.WriteLine($"Removed tag from {removeResult.Affected} tasks");
-
-        // Example 4: Assign tasks to a person
-        var assignResult = await bulkService.AssignAsync(
-            new[] { task1.Id, task2.Id },
-            "developer@example.com"
-        );
-        Console.WriteLine($"Assigned {assignResult.Affected} tasks");
-
-        // Example 5: Set priority for tasks
-        var priorityResult = await bulkService.SetPriorityAsync(
-            new[] { task1.Id, task2.Id, task3.Id },
-            90
-        );
-        Console.WriteLine($"Set priority for {priorityResult.Affected} tasks");
-
-        // Example 6: Soft delete tasks
-        var deleteResult = await bulkService.DeleteAsync(
-            new[] { task3.Id }
-        );
-        Console.WriteLine($"Soft deleted {deleteResult.Affected} tasks");
-
-        // Example 7: Query tasks with filters
-        var matchingTasks = await bulkService.QueryAsync(
-            t => t.Status == TaskStatus.Done && t.Priority >= 75
-        );
-        Console.WriteLine($"Found {matchingTasks.Count} matching tasks");
-
-        // Example 8: Check operation statistics
-        Console.WriteLine($"\nOperation: {bulkService.Operation}");
-        Console.WriteLine($"Requested: {bulkService.Requested}");
-        Console.WriteLine($"Affected: {bulkService.Affected}");
-        Console.WriteLine($"Skipped: {bulkService.Skipped}");
-    }
-}
+var tagged = await bulkService.AddTagAsync(ids, "  Released ");  // stored as "released"
+Console.WriteLine($"IsFullSuccess: {tagged.IsFullSuccess}");
 ```
 
 ## BulkOperationServiceTests
@@ -7000,3 +6915,85 @@ public class JsonFormatterTestsDemo
     }
 }
 ```
+
+## CLI Arguments
+
+`CliArgumentParser` (`Cli/CliArgumentParser.cs`) turns a raw `string[] args` array into a `ParsedCommand` with three parts: `CommandName`, `Options`, and `Arguments`. It does not execute anything. The caller looks up the registered `CliCommand` and calls `ExecuteAsync(parsed.Arguments, parsed.Options)`.
+
+### Supported Syntax
+
+| Form | Example | Result |
+|------|---------|--------|
+| Command (first token) | `notion-sync sync` | `CommandName = "sync"` (lowercased) |
+| Long option, equals form | `--database-id=abc123` | `Options["database-id"] = "abc123"` |
+| Long option, separate value | `--database-id abc123` | `Options["database-id"] = "abc123"` |
+| Long flag (no value) | `--verbose` | `Options["verbose"] = "true"` |
+| Short option with value | `-d yes` | `Options["d"] = "yes"` |
+| Short flag (no value) | `-v` | `Options["v"] = "true"` |
+| Positional argument | `my-config` | added to `Arguments` in order |
+| Help | `--help`, `-h`, `help`, or no arguments | `CommandName = "help"` |
+| Unknown command | `notion-sync foo` | `CommandName = "help"`, `Error = "Unknown command: 'foo'"` |
+
+### Parsing Rules
+
+- The command name is matched case-insensitively. Option names and values are case-sensitive.
+- Option keys are stored without leading dashes. `--database-id` is stored as `database-id`, and `-d` is stored as `d`.
+- Long options take the next token as their value unless that token starts with `--`. Short options take the next token only if it does not start with `-`.
+- A value that starts with `-` (for example `-5`) is not accepted as a separate value by a short option. Use the equals form `--priority=-5` for long options.
+- Repeated options are not merged. The last occurrence wins.
+- Any token that does not start with `-` is positional. Tokens such as `-abc` (a dash plus more than one character) are also treated as positional.
+- `--help` after the command name is not a help request. It is parsed as an ordinary option named `help`.
+- The parser does not check options or arguments against the `Options` and `arguments` you register. Global options from `RegisterGlobalOption` appear only in the help text.
+- `Parse` returns a `ParsedCommand` in every case. Check `IsValid` or `Error` before you execute the command.
+
+### Example Invocations
+
+Assume these commands are registered with `RegisterCommand`:
+
+```csharp
+var parser = new CliArgumentParser();
+parser.RegisterCommand("sync", new SyncCommand());
+parser.RegisterCommand("status", new StatusCommand());
+parser.RegisterGlobalOption("verbose", "Enable verbose output");
+```
+
+```bash
+# Show help (no arguments, or an explicit help token)
+notion-sync
+notion-sync --help
+notion-sync -h
+notion-sync help
+
+# Run a command with a long option in separate-value form
+notion-sync sync --database-id abc123
+
+# Same option in equals form
+notion-sync sync --database-id=abc123
+
+# Long flag with no value (stored as "true")
+notion-sync sync --database-id abc123 --verbose
+
+# Short option with a value
+notion-sync sync -d abc123
+
+# Positional argument alongside options
+notion-sync sync my-config --database-id abc123
+
+# Command names are case-insensitive
+notion-sync SYNC --database-id abc123
+
+# Negative number: use the equals form for long options
+notion-sync sync --retries=-1
+
+# Unknown command: returns help with an error message
+notion-sync deploy
+```
+
+### Resulting ParsedCommand Values
+
+For `notion-sync sync my-config --database-id abc123 --verbose`:
+
+- `CommandName`: `"sync"`
+- `Arguments`: `["my-config"]`
+- `Options`: `{ "database-id": "abc123", "verbose": "true" }`
+- `Error`: `null`
