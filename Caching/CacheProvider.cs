@@ -25,7 +25,8 @@ public class CacheProvider
 
     public CacheProvider(ILogger<CacheProvider> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     /// <summary>
@@ -34,6 +35,8 @@ public class CacheProvider
     /// </summary>
     public T? Get<T>(string key)
     {
+        ArgumentNullException.ThrowIfNull(key);
+
         lock (_cache)
         {
             if (!_cache.TryGetValue(key, out var entry))
@@ -58,6 +61,8 @@ public class CacheProvider
     /// </summary>
     public void Set<T>(string key, T value, TimeSpan? expiration = null)
     {
+        ArgumentNullException.ThrowIfNull(key);
+
         lock (_cache)
         {
             var expiresAt = DateTime.UtcNow.Add(expiration ?? DefaultExpiration);
@@ -79,6 +84,9 @@ public class CacheProvider
     /// </summary>
     public T GetOrSet<T>(string key, Func<T> factory, TimeSpan? expiration = null)
     {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentNullException.ThrowIfNull(factory);
+
         var cached = Get<T>(key);
         if (cached is not null)
             return cached;
@@ -98,6 +106,9 @@ public class CacheProvider
         Func<System.Threading.Tasks.Task<T>> factory,
         TimeSpan? expiration = null)
     {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentNullException.ThrowIfNull(factory);
+
         var cached = Get<T>(key);
         if (cached is not null)
             return cached;
@@ -114,6 +125,8 @@ public class CacheProvider
     /// </summary>
     public bool Remove(string key)
     {
+        ArgumentNullException.ThrowIfNull(key);
+
         lock (_cache)
         {
             var removed = _cache.Remove(key);
@@ -129,6 +142,8 @@ public class CacheProvider
     /// </summary>
     public int RemoveByPattern(string pattern)
     {
+        ArgumentNullException.ThrowIfNull(pattern);
+
         lock (_cache)
         {
             var keysToRemove = _cache.Keys
