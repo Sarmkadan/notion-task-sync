@@ -33,8 +33,7 @@ public class TaskRepository : ITaskRepository
     /// <returns>A task representing the asynchronous operation.</returns>
     public async global::System.Threading.Tasks.Task AddAsync(Task task)
     {
-        if (task is null)
-            throw new ArgumentNullException(nameof(task));
+        ArgumentNullException.ThrowIfNull(task);
 
         if (!task.Validate())
             throw new InvalidOperationException("Task validation failed");
@@ -52,8 +51,7 @@ public class TaskRepository : ITaskRepository
     /// <returns>A task representing the asynchronous operation.</returns>
     public async global::System.Threading.Tasks.Task UpdateAsync(Task task)
     {
-        if (task is null)
-            throw new ArgumentNullException(nameof(task));
+        ArgumentNullException.ThrowIfNull(task);
 
         var existing = _tasks.FirstOrDefault(t => t.Id == task.Id);
 
