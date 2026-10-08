@@ -241,4 +241,18 @@ public static class StringExtensions
         // Trim hyphens from ends
         return slug.Trim('-');
     }
+
+    /// <summary>
+    /// Uppercases the first character of a string and leaves the rest unchanged.
+    /// Useful for presenting labels or titles that come from lowercase sources.
+    /// </summary>
+    /// <param name="str">The string to capitalize.</param>
+    /// <returns>The string with its first character uppercased, or the original string if it's null or empty.</returns>
+    public static string CapitalizeFirst(this string str)
+    {
+        if (string.IsNullOrEmpty(str))
+            return str;
+
+        return char.ToUpperInvariant(str[0]) + str[1..];
+    }
 }
