@@ -92,6 +92,8 @@ public sealed class SyncService
     {
         ArgumentNullException.ThrowIfNull(config);
 
+        ArgumentNullException.ThrowIfNull(config);
+
         if (!config.Validate())
             throw new ConfigurationException(InvalidConfigMessage);
 
