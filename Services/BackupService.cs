@@ -32,6 +32,9 @@ public sealed class BackupService
 
     public BackupService(string backupDirectory, int maxBackupFiles, LocalFileService fileService)
     {
+        ArgumentNullException.ThrowIfNull(backupDirectory);
+        ArgumentNullException.ThrowIfNull(fileService);
+
         _backupDirectory = backupDirectory;
         _maxBackupFiles = maxBackupFiles;
         _fileService = fileService;
@@ -117,6 +120,8 @@ public sealed class BackupService
     /// </summary>
     public async Task RestoreFromBackupAsync(string backupPath)
     {
+        ArgumentNullException.ThrowIfNull(backupPath);
+
         try
         {
             if (!Directory.Exists(backupPath))
@@ -148,6 +153,8 @@ public sealed class BackupService
     /// </summary>
     public async Task DeleteBackupAsync(string backupPath)
     {
+        ArgumentNullException.ThrowIfNull(backupPath);
+
         try
         {
             if (Directory.Exists(backupPath))
