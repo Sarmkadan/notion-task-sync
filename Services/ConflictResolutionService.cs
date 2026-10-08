@@ -22,6 +22,8 @@ public class ConflictResolutionService
 
     public ConflictResolutionService(IChangeLogRepository changeLogRepository)
     {
+        ArgumentNullException.ThrowIfNull(changeLogRepository);
+
         _changeLogRepository = changeLogRepository;
     }
 
@@ -35,6 +37,8 @@ public class ConflictResolutionService
         ConflictResolutionStrategy strategy,
         Dictionary<string, ConflictResolutionStrategy>? fieldStrategies = null)
     {
+        ArgumentNullException.ThrowIfNull(conflicts);
+
         var resolutions = new List<ConflictResolution>();
 
         foreach (var conflict in conflicts)
@@ -192,6 +196,8 @@ public class ConflictResolutionService
         ResolutionMethod method,
         string? notes = null)
     {
+        ArgumentNullException.ThrowIfNull(resolvedValue);
+
         // Would fetch the conflict from storage in real implementation
         var conflict = new ConflictResolution
         {
@@ -212,6 +218,8 @@ public class ConflictResolutionService
     /// </summary>
     public ConflictResolution MergeConflicts(ConflictResolution conflict)
     {
+        ArgumentNullException.ThrowIfNull(conflict);
+
         if (string.IsNullOrEmpty(conflict.LocalValue) || string.IsNullOrEmpty(conflict.NotionValue))
         {
             // If one is empty, prefer the non-empty value
@@ -244,6 +252,8 @@ public class ConflictResolutionService
     /// </summary>
     public List<ConflictResolution> GetPendingConflicts(List<ConflictResolution> allConflicts)
     {
+        ArgumentNullException.ThrowIfNull(allConflicts);
+
         return allConflicts.Where(c => c.IsPending()).ToList();
     }
 
@@ -252,6 +262,8 @@ public class ConflictResolutionService
     /// </summary>
     public ConflictResolutionStats GetResolutionStats(List<ConflictResolution> conflicts)
     {
+        ArgumentNullException.ThrowIfNull(conflicts);
+
         return new ConflictResolutionStats
         {
             TotalConflicts = conflicts.Count,
