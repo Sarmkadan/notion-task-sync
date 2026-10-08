@@ -381,4 +381,24 @@ public static class CollectionExtensions
             (list[i], list[randomIndex]) = (list[randomIndex], list[i]);
         }
     }
+
+    /// <summary>
+    /// Performs the specified action on each element of a collection.
+    /// Fluent alternative to a foreach loop when chaining with other LINQ-style operations.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the collection.</typeparam>
+    /// <param name="items">The collection to iterate.</param>
+    /// <param name="action">The action to perform on each element.</param>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="items"/> is <see langword="null"/>.
+    /// <paramref name="action"/> is <see langword="null"/>.
+    /// </exception>
+    public static void ForEach<T>(this IEnumerable<T> items, Action<T> action)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(action);
+
+        foreach (var item in items)
+            action(item);
+    }
 }
