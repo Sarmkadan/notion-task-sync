@@ -164,6 +164,17 @@ public static class DateTimeExtensions
     }
 
     /// <summary>
+    /// Determines if a timestamp is earlier than the current UTC time.
+    /// Useful for detecting expired deadlines or already-passed events.
+    /// </summary>
+    /// <param name="dateTime">The timestamp to check.</param>
+    /// <returns>True if the timestamp is before the current UTC time; otherwise false.</returns>
+    public static bool IsInPast(this DateTime dateTime)
+    {
+        return dateTime < DateTime.UtcNow;
+    }
+
+    /// <summary>
     /// Gets the start of the day (00:00:00) for a given DateTime.
     /// Useful for range queries and date-based operations.
     /// </summary>
