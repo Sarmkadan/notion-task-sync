@@ -6264,71 +6264,92 @@ class Program
 
 ## WebhookHandler
 
-The `WebhookHandler` class processes incoming webhook events from external services like Notion, GitHub, or other integrations. It validates, routes, and publishes domain events based on webhook payloads, enabling real-time reactive synchronization workflows.
+`WebhookHandler` (`Integration/WebhookHandler.cs`) routes webhook events by a string type name to a registered handler. For the built-in page events it publishes a `ChangeDetectedEvent` on the `EventBus`.
 
-### Usage Example
+It does not read HTTP requests, parse JSON, or check signatures on its own. The caller parses the incoming request into a flat dictionary, decides whether to validate the signature, and calls the handler.
+
+### Public Members
+
+| Member | Description |
+|--------|-------------|
+| `WebhookHandler(EventBus eventBus, ILogger<WebhookHandler> logger)` | Creates the handler and registers the built-in `page_*` handlers. Throws `ArgumentNullException` for null arguments. |
+| `Task<bool> HandleWebhookAsync(string webhookType, Dictionary<string, object> data)` | Runs the handler for `webhookType`. Returns `false` if the type is unknown or the handler throws (the exception is logged, not rethrown). Returns `true` otherwise. |
+| `void RegisterHandler(string webhookType, Func<Dictionary<string, object>, Task> handler)` | Adds or replaces the handler for a type. |
+| `List<string> GetRegisteredWebhookTypes()` | Returns the currently registered type names. |
+| `bool ValidateWebhookSignature(string payload, string signature, string secret)` | Computes the Base64 HMAC-SHA256 of `payload` with `secret` and compares it to `signature`. Returns `false` on exception. |
+
+### Built-in Webhook Types
+
+| `webhookType` | Keys read from `data` | Published `ChangeType` | If keys are missing |
+|---------------|-----------------------|------------------------|---------------------|
+| `page_updated` | `page_id`, `database_id` | `Updated` | Nothing is published. `HandleWebhookAsync` still returns `true`. |
+| `page_created` | `page_id` | `Created` | Throws `KeyNotFoundException`, which is caught. `HandleWebhookAsync` returns `false`. |
+| `page_deleted` | `page_id` | `Deleted` | Same as `page_created`. |
+
+For all three types the published event has `Source = "Remote"` and `ChangedAt = DateTime.UtcNow`.
+
+- `TaskId` is `page_id` parsed as a GUID. If it is not a valid GUID, a new random `Guid` is used. No error is raised.
+- `ChangedProperties` is the full `data` dictionary for `page_updated` and `page_created`. It is empty for `page_deleted`.
+
+### Expected Payloads
+
+The handler expects a flat `Dictionary<string, object>`. Values are read with `ToString()`, so GUIDs and other values should be passed as strings. Keys other than the ones listed above are passed through to `ChangedProperties` and otherwise ignored.
+
+```text
+HandleWebhookAsync("page_updated", {
+    "page_id":     "3f2c9e0a-...-...",   // required for a published event
+    "database_id": "9b1d4e7f-...-...",   // required for a published event
+    "title":       "Updated Task Title" // optional, passed through
+})
+```
+
+The code does not define a schema for the external service's raw payload. Mapping the raw request to a type name and these keys is the caller's job.
+
+### Usage
 
 ```csharp
-using NotionTaskSync.Integration;
-using NotionTaskSync.Events;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using NotionTaskSync.Events;
+using NotionTaskSync.Integration;
+using NotionTaskSync.Utils;
 
-class Program
+using var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
+var eventBus = new EventBus(loggerFactory.CreateLogger<EventBus>());
+var handler = new WebhookHandler(eventBus, loggerFactory.CreateLogger<WebhookHandler>());
+
+// Add a custom type. Exceptions thrown here are caught by HandleWebhookAsync.
+handler.RegisterHandler("sync_requested", async data =>
 {
-    static async Task Main()
+    await eventBus.PublishAsync(new SyncStartedEvent
     {
-        // Setup logging
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        var logger = loggerFactory.CreateLogger<WebhookHandler>();
-        
-        // Create event bus for publishing domain events
-        var eventBus = new EventBus(logger);
-        
-        // Initialize webhook handler
-        var webhookHandler = new WebhookHandler(eventBus, logger);
-        
-        // Register custom webhook handler
-        webhookHandler.RegisterHandler("custom_event", async (data) =>
-        {
-            Console.WriteLine($"Custom event received with data: {string.Join(", ", data.Select(kvp => $"{kvp.Key}={kvp.Value}"))}");
-            
-            // Publish domain event
-            await eventBus.PublishAsync(new SyncStartedEvent
-            {
-                SyncConfigId = "webhook-triggered-sync",
-                DatabaseId = "550e8400-e29b-41d4-a716-446655440000",
-                StartTime = DateTime.UtcNow
-            });
-        });
-        
-        // Get registered webhook types
-        var registeredTypes = webhookHandler.GetRegisteredWebhookTypes();
-        Console.WriteLine($"Registered webhook types: {string.Join(", ", registeredTypes)}");
-        
-        // Handle a webhook
-        var webhookData = new Dictionary<string, object>
-        {
-            { "page_id", "550e8400-e29b-41d4-a716-446655440000" },
-            { "database_id", "123e4567-e89b-12d3-a456-426614174000" },
-            { "title", "Updated Task Title" }
-        };
-        
-        bool handled = await webhookHandler.HandleWebhookAsync("page_updated", webhookData);
-        Console.WriteLine($"Webhook handled successfully: {handled}");
-        
-        // Validate webhook signature (example with test data)
-        string payload = "{\"page_id\":\"550e8400-e29b-41d4-a716-446655440000\"}";
-        string secret = "test-secret-key";
-        string signature = Utils.CryptoHelper.ComputeHmacSha256(payload, secret);
-        
-        bool isValid = webhookHandler.ValidateWebhookSignature(payload, signature, secret);
-        Console.WriteLine($"Webhook signature valid: {isValid}");
-    }
-}
+        SyncConfigId = data["config_id"].ToString()!,
+        DatabaseId = data["database_id"].ToString()!,
+    });
+});
+
+Console.WriteLine(string.Join(", ", handler.GetRegisteredWebhookTypes()));
+
+// Dispatch a built-in event
+var update = new Dictionary<string, object>
+{
+    ["page_id"] = "3f2c9e0a-1111-2222-3333-444455556666",
+    ["database_id"] = "9b1d4e7f-1111-2222-3333-444455556666",
+    ["title"] = "Updated Task Title"
+};
+bool handled = await handler.HandleWebhookAsync("page_updated", update);
+
+// Signature check: call it before dispatching, if the source signs its payloads.
+// Use the constant-time VerifyHmacSha256 (see Known Limitations below).
+bool signatureOk = CryptoHelper.VerifyHmacSha256(rawBody, signatureHeader, secret);
 ```
+
+### Known Limitations
+
+These describe the current behavior. They are not changed by this section.
+
+- `WebhookHandler.ValidateWebhookSignature` compares the signature with `==`, though its comment says it is constant-time. `CryptoHelper.VerifyHmacSha256` does use a constant-time comparison, so use that for signature checks.
+- `WebhookConfig` is defined in the same file but `WebhookHandler` does not use it. `MaxPayloadSizeBytes` and `AllowedTypes` are not enforced.
+- The handler does not subscribe to `EventBus`. Subscribers must do that themselves.
 
 ## SyncStartedEvent
 
