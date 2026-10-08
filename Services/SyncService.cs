@@ -21,6 +21,16 @@ using System.Linq;
 /// </summary>
 public sealed class SyncService
 {
+    private const string InvalidConfigMessage = "Invalid sync configuration provided";
+    private const int DefaultSyncHistoryLimit = 50;
+    private const string DurationFormat = "F1";
+    private const string UnknownDuration = "?";
+    private const string DryRunArchivePageLogMessage = "DRY-RUN: Would archive page {PageId} (task {TaskId})";
+    private const string DryRunUpdatePageLogMessage = "DRY-RUN: Would update page {PageId} with task {TaskId}";
+    private const string DryRunCreatePageLogMessage = "DRY-RUN: Would create new page in database {DatabaseId} for task {TaskId}";
+    private const string DryRunUpdateLocalLogMessage = "DRY-RUN: Would update local task {TaskId} from page {PageId}";
+    private const string DryRunCreateLocalLogMessage = "DRY-RUN: Would create local task {TaskId} from page {PageId}";
+
     private readonly ChangeDetectionService _changeDetectionService;
     private readonly ConflictResolutionService _conflictResolutionService;
     private readonly NotionApiService _notionApiService;
@@ -80,8 +90,10 @@ public sealed class SyncService
     /// <returns>A <see cref="SyncResult"/> containing the outcome of the sync operation.</returns>
     public async Task<SyncResult> ExecuteSyncAsync(SyncConfig config)
     {
+        ArgumentNullException.ThrowIfNull(config);
+
         if (!config.Validate())
-            throw new ConfigurationException("Invalid sync configuration provided");
+            throw new ConfigurationException(InvalidConfigMessage);
 
         var result = new SyncResult { ConfigId = config.Id, StartedAt = DateTime.UtcNow };
 
@@ -196,7 +208,7 @@ public sealed class SyncService
                             await _notionApiService.UpdatePageAsync(page.PageId, task);
                             MarkLocalTaskApplied(config.Id, task, since);
                         }
-                        _logger?.LogInformation("DRY-RUN: Would archive page {PageId} (task {TaskId})", page.PageId, task.Id);
+                        _logger?.LogInformation(DryRunArchivePageLogMessage, page.PageId, task.Id);
                         deleted++;
                     }
                     else
@@ -206,7 +218,7 @@ public sealed class SyncService
                             await _notionApiService.UpdatePageAsync(page.PageId, task);
                             MarkLocalTaskApplied(config.Id, task, since);
                         }
-                        _logger?.LogInformation("DRY-RUN: Would update page {PageId} with task {TaskId}", page.PageId, task.Id);
+                        _logger?.LogInformation(DryRunUpdatePageLogMessage, page.PageId, task.Id);
                         updated++;
                     }
                 }
@@ -223,7 +235,7 @@ public sealed class SyncService
                             MarkLocalTaskApplied(config.Id, task, since);
                         }
                     }
-                    _logger?.LogInformation("DRY-RUN: Would create new page in database {DatabaseId} for task {TaskId}", config.NotionDatabaseId, task.Id);
+                    _logger?.LogInformation(DryRunCreatePageLogMessage, config.NotionDatabaseId, task.Id);
                     created++;
                 }
             }
@@ -244,7 +256,7 @@ public sealed class SyncService
                         await _taskRepository.UpdateAsync(task);
                         MarkNotionPageApplied(config.Id, task.Id, page, since);
                     }
-                    _logger?.LogInformation("DRY-RUN: Would update local task {TaskId} from page {PageId}", task.Id, page.PageId);
+                    _logger?.LogInformation(DryRunUpdateLocalLogMessage, task.Id, page.PageId);
                     if (page.Archived)
                         deleted++;
                     else
@@ -258,7 +270,7 @@ public sealed class SyncService
                         await _taskRepository.AddAsync(newTask);
                         MarkNotionPageApplied(config.Id, newTask.Id, page, since);
                     }
-                    _logger?.LogInformation("DRY-RUN: Would create local task {TaskId} from page {PageId}", newTask.Id, page.PageId);
+                    _logger?.LogInformation(DryRunCreateLocalLogMessage, newTask.Id, page.PageId);
                     created++;
                 }
             }
@@ -324,7 +336,7 @@ public sealed class SyncService
     /// <summary>
     /// Retrieves sync history for a configuration.
     /// </summary>
-    public async Task<List<SyncResult>> GetSyncHistoryAsync(Guid configId, int limit = 50)
+    public async Task<List<SyncResult>> GetSyncHistoryAsync(Guid configId, int limit = DefaultSyncHistoryLimit)
     {
         // Implementation would fetch from persistent storage
         return new List<SyncResult>();
@@ -363,7 +375,7 @@ public sealed class SyncService
         {
             get
             {
-                var durationSec = Duration.HasValue ? Duration.Value.TotalSeconds.ToString("F1") : "?";
+                var durationSec = Duration.HasValue ? Duration.Value.TotalSeconds.ToString(DurationFormat) : UnknownDuration;
                 return $"Sync completed: {Created} created, {Updated} updated, {Deleted} deleted, " +
                        $"{Unchanged} unchanged, {ConflictsDetected} conflicted ({durationSec}s)";
             }
