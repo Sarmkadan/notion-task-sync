@@ -6997,3 +6997,49 @@ For `notion-sync sync my-config --database-id abc123 --verbose`:
 - `Arguments`: `["my-config"]`
 - `Options`: `{ "database-id": "abc123", "verbose": "true" }`
 - `Error`: `null`
+
+## CalendarSyncService
+
+The `CalendarSyncService` class provides two-way synchronization between local tasks and iCal (.ics) calendar files. Tasks with a due date are exported as all-day VEVENT entries, so due dates become visible in any calendar application that supports the iCal standard. Events imported from a .ics file are matched back to tasks (by `X-NOTION-TASK-ID`, by the `task-{guid}@notion-task-sync` UID, or by title) and either update the task's due date or create a new task.
+
+### Public Members
+
+- `CalendarSyncService(ITaskRepository taskRepository, ILogger<CalendarSyncService> logger)` - Constructor; both arguments are required
+- `public async Task<CalendarSyncResult> ExportToCalendarAsync(string? outputPath = null, CancellationToken cancellationToken = default)` - Writes all non-deleted tasks with a due date to an .ics file (default: `notion-tasks.ics` in the current directory)
+- `public async Task<CalendarSyncResult> ImportFromCalendarAsync(string inputPath, CancellationToken cancellationToken = default)` - Reads an .ics file and creates or updates tasks; throws `FileNotFoundException` if the file does not exist
+- `public async Task<CalendarSyncResult> BidirectionalSyncAsync(string calendarFilePath, CancellationToken cancellationToken = default)` - Exports tasks to the file, then re-imports it so manual edits made in an external calendar app are picked up
+- `public class CalendarSyncResult` - Statistics returned by every operation, with properties:
+  - `EventsExported` (int)
+  - `EventsImported` (int)
+  - `TasksCreated` (int)
+  - `TasksUpdated` (int)
+  - `Skipped` (int)
+  - `Warnings` (List<string>)
+  - `CompletedAt` (DateTime)
+
+### Usage Example
+
+```csharp
+using NotionTaskSync.Services;
+using Microsoft.Extensions.Logging;
+
+// Assumes an ITaskRepository and ILogger<CalendarSyncService> are already resolved (e.g. via DI)
+var calendarSync = new CalendarSyncService(taskRepository, logger);
+
+// One-way export: tasks with due dates -> notion-tasks.ics
+var exportResult = await calendarSync.ExportToCalendarAsync("notion-tasks.ics");
+Console.WriteLine($"Exported {exportResult.EventsExported} events");
+
+// One-way import: calendar events -> tasks
+var importResult = await calendarSync.ImportFromCalendarAsync("notion-tasks.ics");
+Console.WriteLine(
+    $"Import: {importResult.TasksCreated} created, " +
+    $"{importResult.TasksUpdated} updated, {importResult.Skipped} skipped");
+
+// Full round trip: picks up due-date edits made in an external calendar app
+var syncResult = await calendarSync.BidirectionalSyncAsync("notion-tasks.ics");
+foreach (var warning in syncResult.Warnings)
+{
+    Console.WriteLine($"Warning: {warning}");
+}
+```
