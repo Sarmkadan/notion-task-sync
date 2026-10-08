@@ -19,6 +19,13 @@ using System.Threading.Tasks;
 /// </summary>
 public sealed class BackupService
 {
+    private const string BackupDirectoryPrefix = "backup_";
+    private const string BackupTimestampFormat = "yyyyMMdd_HHmmss";
+    private const int BackupTimestampLength = 15; // length of BackupTimestampFormat output
+    private const string DefaultBackupLabel = "auto";
+    private const string TaskFileSearchPattern = "*.md";
+    private const string AllFilesSearchPattern = "*";
+
     private readonly string _backupDirectory;
     private readonly int _maxBackupFiles;
     private readonly LocalFileService _fileService;
@@ -39,9 +46,9 @@ public sealed class BackupService
         {
             EnsureBackupDirectoryExists();
 
-            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-            var backupLabel = label ?? "auto";
-            var backupPath = Path.Combine(_backupDirectory, $"backup_{timestamp}_{backupLabel}");
+            var timestamp = DateTime.UtcNow.ToString(BackupTimestampFormat);
+            var backupLabel = label ?? DefaultBackupLabel;
+            var backupPath = Path.Combine(_backupDirectory, $"{BackupDirectoryPrefix}{timestamp}_{backupLabel}");
 
             Directory.CreateDirectory(backupPath);
 
@@ -115,7 +122,7 @@ public sealed class BackupService
             if (!Directory.Exists(backupPath))
                 throw new InvalidOperationException($"Backup path not found: {backupPath}");
 
-            var taskFiles = Directory.GetFiles(backupPath, "*.md");
+            var taskFiles = Directory.GetFiles(backupPath, TaskFileSearchPattern);
             var targetDir = _fileService.GetBasePath();
 
             EnsureTargetDirectoryExists(targetDir);
@@ -174,7 +181,7 @@ public sealed class BackupService
             foreach (var dir in directories)
             {
                 var dirInfo = new DirectoryInfo(dir);
-                stats.TotalSizeBytes += dirInfo.EnumerateFiles("*", SearchOption.AllDirectories)
+                stats.TotalSizeBytes += dirInfo.EnumerateFiles(AllFilesSearchPattern, SearchOption.AllDirectories)
                     .Sum(f => f.Length);
             }
 
@@ -223,20 +230,17 @@ public sealed class BackupService
     /// </summary>
     private static string ExtractLabelFromDirectoryName(string directoryName)
     {
-        const string prefix = "backup_";
-
-        if (!directoryName.StartsWith(prefix, StringComparison.Ordinal))
+        if (!directoryName.StartsWith(BackupDirectoryPrefix, StringComparison.Ordinal))
             return directoryName;
 
         // Format: backup_yyyyMMdd_HHmmss_label -> skip the "backup_" prefix
         // plus the fixed-width "yyyyMMdd_HHmmss_" timestamp.
-        const int timestampLength = 15; // "yyyyMMdd_HHmmss"
-        var afterPrefix = directoryName[prefix.Length..];
+        var afterPrefix = directoryName[BackupDirectoryPrefix.Length..];
 
-        if (afterPrefix.Length <= timestampLength + 1)
+        if (afterPrefix.Length <= BackupTimestampLength + 1)
             return directoryName;
 
-        return afterPrefix[(timestampLength + 1)..];
+        return afterPrefix[(BackupTimestampLength + 1)..];
     }
 
     /// <summary>
@@ -293,9 +297,11 @@ public class BackupStats
     public long TotalSizeBytes { get; set; }
     public DateTime? LastBackupTime { get; set; }
 
+    private const double BytesPerMegabyte = 1024.0 * 1024.0;
+
     public double GetTotalSizeMB()
     {
-        return TotalSizeBytes / (1024.0 * 1024.0);
+        return TotalSizeBytes / BytesPerMegabyte;
     }
 
     public override string ToString()
