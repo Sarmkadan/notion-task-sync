@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class CacheProvider
 {
+    private static readonly TimeSpan DefaultExpiration = TimeSpan.FromHours(1);
+
     private readonly Dictionary<string, CacheEntry> _cache = new();
     private readonly ILogger<CacheProvider> _logger;
 
@@ -58,7 +60,7 @@ public class CacheProvider
     {
         lock (_cache)
         {
-            var expiresAt = DateTime.UtcNow.Add(expiration ?? TimeSpan.FromHours(1));
+            var expiresAt = DateTime.UtcNow.Add(expiration ?? DefaultExpiration);
 
             _cache[key] = new CacheEntry
             {
@@ -234,6 +236,8 @@ public class CacheProvider
 /// </summary>
 public class CacheStatistics
 {
+    private const double PercentageMultiplier = 100.0;
+
     public int TotalEntries { get; set; }
     public int ValidEntries { get; set; }
     public int ExpiredEntries { get; set; }
@@ -243,5 +247,5 @@ public class CacheStatistics
     /// Gets the percentage of cache entries that are still valid.
     /// </summary>
     public double ValidEntriesPercentage =>
-        TotalEntries > 0 ? (ValidEntries * 100.0 / TotalEntries) : 0;
+        TotalEntries > 0 ? (ValidEntries * PercentageMultiplier / TotalEntries) : 0;
 }
