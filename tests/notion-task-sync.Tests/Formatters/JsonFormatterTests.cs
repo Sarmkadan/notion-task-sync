@@ -154,7 +154,8 @@ public class JsonFormatterTests
     [Fact]
     public void IsValidJson_HandlesNullAndEmptyStrings()
     {
-        _formatter.IsValidJson(null).Should().BeFalse();
+        var act = () => _formatter.IsValidJson(null!);
+        act.Should().Throw<ArgumentNullException>();
         _formatter.IsValidJson("").Should().BeFalse();
         _formatter.IsValidJson(" ").Should().BeFalse();
     }

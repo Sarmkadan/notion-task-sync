@@ -1,77 +1,66 @@
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
-using BenchmarkDotNet.Running;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NotionTaskSync.Events;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 [MemoryDiagnoser]
 public class EventBusBenchmarks
 {
-    private EventBus _eventBus;
-    private List<Func<ApplicationEvent, Task>> _asyncHandlers;
-    private List<Action<ApplicationEvent>> _syncHandlers;
-    private ApplicationEvent _event;
+    private EventBus _eventBus = null!;
+    private BenchmarkEvent _event = null!;
+
+    [Params(10, 100, 1000)]
+    public int Count;
 
     [GlobalSetup]
     public void Setup()
     {
-        _eventBus = new EventBus(new LoggerFactory().CreateLogger<EventBus>());
-        _asyncHandlers = new List<Func<ApplicationEvent, Task>>();
-        _syncHandlers = new List<Action<ApplicationEvent>>();
-        _event = new ApplicationEvent();
+        _eventBus = new EventBus(NullLogger<EventBus>.Instance);
+        _event = new BenchmarkEvent();
+    }
 
-        for (int i = 0; i < 100; i++)
+    [Benchmark]
+    public void Benchmark_SubscribeAsync()
+    {
+        for (int i = 0; i < Count; i++)
         {
-            _asyncHandlers.Add(e => Task.CompletedTask);
-            _syncHandlers.Add(e => { });
+            _eventBus.Subscribe<BenchmarkEvent>(e => Task.CompletedTask);
         }
     }
 
     [Benchmark]
-    [Params(10, 100, 1000)]
-    public void Benchmark_SubscribeAsync(int count)
+    public void Benchmark_SubscribeSync()
     {
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < Count; i++)
         {
-            _eventBus.Subscribe<ApplicationEvent>(e => Task.CompletedTask);
+            _eventBus.Subscribe<BenchmarkEvent>(e => { });
         }
     }
 
     [Benchmark]
-    [Params(10, 100, 1000)]
-    public void Benchmark_SubscribeSync(int count)
+    public void Benchmark_PublishAsync()
     {
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < Count; i++)
         {
-            _eventBus.Subscribe<ApplicationEvent>(e => { });
+            _eventBus.Subscribe<BenchmarkEvent>(e => Task.CompletedTask);
         }
+
+        _eventBus.PublishAsync(_event).GetAwaiter().GetResult();
     }
 
     [Benchmark]
-    [Params(10, 100, 1000)]
-    public void Benchmark_PublishAsync(int count)
+    public void Benchmark_PublishSync()
     {
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < Count; i++)
         {
-            _eventBus.Subscribe<ApplicationEvent>(e => Task.CompletedTask);
-        }
-
-        _eventBus.PublishAsync(_event);
-    }
-
-    [Benchmark]
-    [Params(10, 100, 1000)]
-    public void Benchmark_PublishSync(int count)
-    {
-        for (int i = 0; i < count; i++)
-        {
-            _eventBus.Subscribe<ApplicationEvent>(e => { });
+            _eventBus.Subscribe<BenchmarkEvent>(e => { });
         }
 
         _eventBus.Publish(_event);
+    }
+
+    private sealed class BenchmarkEvent : ApplicationEvent
+    {
     }
 }

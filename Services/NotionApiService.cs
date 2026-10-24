@@ -26,7 +26,6 @@ public class NotionApiService
     internal readonly string? _apiKey;
     internal readonly HttpClient _httpClient;
     internal readonly List<string> _includedStatuses;
-    internal readonly AppJsonSerializerContext _jsonContext;
     internal const string NotionApiBaseUrl = "https://api.notion.com/v1";
     internal const string NotionApiVersion = "2022-06-28";
     private readonly SemaphoreSlim _concurrencySemaphore = new SemaphoreSlim(4);
@@ -46,9 +45,6 @@ public class NotionApiService
         if (apiKey != null && string.IsNullOrWhiteSpace(apiKey))
             throw new ArgumentException("API key cannot be empty or whitespace.", nameof(apiKey));
 
-        if (httpClient == null)
-            throw new ArgumentNullException(nameof(httpClient), "HTTP client cannot be null.");
-
         if (includedStatuses == null)
             throw new ArgumentNullException(nameof(includedStatuses), "Status list cannot be null.");
 
@@ -56,9 +52,8 @@ public class NotionApiService
         ValidateStatusList(includedStatuses);
 
         _apiKey = apiKey;
-        _httpClient = httpClient;
+        _httpClient = httpClient ?? new HttpClient();
         _includedStatuses = includedStatuses;
-        _jsonContext = new AppJsonSerializerContext();
 
         if (!string.IsNullOrEmpty(_apiKey))
         {
@@ -662,7 +657,7 @@ public class NotionApiService
     {
         try
         {
-            var json = _jsonContext.Serialize(payload);
+            var json = JsonSerializer.Serialize(payload);
 
             using var response = await SendWithRateLimitRetryAsync(() =>
                 new HttpRequestMessage(HttpMethod.Post, url)
@@ -687,7 +682,7 @@ public class NotionApiService
     {
         try
         {
-            var json = _jsonContext.Serialize(payload);
+            var json = JsonSerializer.Serialize(payload);
 
             using var response = await SendWithRateLimitRetryAsync(() =>
                 new HttpRequestMessage(HttpMethod.Patch, url)

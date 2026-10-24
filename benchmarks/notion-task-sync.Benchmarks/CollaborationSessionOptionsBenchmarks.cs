@@ -1,16 +1,15 @@
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
-using BenchmarkDotNet.Running;
 using NotionTaskSync.Collaboration;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 
 [MemoryDiagnoser]
 public class CollaborationSessionOptionsBenchmarks
 {
-    private CollaborationSessionOptions _options;
-    private List<CollaborationSessionOptions> _optionsList;
+    private CollaborationSessionOptions _options = null!;
+    private List<CollaborationSessionOptions> _optionsList = null!;
+
+    [Params(10, 100, 1000)]
+    public int Count;
 
     [GlobalSetup]
     public void Setup()
@@ -24,40 +23,36 @@ public class CollaborationSessionOptionsBenchmarks
     }
 
     [Benchmark]
-    [Params(10, 100, 1000)]
-    public void Benchmark_Validate(int count)
+    public void Benchmark_Validate()
     {
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < Count; i++)
         {
             _options.Validate();
         }
     }
 
     [Benchmark]
-    [Params(10, 100, 1000)]
-    public void Benchmark_SetMaxParticipantsPerSession(int count)
+    public void Benchmark_SetMaxParticipantsPerSession()
     {
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < Count; i++)
         {
             _options.MaxParticipantsPerSession = i;
         }
     }
 
     [Benchmark]
-    [Params(10, 100, 1000)]
-    public void Benchmark_SetOperationLogCapacity(int count)
+    public void Benchmark_SetOperationLogCapacity()
     {
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < Count; i++)
         {
             _options.OperationLogCapacity = i;
         }
     }
 
     [Benchmark]
-    [Params(10, 100, 1000)]
-    public void Benchmark_SetMaxOperationsPerBatch(int count)
+    public void Benchmark_SetMaxOperationsPerBatch()
     {
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < Count; i++)
         {
             _options.MaxOperationsPerBatch = i;
         }

@@ -1,6 +1,11 @@
+using BenchmarkDotNet.Attributes;
+
 [MemoryDiagnoser]
 public class SyncServiceTestsValidationBenchmarks
 {
+    [Params(10)]
+    public int InputSize;
+
     [Benchmark]
     public void BenchmarkMethod1()
     {
@@ -10,7 +15,7 @@ public class SyncServiceTestsValidationBenchmarks
     }
 
     [Benchmark]
-    public void BenchmarkMethod2([Params(10)] int inputSize)
+    public void BenchmarkMethod2()
     {
         // Setup and test data
         var testData = new object[] { /* test data */ };

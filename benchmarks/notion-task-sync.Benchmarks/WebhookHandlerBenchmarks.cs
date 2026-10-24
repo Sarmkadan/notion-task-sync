@@ -19,6 +19,9 @@ namespace NotionTaskSync.Benchmarks
         private string _secret = null!;
         private string _signature = null!;
 
+        [Params(10, 100, 1000)]
+        public int Count;
+
         [GlobalSetup]
         public void Setup()
         {
@@ -26,7 +29,7 @@ namespace NotionTaskSync.Benchmarks
             ILogger<WebhookHandler> logger = NullLogger<WebhookHandler>.Instance;
 
             // EventBus with a simple logger (real implementation is not needed for the benchmark)
-            var eventBus = new EventBus(new LoggerFactory().CreateLogger<EventBus>());
+            var eventBus = new EventBus(NullLogger<EventBus>.Instance);
 
             _handler = new WebhookHandler(eventBus, logger);
 
@@ -48,10 +51,9 @@ namespace NotionTaskSync.Benchmarks
         // Benchmark: handling a webhook (the most common public async method)
         // --------------------------------------------------------------------
         [Benchmark]
-        [Params(10, 100, 1000)]
-        public void Benchmark_HandleWebhookAsync(int count)
+        public void Benchmark_HandleWebhookAsync()
         {
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < Count; i++)
             {
                 // Synchronously wait for the async method to keep the benchmark simple
                 _handler.HandleWebhookAsync("page_updated", _sampleData).GetAwaiter().GetResult();
@@ -62,15 +64,14 @@ namespace NotionTaskSync.Benchmarks
         // Benchmark: registering many custom handlers (RegisterHandler)
         // --------------------------------------------------------------
         [Benchmark]
-        [Params(10, 100, 1000)]
-        public void Benchmark_RegisterHandler(int count)
+        public void Benchmark_RegisterHandler()
         {
             // Create a fresh handler for each benchmark run to avoid side‑effects
             var freshHandler = new WebhookHandler(
-                new EventBus(new LoggerFactory().CreateLogger<EventBus>()),
+                new EventBus(NullLogger<EventBus>.Instance),
                 NullLogger<WebhookHandler>.Instance);
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < Count; i++)
             {
                 freshHandler.RegisterHandler($"custom_type_{i}", data => Task.CompletedTask);
             }

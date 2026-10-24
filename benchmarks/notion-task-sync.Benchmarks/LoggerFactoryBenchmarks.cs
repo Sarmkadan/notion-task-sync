@@ -1,16 +1,17 @@
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
-using BenchmarkDotNet.Running;
 using Microsoft.Extensions.Logging;
 using NotionTaskSync.Infrastructure.Logging;
-using System;
 using System.IO;
+using LoggerFactory = NotionTaskSync.Infrastructure.Logging.LoggerFactory;
 
 [MemoryDiagnoser]
 public class LoggerFactoryBenchmarks
 {
-    private LoggerFactory _loggerFactory;
-    private string _logFilePath;
+    private LoggerFactory _loggerFactory = null!;
+    private string _logFilePath = null!;
+
+    [Params(10, 100, 1000)]
+    public int Count;
 
     [GlobalSetup]
     public void Setup()
@@ -26,20 +27,18 @@ public class LoggerFactoryBenchmarks
     }
 
     [Benchmark]
-    [Params(10, 100, 1000)]
-    public void RotateLogFile(int iterations)
+    public void RotateLogFile()
     {
-        for (int i = 0; i < iterations; i++)
+        for (int i = 0; i < Count; i++)
         {
             _loggerFactory.RotateLogFile();
         }
     }
 
     [Benchmark]
-    [Params(10, 100, 1000)]
-    public void CleanupOldLogs(int iterations)
+    public void CleanupOldLogs()
     {
-        for (int i = 0; i < iterations; i++)
+        for (int i = 0; i < Count; i++)
         {
             _loggerFactory.CleanupOldLogs();
         }
