@@ -1,3 +1,121 @@
+## Getting Started
+
+This takes you from zero to one printed sync pass. You need the .NET 10 SDK and a Notion database you can edit.
+
+### 1. Create a Notion integration token
+
+1. Open <https://www.notion.so/profile/integrations> and click **New integration**.
+2. Pick your workspace, name the integration (for example `task-sync`), and choose the **Internal** type.
+3. Submit, then copy the **Internal Integration Secret** from the integration's settings. It starts with `ntn_` or `secret_`.
+
+Keep the token out of source control. The examples below read it from the `NotionApi__ApiKey` environment variable (the double underscore is how .NET maps `NotionApi:ApiKey` onto environment variables):
+
+```bash
+export NotionApi__ApiKey="ntn_your_token_here"
+```
+
+```powershell
+$env:NotionApi__ApiKey = "ntn_your_token_here"
+```
+
+### 2. Share the database with the integration
+
+An integration cannot see a database until you grant it access:
+
+1. Open the database as a page in Notion.
+2. Click the `•••` menu, choose **Connections** (or **Connect to**), and select your integration.
+
+Sharing a parent page also covers the pages inside it, so you can share once at the parent level.
+
+### 3. Copy the database ID
+
+Open the database and look at its URL. The database ID is the 32-character hex string right before `?v=`:
+
+```text
+https://www.notion.so/your-workspace/0123456789abcdef0123456789abcdef?v=...
+                                     └──────────── database ID ───────────┘
+```
+
+### 4. Create appsettings.json
+
+Only the two sections the app validates are required. Put the database ID in `NotionApi:DatabaseIds`; the token comes from the environment variable above.
+
+```json
+{
+  "NotionApi": {
+    "DatabaseIds": [ "0123456789abcdef0123456789abcdef" ]
+  },
+  "AppSettings": {
+    "LocalTasksDirectory": "./tasks"
+  }
+}
+```
+
+Make sure the file is copied next to the built app by adding this to your `.csproj`:
+
+```xml
+<ItemGroup>
+  <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+```
+
+### 5. Register the services
+
+`DependencyInjection.AddApplicationServices(configuration)` registers the repositories, `NotionApiService`, `ChangeDetectionService`, and the other services. `TaskSyncer` is not registered by that call, and it needs `ConflictResolver` and `PropertyMapper`, so add those three lines yourself. This works in any `IServiceCollection`, including a generic host:
+
+```csharp
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using NotionTaskSync.Data.Mappers;
+using NotionTaskSync.Infrastructure.Configuration;
+using NotionTaskSync.Services;
+
+public static class NotionSyncRegistration
+{
+    public static IServiceCollection AddNotionSync(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddLogging(builder => builder.AddConsole());
+        services.AddApplicationServices(configuration);
+        services.AddSingleton<ConflictResolver>();
+        services.AddSingleton<PropertyMapper>();
+        services.AddSingleton<TaskSyncer>();
+        return services;
+    }
+}
+```
+
+### 6. Run one sync pass
+
+This `Program.cs` loads the configuration, builds the container, runs one pass with `TaskSyncer`, and prints the result:
+
+```csharp
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using NotionTaskSync.Data.Mappers;
+using NotionTaskSync.Infrastructure.Configuration;
+using NotionTaskSync.Services;
+
+var config = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile("appsettings.json").AddEnvironmentVariables().Build();
+DependencyInjection.ValidateConfiguration(config);
+
+var services = new ServiceCollection().AddLogging(b => b.AddConsole()).AddApplicationServices(config);
+services.AddSingleton<ConflictResolver>().AddSingleton<PropertyMapper>().AddSingleton<TaskSyncer>();
+await using var provider = services.BuildServiceProvider();
+
+var result = await provider.GetRequiredService<TaskSyncer>().ExecutePassAsync(config["NotionApi:DatabaseIds:0"]!, []);
+Console.WriteLine($"Status: {result.Status}, remote pages: {result.RemotePageCount}, local changes: {result.LocalChanges}, remote changes: {result.RemoteChanges}, conflicts: {result.ConflictsDetected}");
+if (result.ErrorMessage is not null) Console.WriteLine($"Error: {result.ErrorMessage}");
+```
+
+Run it with `dotnet run`. `ExecutePassAsync` returns a `TaskSyncer.SyncPassResult` and does not throw for sync errors; check `Status` and `ErrorMessage`.
+
+Two things to know about this version:
+
+- **Auth and access failures look like an empty database.** When Notion rejects the token (HTTP 401) or the database isn't shared with the integration, the pass still reports `Status: Completed` with `remote pages: 0`. The reason is in the console log: the `System.Net.Http.HttpClient` lines end in `- 401` (or `- 404`). If you expect tasks and see `remote pages: 0`, check the token and the sharing step first.
+- **The pass only reports counts.** `ExecutePassAsync` fetches the remote pages and compares them with the local tasks you pass in. It does not write to Notion or to local files. For the full pipeline, including writes and backups, call `SyncService.ExecuteSyncAsync` as described in the [SyncService](#syncservice) section.
+
 ## Architecture
 
 For the big picture - what runs on the default path, how a sync cycle flows, why the design is the way it is, and where the extension seams are - see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Short version: a single-shot console app where `SyncService` orchestrates change detection, conflict resolution and bidirectional apply between a Notion database and a local task store.
