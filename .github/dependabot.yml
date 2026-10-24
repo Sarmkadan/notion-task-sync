@@ -3,16 +3,13 @@ updates:
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
-      interval: "daily"
-    open-pull-requests-limit: 10
-    allow:
-      - dependency-type: "direct"
-    allow-unstable: true
+      interval: "weekly"
+    groups:
+      nuget-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
-    allow:
-      - dependency-name: "Microsoft.NET.Test.Sdk"
-        versions: ["17.0.0", "17.1.0", "17.2.0"]
+      interval: "weekly"
