@@ -1,1 +1,23 @@
-using BenchmarkDotNet; using BenchmarkDotNet.Attributes; using BenchmarkDotNet.Jobs; using BenchmarkDotNet.Math; using BenchmarkDotNet.Math.Mathd; using System; using System.Collections.Generic; using System.Linq; using System.Text; using System.Threading; using System.Threading.Tasks; using NotionTaskSync.Integration; using NotionTaskSync.Benchmarks; namespace NotionTaskSync.Benchmarks { [MemoryDiagnoser] public class HttpClientFactoryBenchmarks { [GlobalSetup] public void Setup() { } [Benchmark] [Params(10, 100, 1000)] public void Benchmark_HttpClientFactory_Get() { } [Benchmark] [Params(10, 100, 1000)] public void Benchmark_HttpClientFactory_Post() { } [Benchmark] [Params(10, 100, 1000)] public void Benchmark_HttpClientFactory_Put() { } [Benchmark] [Params(10, 100, 1000)] public void Benchmark_HttpClientFactory_Delete() { } } }
+using BenchmarkDotNet.Attributes;
+
+namespace NotionTaskSync.Benchmarks
+{
+    [MemoryDiagnoser]
+    public class HttpClientFactoryBenchmarks
+    {
+        [GlobalSetup]
+        public void Setup() { }
+
+        [Benchmark]
+        public void Benchmark_HttpClientFactory_Get() { }
+
+        [Benchmark]
+        public void Benchmark_HttpClientFactory_Post() { }
+
+        [Benchmark]
+        public void Benchmark_HttpClientFactory_Put() { }
+
+        [Benchmark]
+        public void Benchmark_HttpClientFactory_Delete() { }
+    }
+}

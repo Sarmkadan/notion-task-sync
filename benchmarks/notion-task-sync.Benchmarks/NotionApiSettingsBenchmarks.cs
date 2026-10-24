@@ -42,11 +42,13 @@ namespace NotionTaskSync.Benchmarks
             _settings.Validate();
         }
 
-        [Benchmark]
         [Params(10, 100, 1000)]
-        public void ValidateIncludedStatuses(int count)
+        public int Count;
+
+        [Benchmark]
+        public void ValidateIncludedStatuses()
         {
-            _settings.IncludedStatuses = Enumerable.Range(0, count).Select(i => $"Status{i}").ToList();
+            _settings.IncludedStatuses = Enumerable.Range(0, Count).Select(i => $"Status{i}").ToList();
             _settings.Validate();
         }
 

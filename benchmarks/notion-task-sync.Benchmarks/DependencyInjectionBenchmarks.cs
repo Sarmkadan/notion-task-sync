@@ -1,47 +1,43 @@
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
-using BenchmarkDotNet.Running;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using NotionTaskSync.Infrastructure.Configuration;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 
 [MemoryDiagnoser]
 public class DependencyInjectionBenchmarks
 {
-    private readonly AppSettings _appSettings;
-    private readonly NotionApiSettings _notionApiSettings;
+    private IConfiguration _configuration = null!;
+
+    [Params(10, 100, 1000)]
+    public int Count;
 
     [GlobalSetup]
     public void Setup()
     {
-        _appSettings = new AppSettings();
-        _notionApiSettings = new NotionApiSettings();
+        _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new[]
+            {
+                new KeyValuePair<string, string?>("NotionApi:ApiKey", "test-api-key"),
+                new KeyValuePair<string, string?>("AppSettings:LocalTasksDirectory", "/path/to/tasks")
+            })
+            .Build();
     }
 
     [Benchmark]
-    [Params(10, 100, 1000)]
-    public void Benchmark_AddApplicationServices(int count)
+    public void Benchmark_AddApplicationServices()
     {
         var services = new ServiceCollection();
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < Count; i++)
         {
-            services.AddApplicationServices(_appSettings, _notionApiSettings);
+            services.AddApplicationServices(_configuration);
         }
     }
 
     [Benchmark]
     public void Benchmark_ValidateConfiguration()
     {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new[]
-            {
-                new KeyValuePair<string, string>("NotionApi:ApiKey", "test-api-key"),
-                new KeyValuePair<string, string>("AppSettings:LocalTasksDirectory", "/path/to/tasks")
-            })
-            .Build();
-
-        DependencyInjection.ValidateConfiguration(configuration);
+        DependencyInjection.ValidateConfiguration(_configuration);
     }
 
     [Benchmark]
