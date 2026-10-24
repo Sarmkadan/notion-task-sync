@@ -16,6 +16,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using NotionTaskSync.Domain.Exceptions;
 
 /// <summary>
 /// Low-level HTTP client wrapper for the Notion REST API.
@@ -192,6 +193,16 @@ public sealed class NotionClient : IDisposable
 
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
             _logger.LogError("Notion API error {StatusCode}: {Error}", response.StatusCode, errorContent);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                throw new NotionApiException(
+                    "Notion authentication failed (HTTP 401): the integration token is missing, invalid, or revoked.")
+                {
+                    HttpStatusCode = (int)response.StatusCode,
+                };
+            }
+
             throw new HttpRequestException($"Notion API returned {(int)response.StatusCode}: {errorContent}");
         }
 
