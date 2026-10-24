@@ -340,7 +340,7 @@ public class ConflictResolutionTests
     /// Tests that ResolveConflictsAsync properly handles multiple conflicts with mixed scenarios.
     /// </summary>
     [Fact]
-    public void ResolveConflictsAsync_HandlesMultipleConflictsWithDifferentScenarios()
+    public async System.Threading.Tasks.Task ResolveConflictsAsync_HandlesMultipleConflictsWithDifferentScenarios()
     {
         // Arrange
         var mockRepo = new Mock<IChangeLogRepository>();
@@ -378,7 +378,7 @@ public class ConflictResolutionTests
         };
 
         // Act
-        var results = service.ResolveConflictsAsync(conflicts, ConflictResolutionStrategy.LastWrite).Result;
+        var results = await service.ResolveConflictsAsync(conflicts, ConflictResolutionStrategy.LastWrite);
 
         // Assert
         results.Should().HaveCount(3);
@@ -497,7 +497,7 @@ public class ConflictResolutionTests
     /// Tests conflict resolution with ResolveConflictsAsync using LastWrite strategy.
     /// </summary>
     [Fact]
-    public void ResolveConflictsAsync_WithClockSkewTolerance_HandlesMixedScenarios()
+    public async System.Threading.Tasks.Task ResolveConflictsAsync_WithClockSkewTolerance_HandlesMixedScenarios()
     {
         // Arrange
         var mockRepo = new Mock<IChangeLogRepository>();
@@ -537,7 +537,7 @@ public class ConflictResolutionTests
         };
 
         // Act
-        var results = service.ResolveConflictsAsync(conflicts, ConflictResolutionStrategy.LastWrite).Result;
+        var results = await service.ResolveConflictsAsync(conflicts, ConflictResolutionStrategy.LastWrite);
 
         // Assert
         results.Should().HaveCount(3);
@@ -606,7 +606,7 @@ public class ConflictResolutionTests
     /// The resolution should still mark the conflict as resolved but preserve the identical values.
     /// </summary>
     [Fact]
-    public void ResolveConflictsAsync_WithIdenticalContentIdenticalTimestamps_NoOpResolution()
+    public async System.Threading.Tasks.Task ResolveConflictsAsync_WithIdenticalContentIdenticalTimestamps_NoOpResolution()
     {
         // Arrange
         var mockRepo = new Mock<IChangeLogRepository>();
@@ -623,7 +623,7 @@ public class ConflictResolutionTests
         };
 
         // Act - Use LastWrite strategy
-        var results = service.ResolveConflictsAsync(new List<ConflictResolution> { conflict }, ConflictResolutionStrategy.LastWrite).Result;
+        var results = await service.ResolveConflictsAsync(new List<ConflictResolution> { conflict }, ConflictResolutionStrategy.LastWrite);
 
         // Assert - Should resolve successfully with identical values
         results.Should().HaveCount(1);
@@ -670,7 +670,7 @@ public class ConflictResolutionTests
     /// Verifies that each strategy correctly preserves the expected side's data.
     /// </summary>
     [Fact]
-    public void ResolveConflictsAsync_AllSupportedStrategies_AppliesCorrectResolution()
+    public async System.Threading.Tasks.Task ResolveConflictsAsync_AllSupportedStrategies_AppliesCorrectResolution()
     {
         // Arrange
         var mockRepo = new Mock<IChangeLogRepository>();
@@ -724,29 +724,29 @@ public class ConflictResolutionTests
         };
 
         // Act & Assert for each strategy
-        var lastWriteResults = service.ResolveConflictsAsync(
-            conflicts, ConflictResolutionStrategy.LastWrite).Result;
+        var lastWriteResults = await service.ResolveConflictsAsync(
+            conflicts, ConflictResolutionStrategy.LastWrite);
         lastWriteResults.Should().OnlyContain(r => r.Status == ResolutionStatus.Resolved);
         lastWriteResults.Should().OnlyContain(r => r.ResolutionMethod == ResolutionMethod.LastWrite);
         // LastWrite with equal timestamps should prefer Notion
         lastWriteResults.Should().OnlyContain(r => r.ResolvedValue == r.NotionValue);
 
-        var localWinsResults = service.ResolveConflictsAsync(
-            conflicts, ConflictResolutionStrategy.LocalWins).Result;
+        var localWinsResults = await service.ResolveConflictsAsync(
+            conflicts, ConflictResolutionStrategy.LocalWins);
         localWinsResults.Should().OnlyContain(r => r.Status == ResolutionStatus.Resolved);
         localWinsResults.Should().OnlyContain(r => r.ResolutionMethod == ResolutionMethod.LocalWins);
         // LocalWins should always preserve local value
         localWinsResults.Should().OnlyContain(r => r.ResolvedValue == r.LocalValue);
 
-        var notionWinsResults = service.ResolveConflictsAsync(
-            conflicts, ConflictResolutionStrategy.NotionWins).Result;
+        var notionWinsResults = await service.ResolveConflictsAsync(
+            conflicts, ConflictResolutionStrategy.NotionWins);
         notionWinsResults.Should().OnlyContain(r => r.Status == ResolutionStatus.Resolved);
         notionWinsResults.Should().OnlyContain(r => r.ResolutionMethod == ResolutionMethod.NotionWins);
         // NotionWins should always preserve Notion value
         notionWinsResults.Should().OnlyContain(r => r.ResolvedValue == r.NotionValue);
 
-        var manualResults = service.ResolveConflictsAsync(
-            conflicts, ConflictResolutionStrategy.Manual).Result;
+        var manualResults = await service.ResolveConflictsAsync(
+            conflicts, ConflictResolutionStrategy.Manual);
         manualResults.Should().OnlyContain(r => r.Status == ResolutionStatus.PendingReview);
         manualResults.Should().OnlyContain(r => r.ResolutionMethod == ResolutionMethod.Manual);
     }

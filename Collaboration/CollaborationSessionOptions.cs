@@ -13,7 +13,7 @@ using System.ComponentModel.DataAnnotations;
 /// Fine-grained configuration for real-time collaboration sessions.
 /// Bind from <c>appsettings.json → Collaboration</c> via the Options pattern and
 /// override per-session through the <c>configure</c> delegate in
-/// <see cref="CollaborationExtensions.AddRealtimeCollaboration"/>.
+/// <c>AddRealtimeCollaboration</c>.
 /// </summary>
 public sealed class CollaborationSessionOptions
 {

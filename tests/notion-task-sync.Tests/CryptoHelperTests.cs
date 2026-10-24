@@ -34,10 +34,10 @@ public class CryptoHelperTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    public void HashSha256_ReturnsEmptyString_ForNullOrEmptyInput(string input)
+    public void HashSha256_ReturnsEmptyString_ForNullOrEmptyInput(string? input)
     {
         // Act
-        var result = CryptoHelper.HashSha256(input);
+        var result = CryptoHelper.HashSha256(input!);
 
         // Assert
         result.Should().BeEmpty();
@@ -125,14 +125,6 @@ public class CryptoHelperTests
         // Arrange
         var data = "data";
         var key = "key";
-        // Expected HMAC-SHA256 of "data" with "key"
-        var expectedSignature = "sCjP785b8Y2/lH3s0+Yw1k2fM5b/2u8gO1L1R7y7g4o="; 
-        
-        // Re-calculated:
-        // HMACSHA256 with key "key" and data "data"
-        // Key bytes: [107, 101, 121]
-        // Data bytes: [100, 97, 116, 97]
-        // HMAC result: ...
         
         // Actually, just calculating it in the test to ensure it works
         var expected = CryptoHelper.ComputeHmacSha256(data, key);

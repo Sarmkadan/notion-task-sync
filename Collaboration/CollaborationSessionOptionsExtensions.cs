@@ -2,14 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-/// <summary>
-/// Extension methods for <see cref="CollaborationSessionOptions"/> that provide
-/// validation, diagnostics and simple calculations based on the option values.
-/// </summary>
 namespace NotionTaskSync.Collaboration
 {
     /// <summary>
-    /// Provides additional functionality for <see cref="CollaborationSessionOptions"/>.
+    /// Extension methods for <see cref="CollaborationSessionOptions"/> that provide
+    /// validation, diagnostics and simple calculations based on the option values.
     /// </summary>
     public static class CollaborationSessionOptionsExtensions
     {

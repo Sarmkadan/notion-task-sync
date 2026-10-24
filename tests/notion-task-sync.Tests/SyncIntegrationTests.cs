@@ -77,7 +77,7 @@ public class SyncIntegrationTests : IDisposable
         _localFileService = new LocalFileService(_localTasksDirectory);
         _mockTaskRepository = new Mock<ITaskRepository>();
         _mockChangeLogRepository = new Mock<IChangeLogRepository>();
-        _mockNotionApiService = new Mock<NotionApiService>(null);
+        _mockNotionApiService = new Mock<NotionApiService>(null!);
         _mockChangeDetectionService = new Mock<ChangeDetectionService>(_mockChangeLogRepository.Object);
         _mockConflictResolutionService = new Mock<ConflictResolutionService>(_mockChangeLogRepository.Object);
 

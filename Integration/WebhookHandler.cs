@@ -104,7 +104,7 @@ public class WebhookHandler
                     ChangeType = ChangeTypeUpdated,
                     Source = ChangeSourceRemote,
                     ChangedAt = DateTime.UtcNow,
-                    ChangedProperties = data
+                    ChangedProperties = data.ToDictionary(p => p.Key, p => (object?)p.Value)
                 });
             }
         });
@@ -118,7 +118,7 @@ public class WebhookHandler
                 ChangeType = ChangeTypeCreated,
                 Source = ChangeSourceRemote,
                 ChangedAt = DateTime.UtcNow,
-                ChangedProperties = data
+                ChangedProperties = data.ToDictionary(p => p.Key, p => (object?)p.Value)
             });
         });
 

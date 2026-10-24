@@ -220,7 +220,8 @@ public sealed class BackupService
 
                 foreach (var backup in backupsToDelete)
                 {
-                    await DeleteBackupAsync(backup.Path);
+                    if (backup.Path is not null)
+                        await DeleteBackupAsync(backup.Path);
                 }
             }
         }

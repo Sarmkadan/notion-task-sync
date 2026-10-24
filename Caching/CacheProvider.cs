@@ -74,7 +74,7 @@ public class CacheProvider
                 CreatedAt = DateTime.UtcNow
             };
 
-            _logger.LogDebug("Cache set: {Key}, expires in {Minutes} minutes", key, (int)expiration?.TotalMinutes);
+            _logger.LogDebug("Cache set: {Key}, expires in {Minutes} minutes", key, (int?)expiration?.TotalMinutes);
         }
     }
 
