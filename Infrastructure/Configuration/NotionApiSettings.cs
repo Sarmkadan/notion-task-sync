@@ -96,6 +96,12 @@ public sealed class NotionApiSettings
     public Dictionary<string, string> PropertyMappings { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets local-to-Notion status name mappings. Checked at startup for duplicate
+    /// names; not applied during sync.
+    /// </summary>
+    public List<NotionTaskSync.Data.Mappers.PropertyMappingOptions.StatusNameMapping> StatusNameMappings { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets the list of task statuses to include in sync (empty = all statuses).
     /// Valid values are: "Todo", "InProgress", "Done", "Blocked", "Archived".
     /// </summary>

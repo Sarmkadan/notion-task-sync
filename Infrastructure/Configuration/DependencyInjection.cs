@@ -9,6 +9,7 @@ namespace NotionTaskSync.Infrastructure.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using NotionTaskSync.Services;
+using NotionTaskSync.Data.Mappers;
 using NotionTaskSync.Data.Repositories;
 using NotionTaskSync.Commands;
 using System;
@@ -128,6 +129,21 @@ public static class DependencyInjection
             throw new ConfigurationException(
                 "AppSettings configuration section is missing. " +
                 "Please add AppSettings section to appsettings.json");
+        }
+
+        var notionSettings = notionApiSection.Get<NotionApiSettings>() ?? new NotionApiSettings();
+        var mappingOptions = new PropertyMappingOptions
+        {
+            Properties = notionSettings.PropertyMappings,
+            StatusNames = notionSettings.StatusNameMappings,
+        };
+
+        var mappingProblems = new PropertyMapper().ValidateMappingOptions(mappingOptions);
+
+        if (mappingProblems.Count > 0)
+        {
+            throw new ConfigurationException(
+                "NotionApi:PropertyMappings is invalid: " + string.Join("; ", mappingProblems));
         }
     }
 

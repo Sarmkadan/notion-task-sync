@@ -7,10 +7,14 @@
 namespace NotionTaskSync.Data.Mappers;
 
 using NotionTaskSync.Domain.Models;
+using NotionTaskSync.Integration;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using Task = System.Threading.Tasks.Task;
 
 /// <summary>
 /// Maps between Notion property structures and local <see cref="TaskProperty"/> entities.
@@ -31,6 +35,21 @@ public sealed class PropertyMapper
         ["email"] = PropertyDataType.String,
         ["phone_number"] = PropertyDataType.String,
         ["status"] = PropertyDataType.String,
+    };
+
+    /// <summary>
+    /// Local fields that must be mapped for sync to work.
+    /// </summary>
+    private static readonly string[] RequiredFields = { "Title", "Status" };
+
+    /// <summary>
+    /// Notion property types that the sync code depends on, by local field name.
+    /// Fields not listed here are only checked for existence against the database schema.
+    /// </summary>
+    private static readonly Dictionary<string, string> RequiredNotionTypes = new(StringComparer.Ordinal)
+    {
+        ["Title"] = "title",
+        ["Status"] = "status",
     };
 
     /// <summary>
@@ -126,6 +145,135 @@ public sealed class PropertyMapper
                 ld == nd,
             _ => string.Equals(local.Trim(), notion.Trim(), StringComparison.Ordinal),
         };
+    }
+
+    /// <summary>
+    /// Checks mapping options without contacting Notion: required fields, empty names,
+    /// Notion properties mapped by more than one field, and status names that collide.
+    /// </summary>
+    /// <param name="options">The mapping options to check.</param>
+    /// <returns>Human-readable problems; empty when the options are valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="options"/> is <see langword="null"/>.</exception>
+    public IReadOnlyList<string> ValidateMappingOptions(PropertyMappingOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        var problems = new List<string>();
+
+        foreach (var required in RequiredFields)
+        {
+            if (!options.Properties.ContainsKey(required))
+                problems.Add($"Required property mapping '{required}' is missing.");
+        }
+
+        foreach (var (field, notionName) in options.Properties.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (string.IsNullOrWhiteSpace(field))
+                problems.Add("A property mapping has an empty field name.");
+
+            if (string.IsNullOrWhiteSpace(notionName))
+                problems.Add($"Property mapping '{field}' has an empty Notion property name.");
+        }
+
+        var duplicateTargets = options.Properties
+            .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+            .GroupBy(kv => kv.Value, StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .OrderBy(g => g.Key, StringComparer.Ordinal);
+
+        foreach (var group in duplicateTargets)
+        {
+            var fields = string.Join(", ", group.Select(kv => kv.Key).OrderBy(f => f, StringComparer.Ordinal));
+            problems.Add($"Notion property '{group.Key}' is mapped by more than one field: {fields}.");
+        }
+
+        foreach (var status in options.StatusNames)
+        {
+            if (string.IsNullOrWhiteSpace(status.Name))
+                problems.Add("A status name mapping has an empty status name.");
+
+            if (string.IsNullOrWhiteSpace(status.NotionName))
+                problems.Add($"Status mapping '{status.Name}' has an empty Notion status name.");
+        }
+
+        var statusGroups = options.StatusNames
+            .Where(s => !string.IsNullOrWhiteSpace(s.Name))
+            .GroupBy(s => s.Name.ToLowerInvariant())
+            .Where(g => g.Count() > 1)
+            .OrderBy(g => g.Key, StringComparer.Ordinal);
+
+        foreach (var group in statusGroups)
+        {
+            var names = group.Select(s => s.Name).Distinct(StringComparer.Ordinal).OrderBy(n => n, StringComparer.Ordinal).ToList();
+            var quoted = string.Join(", ", names.Select(n => $"'{n}'"));
+
+            problems.Add(names.Count > 1
+                ? $"Status name keys {quoted} differ only by case; keep one spelling."
+                : $"Status name {quoted} is mapped more than once.");
+        }
+
+        return problems;
+    }
+
+    /// <summary>
+    /// Checks mapped Notion properties against the live database schema: each mapped property must
+    /// exist, and <c>Title</c> and <c>Status</c> must have the Notion types the sync depends on.
+    /// Mappings with empty names are skipped here; <see cref="ValidateMappingOptions"/> reports them.
+    /// </summary>
+    /// <param name="client">Notion client used to fetch the database.</param>
+    /// <param name="databaseId">The Notion database identifier.</param>
+    /// <param name="options">The mapping options to check.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Human-readable problems; empty when every mapped property matches the schema.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="client"/> or <paramref name="options"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="databaseId"/> is null, empty or whitespace.</exception>
+    /// <exception cref="NotionTaskSync.Domain.Exceptions.NotionApiException">Notion rejected the request (for example, an invalid token).</exception>
+    /// <exception cref="System.Net.Http.HttpRequestException">The database could not be fetched.</exception>
+    public async Task<IReadOnlyList<string>> ValidateAgainstDatabaseAsync(
+        NotionClient client,
+        string databaseId,
+        PropertyMappingOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentException.ThrowIfNullOrWhiteSpace(databaseId);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var database = await client.GetDatabaseAsync(databaseId, cancellationToken);
+
+        if (!database.TryGetProperty("properties", out var schema) || schema.ValueKind != JsonValueKind.Object)
+            return new[] { $"Notion database '{databaseId}' returned no property schema." };
+
+        var schemaTypes = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var property in schema.EnumerateObject())
+        {
+            var type = property.Value.TryGetProperty("type", out var typeElement) && typeElement.ValueKind == JsonValueKind.String
+                ? typeElement.GetString()
+                : null;
+            schemaTypes[property.Name] = type ?? string.Empty;
+        }
+
+        var problems = new List<string>();
+
+        foreach (var (field, notionName) in options.Properties.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (string.IsNullOrWhiteSpace(notionName))
+                continue;
+
+            if (!schemaTypes.TryGetValue(notionName, out var actualType))
+            {
+                problems.Add($"Mapped property '{notionName}' (field '{field}') does not exist in the Notion database.");
+                continue;
+            }
+
+            if (RequiredNotionTypes.TryGetValue(field, out var expectedType) &&
+                !string.Equals(actualType, expectedType, StringComparison.Ordinal))
+            {
+                problems.Add($"Mapped property '{notionName}' (field '{field}') has Notion type '{actualType}', but '{expectedType}' is expected.");
+            }
+        }
+
+        return problems;
     }
 
     private static (string? Value, PropertyDataType DataType) ExtractValueAndType(object? notionValue)
