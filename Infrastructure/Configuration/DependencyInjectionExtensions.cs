@@ -9,6 +9,7 @@ namespace NotionTaskSync.Infrastructure.Configuration;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using NotionTaskSync.Services;
 using NotionTaskSync.Data.Repositories;
 using System;
@@ -121,6 +122,35 @@ public static class DependencyInjectionExtensions
 
         // Configure additional settings from configuration with validation
         services.Configure<AppSettings>(configuration.GetSection("AppSettings"));
+
+        return services;
+    }
+
+    /// <summary>
+    /// Binds <see cref="NotionSyncOptions"/> from the <c>NotionSync</c> configuration section and
+    /// registers <see cref="NotionSyncOptionsValidator"/> with start-time validation.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the options to.</param>
+    /// <param name="configuration">The <see cref="IConfiguration"/> containing the <c>NotionSync</c> section.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="services"/> or <paramref name="configuration"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// Validation runs when <see cref="NotionSyncOptions"/> is first resolved through <c>IOptions</c>,
+    /// and <c>ValidateOnStart</c> runs it at host startup. An invalid section throws
+    /// <c>OptionsValidationException</c> listing every failing property.
+    /// </remarks>
+    public static IServiceCollection AddNotionTaskSync(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        services.AddOptions<NotionSyncOptions>()
+            .Bind(configuration.GetSection(NotionSyncOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddSingleton<IValidateOptions<NotionSyncOptions>, NotionSyncOptionsValidator>();
 
         return services;
     }
