@@ -116,6 +116,96 @@ Two things to know about this version:
 - **Auth and access failures look like an empty database.** When Notion rejects the token (HTTP 401) or the database isn't shared with the integration, the pass still reports `Status: Completed` with `remote pages: 0`. The reason is in the console log: the `System.Net.Http.HttpClient` lines end in `- 401` (or `- 404`). If you expect tasks and see `remote pages: 0`, check the token and the sharing step first.
 - **The pass only reports counts.** `ExecutePassAsync` fetches the remote pages and compares them with the local tasks you pass in. It does not write to Notion or to local files. For the full pipeline, including writes and backups, call `SyncService.ExecuteSyncAsync` as described in the [SyncService](#syncservice) section.
 
+## Mapping Notion properties
+
+`PropertyMapper` (`Data/Mappers/PropertyMapper.cs`) turns one Notion property into a `TaskProperty`: a property name, a string value, and a `PropertyDataType`. Use it when you want typed property values from a page.
+
+It is not on the sync path. `TaskSyncer` receives a `PropertyMapper` in its constructor but never calls it, and the sync pass does not read `SyncConfig.FieldMappings` or `NotionApiSettings.PropertyMappings`. The sync pass reads page properties in `NotionApiService.ParseNotionPage`: `title`, `rich_text`, `select` and `status` become plain text, and every other type is stored as raw JSON text.
+
+### Supported types
+
+`MapFromNotion` takes the raw property object from the Notion API (the object with a `type` key). Types that are not in this table fall back to `String`.
+
+| Notion type | `DataType` | `PropertyValue` | Works? |
+|---|---|---|---|
+| `title` | `String` | .NET type name (see Known issues) | No |
+| `rich_text` | `String` | .NET type name (see Known issues) | No |
+| `multi_select` | `String` | .NET type name (see Known issues) | No |
+| `people` | `String` | .NET type name (not in the type map) | No |
+| `status` | `String` | Status name, for example `In Progress` | Yes |
+| `select` | `String` | Option name, for example `High` | Yes |
+| `date` | `DateTime` | Start date, for example `2026-11-01`; `end` is dropped | Yes |
+| `checkbox` | `Boolean` | `True` or `False` | Yes |
+| `number` | `Decimal` | For example `3.5` | Yes |
+| `url`, `email`, `phone_number` | `String` | The text as stored | Yes |
+
+`status` and `select` are both `String`. `PropertyMapper` does not check them against `TaskStatus`; see the troubleshooting list below.
+
+### Known issues
+
+`title`, `rich_text` and `multi_select` values are arrays. `PropertyMapper` calls `ToString()` on them, which returns the .NET type name (`System.Collections.Generic.List`1[System.Object]`) instead of the text. `people` is not in the type map, so it also comes out as a `String` with the same garbage value. This is not fixed in this version.
+
+### Customising the mapping
+
+#### Custom property names
+
+You have two options:
+
+1. **Rename while mapping.** The wrapper below changes Notion property names into local names after `PropertyMapper` runs. No library code changes.
+2. **Change the names `TaskMapper` reads.** They are constants at the top of `Data/Mappers/TaskMapper.cs` (`DueDateKey = "DueDate"`, and so on). Changing them affects every page that `TaskMapper` maps.
+
+`SyncConfig.FieldMappings` and `NotionApiSettings.PropertyMappings` do not change the sync pass, so do not rely on them for renaming.
+
+#### Custom mapper registration
+
+`PropertyMapper` is `sealed` and has no interface, and `TaskSyncer` takes the concrete class. A custom mapper therefore cannot replace it in the container for the sync pass. Register the wrapper for your own code instead:
+
+```csharp
+using System;
+using System.Collections.Generic;
+using NotionTaskSync.Data.Mappers;
+using NotionTaskSync.Domain.Models;
+
+// Maps Notion property names to local TaskProperty names.
+public sealed class RenamingPropertyMapper
+{
+    private readonly PropertyMapper _inner = new();
+    private readonly IReadOnlyDictionary<string, string> _renames;
+
+    public RenamingPropertyMapper(IReadOnlyDictionary<string, string> renames) => _renames = renames;
+
+    public List<TaskProperty> MapAllFromNotion(Guid taskId, Dictionary<string, object?>? notionProperties)
+    {
+        var mapped = _inner.MapAllFromNotion(taskId, notionProperties);
+        foreach (var property in mapped)
+        {
+            if (_renames.TryGetValue(property.PropertyName, out var localName))
+                property.PropertyName = localName;
+        }
+        return mapped;
+    }
+}
+```
+
+Register it next to the other services, then use it wherever you map a page:
+
+```csharp
+services.AddSingleton(new RenamingPropertyMapper(new Dictionary<string, string>
+{
+    ["Due Date"] = "DueDate",
+    ["Priority Level"] = "Priority",
+}));
+
+// Where you map a page (mapper resolved from the container):
+var properties = renamingMapper.MapAllFromNotion(task.Id, page.Properties);
+```
+
+### Troubleshooting
+
+- **Property not found.** Neither mapper throws when a key is missing. `PropertyMapper` returns no entry for it, and `TaskMapper` leaves the task field at its default. Names are case-sensitive and must match the Notion name exactly, including spaces. `TaskMapper` reads `DueDate`, but `AppConstants.NotionPropertyDueDate` is `Due Date`, so a column named `Due Date` is ignored by `TaskMapper`. Rename the column to `DueDate`, or use the renaming wrapper above.
+- **Wrong type.** `TaskMapper` parses `Priority` with `int.TryParse`, so a select value such as `High` leaves it at `0`. Store an integer-like value. A checkbox arrives as the text `True` or `False`, not `1` or `0`. Array-valued properties (`title`, `rich_text`, `multi_select`, `people`) show a .NET type name; see Known issues.
+- **Status casing.** `TaskStatus` parsing is case-sensitive, and the enum names have no spaces. `Done` parses, but `done` and `In Progress` do not, and `TaskMapper` then keeps the default (`Todo` for a new task) without an error. `AppConstants.TaskStatusInProgress` is `In Progress`, which does not parse either. Name the Notion status options exactly `Todo`, `InProgress`, `Done`, `Blocked` or `Archived`. The same rule applies to `**Status**:` lines in local Markdown files, which `LocalFileService` parses the same way.
+
 ## Architecture
 
 For the big picture - what runs on the default path, how a sync cycle flows, why the design is the way it is, and where the extension seams are - see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Short version: a single-shot console app where `SyncService` orchestrates change detection, conflict resolution and bidirectional apply between a Notion database and a local task store.
