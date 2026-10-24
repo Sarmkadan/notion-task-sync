@@ -19,6 +19,8 @@ public class DependencyInjectionBenchmarks
             .AddInMemoryCollection(new[]
             {
                 new KeyValuePair<string, string?>("NotionApi:ApiKey", "test-api-key"),
+                new KeyValuePair<string, string?>("NotionApi:PropertyMappings:Title", "Name"),
+                new KeyValuePair<string, string?>("NotionApi:PropertyMappings:Status", "Status"),
                 new KeyValuePair<string, string?>("AppSettings:LocalTasksDirectory", "/path/to/tasks")
             })
             .Build();

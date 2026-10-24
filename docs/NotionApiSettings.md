@@ -16,7 +16,8 @@ The `NotionApiSettings` type exposes the following public members:
 * `EnableCaching`: A boolean indicating whether caching is enabled. If `true`, the client will cache responses.
 * `CacheDurationMinutes`: The duration in minutes that cached responses are valid. This is an integer property.
 * `DatabaseIds`: A list of database IDs. This is a list of strings.
-* `PropertyMappings`: A dictionary of property mappings. This is a dictionary of string keys and values.
+* `PropertyMappings`: A dictionary of property mappings. This is a dictionary of string keys and values. Checked at startup; see [PropertyMappingOptions](PropertyMappingOptions.md).
+* `StatusNameMappings`: A list of local-to-Notion status name pairs. Checked at startup for duplicate names; not applied during sync.
 * `Validate`: A boolean indicating whether to validate API responses. If `true`, the client will validate responses.
 * `ToString()`: Returns a string representation of the `NotionApiSettings` instance.
 * `GetMaskedApiKey()`: Returns the masked API key.

@@ -117,6 +117,18 @@ public sealed class NotionClient : IDisposable
     }
 
     /// <summary>
+    /// Retrieves a database object, including its <c>properties</c> schema.
+    /// </summary>
+    /// <param name="databaseId">The Notion database identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Raw database response.</returns>
+    public async Task<JsonElement> GetDatabaseAsync(string databaseId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(databaseId);
+        return await SendWithRetryAsync(HttpMethod.Get, $"{BaseUrl}/databases/{databaseId}", null, cancellationToken);
+    }
+
+    /// <summary>
     /// Updates properties on an existing Notion page.
     /// </summary>
     /// <param name="pageId">The page to update.</param>
