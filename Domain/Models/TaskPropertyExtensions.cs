@@ -140,20 +140,19 @@ public static class TaskPropertyExtensions
     {
         ArgumentNullException.ThrowIfNull(property);
 
-        // Create an uninitialized instance to bypass constructor requirements
-        var clone = (TaskProperty)FormatterServices.GetUninitializedObject(typeof(TaskProperty));
-
-        // Set all properties
-        clone.Id = Guid.NewGuid();
-        clone.TaskId = property.TaskId;
-        clone.PropertyName = property.PropertyName ?? throw new InvalidOperationException("PropertyName cannot be null");
-        clone.PropertyValue = property.PropertyValue;
-        clone.DataType = property.DataType;
-        clone.IsRequired = property.IsRequired;
-        clone.SyncToNotion = property.SyncToNotion;
-        clone.SyncToLocal = property.SyncToLocal;
-        clone.CreatedAt = DateTime.UtcNow;
-        clone.UpdatedAt = DateTime.UtcNow;
+        var clone = new TaskProperty(
+            property.PropertyName ?? throw new InvalidOperationException("PropertyName cannot be null"),
+            property.PropertyValue,
+            property.DataType)
+        {
+            Id = Guid.NewGuid(),
+            TaskId = property.TaskId,
+            IsRequired = property.IsRequired,
+            SyncToNotion = property.SyncToNotion,
+            SyncToLocal = property.SyncToLocal,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
 
         return clone;
     }

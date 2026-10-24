@@ -282,7 +282,7 @@ public class XmlFormatterTests
     [Fact]
     public void IsValidXml_HandlesNullAndEmptyStrings()
     {
-        _formatter.IsValidXml(null).Should().BeFalse();
+        _formatter.IsValidXml(null!).Should().BeFalse();
         _formatter.IsValidXml("").Should().BeFalse();
         _formatter.IsValidXml(" ").Should().BeFalse();
     }

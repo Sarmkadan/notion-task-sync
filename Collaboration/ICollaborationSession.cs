@@ -38,7 +38,7 @@ public interface ICollaborationSession
     /// Registers a new participant and returns their initial bootstrap state,
     /// including the full server operation log up to the current revision.
     /// </summary>
-    /// <exception cref="CollaborationException">Thrown when the session's participant limit is reached.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the session's participant limit is reached.</exception>
     global::System.Threading.Tasks.Task<SessionJoinResult> JoinAsync(Participant participant, CancellationToken ct = default);
 
     /// <summary>
@@ -51,7 +51,7 @@ public interface ICollaborationSession
     /// Submits an <see cref="OperationBatch"/> for server-side OT transformation and linearisation.
     /// Returns the acknowledged revisions and the transformed operations as stored on the server.
     /// </summary>
-    /// <exception cref="CollaborationException">
+    /// <exception cref="InvalidOperationException">
     /// Thrown when the batch exceeds size limits, the submitter is not a session member,
     /// or an observer submits while observer edits are disabled.
     /// </exception>

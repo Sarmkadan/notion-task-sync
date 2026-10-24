@@ -10,7 +10,7 @@ namespace NotionTaskSync.Benchmarks
     [MemoryDiagnoser]
     public class NotionApiSettingsBenchmarks
     {
-        private NotionApiSettings _settings;
+        private NotionApiSettings _settings = null!;
 
         [GlobalSetup]
         public void Setup()

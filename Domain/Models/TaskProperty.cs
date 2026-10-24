@@ -8,6 +8,7 @@ namespace NotionTaskSync.Domain.Models;
 
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// Represents a custom property or extended attribute for a task.
@@ -42,6 +43,7 @@ public class TaskProperty
     /// <summary>
     /// Initializes a new TaskProperty with name, value, and data type.
     /// </summary>
+    [SetsRequiredMembers]
     public TaskProperty(string propertyName, string? propertyValue, PropertyDataType dataType)
     {
         PropertyName = propertyName;

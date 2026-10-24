@@ -59,7 +59,7 @@ public class ChangeDetectedEvent : ApplicationEvent
 {
     public Guid TaskId { get; set; }
     public string ChangeType { get; set; } = string.Empty; // "Created", "Updated", "Deleted"
-    public string Source { get; set; } = string.Empty; // "Local" or "Remote"
+    public new string Source { get; set; } = string.Empty; // "Local" or "Remote"
     public DateTime ChangedAt { get; set; }
     public Dictionary<string, object?> ChangedProperties { get; set; } = new();
 }

@@ -67,7 +67,7 @@ public class SyncServiceTests
 			new Mock<IChangeLogRepository>().Object);
 		_mockConflictResolutionService = new Mock<ConflictResolutionService>(
 			new Mock<IChangeLogRepository>().Object);
-		_mockNotionApiService = new Mock<NotionApiService>(null);
+		_mockNotionApiService = new Mock<NotionApiService>(null!);
 		_mockTaskRepository = new Mock<ITaskRepository>();
 		_mockChangeLogRepository = new Mock<IChangeLogRepository>();
 		_mockLogger = new Mock<ILogger<SyncService>>();
@@ -366,7 +366,6 @@ public class SyncServiceTests
 	{
 		// Arrange
 		var taskId = Guid.NewGuid();
-		var pageId = "page123";
 		var task = new DomainTask
 		{
 			Id = taskId,

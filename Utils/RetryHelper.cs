@@ -145,7 +145,7 @@ public sealed class RetryHelper
             {
                 return operation();
             }
-            catch (Exception ex) when (attempt < maxRetries)
+            catch (Exception) when (attempt < maxRetries)
             {
                 _logger.LogWarning(
                     "Operation failed on attempt {Attempt}/{MaxAttempts}. Retrying in {DelayMs}ms.",
@@ -156,7 +156,7 @@ public sealed class RetryHelper
                 System.Threading.Thread.Sleep(delayMs);
                 delayMs = (delayMs * 2) + new Random().Next(0, delayMs / 2);
             }
-            catch (Exception ex) when (attempt >= maxRetries)
+            catch (Exception) when (attempt >= maxRetries)
             {
                 _logger.LogError("Operation failed after {MaxAttempts} attempts.", maxRetries);
                 throw;
