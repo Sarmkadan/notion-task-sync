@@ -1,0 +1,62 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotionTaskSync", "..\NotionTaskSync.csproj", "{FAD19ED7-4268-4FF7-92C5-D7605959C748}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "notion-task-sync.Tests", "notion-task-sync.Tests\notion-task-sync.Tests.csproj", "{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "notion-task-sync.IntegrationTests", "notion-task-sync.IntegrationTests\notion-task-sync.IntegrationTests.csproj", "{319EED08-58BC-4D5B-91D0-733DB719F644}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Debug|x64.Build.0 = Debug|Any CPU
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Debug|x86.Build.0 = Debug|Any CPU
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Release|x64.ActiveCfg = Release|Any CPU
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Release|x64.Build.0 = Release|Any CPU
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Release|x86.ActiveCfg = Release|Any CPU
+		{FAD19ED7-4268-4FF7-92C5-D7605959C748}.Release|x86.Build.0 = Release|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Debug|x64.Build.0 = Debug|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Debug|x86.Build.0 = Debug|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Release|x64.ActiveCfg = Release|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Release|x64.Build.0 = Release|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Release|x86.ActiveCfg = Release|Any CPU
+		{18FA0B8E-56FC-411B-ADBB-8FEE6CDB0517}.Release|x86.Build.0 = Release|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Debug|x64.Build.0 = Debug|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Debug|x86.Build.0 = Debug|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Release|Any CPU.Build.0 = Release|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Release|x64.ActiveCfg = Release|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Release|x64.Build.0 = Release|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Release|x86.ActiveCfg = Release|Any CPU
+		{319EED08-58BC-4D5B-91D0-733DB719F644}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
