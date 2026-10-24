@@ -21,9 +21,16 @@ What you expected to happen.
 What actually happened.
 
 ## Environment
-- OS: [e.g., Windows 11, Ubuntu 22.04]
-- .NET Version: [e.g., 8.0]
-- Package Version: [e.g., 1.0.0]
+- OS: [e.g., Windows 11, Ubuntu 22.04, macOS 14]
+- .NET Version: [e.g., 10.0.100 - output of `dotnet --version`]
+- NotionTaskSync Version: [e.g., 1.0.0, or commit SHA]
+
+## Logs
+Paste the relevant output from `dotnet run -- sync --verbose` (remove API keys and database IDs first).
+
+```
+<paste logs here>
+```
 
 ## Additional Context
-Add any other context, logs, or screenshots.
+Add any other context or screenshots.
