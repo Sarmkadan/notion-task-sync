@@ -99,4 +99,20 @@ public static class TaskRepositoryExtensions
             .Where(predicate)
             .ToList();
     }
+
+    /// <summary>
+    /// Gets all tasks that are not linked to a Notion page.
+    /// </summary>
+    /// <param name="repository">The task repository.</param>
+    /// <returns>A list of tasks whose <c>NotionPageId</c> is null, empty, or whitespace.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is <see langword="null"/>.</exception>
+    public static async Task<List<Task>> GetWithoutNotionPageAsync(this TaskRepository repository)
+    {
+        ArgumentNullException.ThrowIfNull(repository);
+
+        var allTasks = await repository.GetAllAsync();
+        return allTasks
+            .Where(t => string.IsNullOrWhiteSpace(t.NotionPageId))
+            .ToList();
+    }
 }
