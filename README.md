@@ -954,6 +954,15 @@ The `RetryHelper` class provides retry logic with exponential backoff for handli
 - `ExecuteWithRetry<T>(Func<T> operation, int maxRetries = 3, int initialDelayMs = 1000)` - Executes a synchronous operation with retry logic
 - `ExecuteWithCircuitBreakerAsync<T>(Func<Task<T>> operation, int maxFailures = 5, int resetTimeoutMs = 30000)` - Implements a circuit breaker pattern that stops retrying after too many failures
 
+### Retry and Backoff Behavior
+
+- `maxRetries` is the total number of attempts, not the number of retries. The default of `3` means one initial call and up to two retries. Values below `1` throw `ArgumentException`.
+- `initialDelayMs` is the wait after the first failure. Each later wait is double the previous one plus random jitter in `[0, previousDelay / 2)` ms. With the defaults, the waits are 1000 ms, then 2000–2499 ms.
+- When attempts run out, the last exception is rethrown unchanged. The async and sync overloads log a warning before each retry and an error when giving up.
+- The overload with `shouldRetry` rethrows immediately, without waiting, when the predicate returns `false`. The predicate may be evaluated more than once per exception, so keep it free of side effects.
+- No overload accepts a `CancellationToken`, so a retry wait cannot be cancelled. `ExecuteWithRetry<T>` blocks the calling thread with `Thread.Sleep`.
+- `ExecuteWithCircuitBreakerAsync` does not retry. It makes one attempt per call and returns `(default, false)` on failure. Its failure count and last-failure time are kept in local variables, so state is not shared between calls and the circuit never opens.
+
 ### Usage Example
 
 ```csharp
