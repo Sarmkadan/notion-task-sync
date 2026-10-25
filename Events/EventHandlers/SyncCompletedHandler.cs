@@ -25,8 +25,11 @@ public class SyncCompletedHandler
         ILogger<SyncCompletedHandler> logger,
         SyncStatistics statistics)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _statistics = statistics ?? throw new ArgumentNullException(nameof(statistics));
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(statistics);
+
+        _logger = logger;
+        _statistics = statistics;
     }
 
     /// <summary>
@@ -35,6 +38,8 @@ public class SyncCompletedHandler
     /// </summary>
     public async Task HandleAsync(SyncCompletedEvent @event)
     {
+        ArgumentNullException.ThrowIfNull(@event);
+
         try
         {
             // Record the operation in statistics
@@ -91,6 +96,8 @@ public class SyncCompletedHandler
     /// </summary>
     private void CheckForWarnings(SyncCompletedEvent @event)
     {
+        ArgumentNullException.ThrowIfNull(@event);
+
         // Warn if sync took too long
         if (@event.Duration.TotalSeconds > 60)
         {
@@ -119,6 +126,8 @@ public class SyncCompletedHandler
     /// </summary>
     private async Task PerformPostSyncActionsAsync(SyncCompletedEvent @event)
     {
+        ArgumentNullException.ThrowIfNull(@event);
+
         // TODO: Implement post-sync actions:
         // - Save statistics to persistent storage
         // - Send notifications
