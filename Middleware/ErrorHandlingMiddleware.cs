@@ -33,6 +33,9 @@ public sealed class ErrorHandlingMiddleware
         string operationName,
         Func<Task<T>> operation)
     {
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(operation);
+
         try
         {
             var result = await operation();
@@ -72,6 +75,9 @@ public sealed class ErrorHandlingMiddleware
         string operationName,
         Func<T> operation)
     {
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(operation);
+
         try
         {
             var result = operation();
@@ -100,6 +106,8 @@ public sealed class ErrorHandlingMiddleware
     /// </summary>
     public int GetStatusCode(Exception ex)
     {
+        ArgumentNullException.ThrowIfNull(ex);
+
         return ex switch
         {
             ConfigurationException => 400, // Bad Request
@@ -116,6 +124,8 @@ public sealed class ErrorHandlingMiddleware
     /// </summary>
     public string FormatErrorMessage(Exception ex)
     {
+        ArgumentNullException.ThrowIfNull(ex);
+
         return ex switch
         {
             ConfigurationException => "The application is not properly configured. Please check your settings.",
@@ -132,6 +142,8 @@ public sealed class ErrorHandlingMiddleware
     /// </summary>
     public bool IsRetryable(Exception ex)
     {
+        ArgumentNullException.ThrowIfNull(ex);
+
         return ex switch
         {
             TimeoutException => true,
@@ -149,6 +161,9 @@ public sealed class ErrorHandlingMiddleware
         string operationName,
         Func<Task> operation)
     {
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(operation);
+
         try
         {
             await operation();
