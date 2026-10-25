@@ -14,6 +14,22 @@ using System.Linq;
 /// Parses command-line arguments into structured command objects.
 /// Handles validation, normalization, and help text generation.
 /// Designed to work without external dependencies for maximum compatibility.
+/// <para>
+/// Supported argument shape: <c>&lt;command&gt; [options] [positional arguments]</c>.
+/// The first argument is the command name (matched case-insensitively against registered commands).
+/// The remaining arguments are parsed as follows:
+/// </para>
+/// <list type="bullet">
+/// <item><description><c>--key=value</c> - long option with an inline value (split on the first <c>=</c>).</description></item>
+/// <item><description><c>--key value</c> - long option whose value is the next argument, unless that argument starts with <c>--</c>.</description></item>
+/// <item><description><c>--flag</c> - long option with no value; stored as <c>"true"</c>.</description></item>
+/// <item><description><c>-k value</c> - single-letter short option (exactly two characters including the dash); the value is the next argument unless it starts with <c>-</c>. Without a value it is stored as <c>"true"</c>.</description></item>
+/// <item><description>Any other argument - positional, collected in order into <see cref="ParsedCommand.Arguments"/>.</description></item>
+/// </list>
+/// <para>
+/// Help is requested with <c>--help</c>, <c>-h</c>, <c>help</c>, or by passing no arguments at all.
+/// An unregistered command name yields a help result with <see cref="ParsedCommand.Error"/> set.
+/// </para>
 /// </summary>
 public class CliArgumentParser
 {
@@ -22,7 +38,12 @@ public class CliArgumentParser
 
     /// <summary>
     /// Registers a command that can be invoked from the CLI.
+    /// The name is stored in lowercase invariant form, so lookups are case-insensitive.
+    /// Registering the same name again replaces the previous command.
     /// </summary>
+    /// <param name="name">The command name typed on the command line (for example <c>sync</c>). Must not be null, empty, or whitespace.</param>
+    /// <param name="command">The command instance to execute when <paramref name="name"/> is parsed.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is null, empty, or whitespace.</exception>
     public void RegisterCommand(string name, CliCommand command)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -33,7 +54,11 @@ public class CliArgumentParser
 
     /// <summary>
     /// Registers a global option that applies to all commands.
+    /// Global options are listed in the help text only; <see cref="Parse"/> does not validate them.
+    /// Registering the same name again replaces the previous description.
     /// </summary>
+    /// <param name="name">The option name without the leading dashes (for example <c>verbose</c> for <c>--verbose</c>).</param>
+    /// <param name="description">Human-readable description shown in the help text.</param>
     public void RegisterGlobalOption(string name, string description)
     {
         _globalOptions[name] = description;
@@ -41,8 +66,14 @@ public class CliArgumentParser
 
     /// <summary>
     /// Parses command-line arguments and returns an executable command.
-    /// Returns null if parsing fails or help is requested.
+    /// Argument forms are described on <see cref="CliArgumentParser"/>.
+    /// Never returns null: a help request (no arguments, <c>--help</c>, <c>-h</c>, <c>help</c>)
+    /// returns a result with <see cref="ParsedCommand.CommandName"/> set to <c>help</c>, and an unknown
+    /// command returns a <c>help</c> result with <see cref="ParsedCommand.Error"/> set.
+    /// Check <see cref="ParsedCommand.IsValid"/> before executing the result.
     /// </summary>
+    /// <param name="args">The raw command-line arguments, typically <c>args</c> from <c>Main</c>. The first element is the command name.</param>
+    /// <returns>The parsed command, with options, positional arguments, and any error set.</returns>
     public ParsedCommand? Parse(string[] args)
     {
         if (args is null || args.Length == 0)
@@ -138,8 +169,10 @@ public class CliArgumentParser
     }
 
     /// <summary>
-    /// Generates help text for all registered commands.
+    /// Generates help text for all registered commands, including each command's options,
+    /// the registered global options, and a few usage examples.
     /// </summary>
+    /// <returns>The help text, with lines joined by the platform newline.</returns>
     public string GenerateHelpText()
     {
         var lines = new List<string>
