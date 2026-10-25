@@ -138,4 +138,23 @@ public static class CacheProviderExtensions
 
         return removedCount;
     }
+
+    /// <summary>
+    /// Attempts to get a value from cache using the Try pattern.
+    /// Returns false when the key is missing, expired, or holds a null value.
+    /// </summary>
+    /// <typeparam name="T">The type of value to retrieve from cache.</typeparam>
+    /// <param name="cache">The cache provider instance.</param>
+    /// <param name="key">The cache key to look up.</param>
+    /// <param name="value">When this method returns, contains the cached value if found; otherwise the default value.</param>
+    /// <returns>True if a non-null value was found in cache; otherwise false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="cache"/> or <paramref name="key"/> is null.</exception>
+    public static bool TryGetValue<T>(this CacheProvider cache, string key, out T? value)
+    {
+        ArgumentNullException.ThrowIfNull(cache);
+        ArgumentNullException.ThrowIfNull(key);
+
+        value = cache.Get<T>(key);
+        return value is not null;
+    }
 }
