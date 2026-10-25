@@ -47,6 +47,9 @@ public class RateLimitingMiddleware
         Func<Task<T>> operation,
         string apiService = "Unknown")
     {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(apiService);
+
         // Check if we need to wait
         var delayMs = GetRequiredDelay();
         if (delayMs > 0)
@@ -92,6 +95,9 @@ public class RateLimitingMiddleware
     /// </summary>
     public T ExecuteWithRateLimit<T>(Func<T> operation, string apiService = "Unknown")
     {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(apiService);
+
         var delayMs = GetRequiredDelay();
         if (delayMs > 0)
         {
@@ -118,6 +124,8 @@ public class RateLimitingMiddleware
         int? resetEpoch,
         string apiService = "Unknown")
     {
+        ArgumentNullException.ThrowIfNull(apiService);
+
         if (remainingRequests.HasValue)
         {
             if (remainingRequests.Value < (_requestsPerMinute * 0.2))
