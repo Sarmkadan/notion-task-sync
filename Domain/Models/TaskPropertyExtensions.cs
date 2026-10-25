@@ -216,4 +216,17 @@ public static class TaskPropertyExtensions
 
         return value;
     }
+
+    /// <summary>
+    /// Determines whether the property value is null, empty, or contains only white-space characters.
+    /// </summary>
+    /// <param name="property">The task property instance</param>
+    /// <returns>True if the value is null, empty, or white-space; otherwise false</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="property"/> is null.</exception>
+    public static bool IsValueEmpty(this TaskProperty property)
+    {
+        ArgumentNullException.ThrowIfNull(property);
+
+        return string.IsNullOrWhiteSpace(property.PropertyValue);
+    }
 }
