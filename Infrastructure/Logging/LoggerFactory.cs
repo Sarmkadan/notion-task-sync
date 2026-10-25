@@ -14,6 +14,10 @@ using System.IO;
 /// Factory for creating and configuring loggers for the application.
 /// Handles both console and file logging setup.
 /// </summary>
+/// <remarks>
+/// File output is currently a placeholder: <see cref="FileLoggerExtensions.AddFile"/> does not write
+/// to disk yet, so enabling file logging only ensures the log directory exists.
+/// </remarks>
 public class LoggerFactory
 {
     private readonly string? _logFilePath;
@@ -21,6 +25,13 @@ public class LoggerFactory
     private readonly bool _enableConsole;
     private readonly bool _enableFile;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LoggerFactory"/> class.
+    /// </summary>
+    /// <param name="logFilePath">Path to the log file. Used only when file logging is enabled.</param>
+    /// <param name="minLogLevel">The minimum level of messages that loggers will emit.</param>
+    /// <param name="enableConsole">When <c>true</c>, loggers write to the console.</param>
+    /// <param name="enableFile">When <c>true</c> and <paramref name="logFilePath"/> is set, file logging is enabled.</param>
     public LoggerFactory(string? logFilePath = null, LogLevel minLogLevel = LogLevel.Information,
         bool enableConsole = true, bool enableFile = false)
     {
@@ -33,6 +44,11 @@ public class LoggerFactory
     /// <summary>
     /// Creates a configured logger for a specific class.
     /// </summary>
+    /// <typeparam name="T">The type whose name is used as the logger category.</typeparam>
+    /// <returns>An <see cref="ILogger"/> for <typeparamref name="T"/>.</returns>
+    /// <remarks>
+    /// Each call builds a new logging factory. When file logging is enabled, the log directory is created if it does not exist.
+    /// </remarks>
     public ILogger CreateLogger<T>()
     {
         var factory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
@@ -60,6 +76,7 @@ public class LoggerFactory
     /// <summary>
     /// Gets the configured log file path.
     /// </summary>
+    /// <returns>The log file path passed to the constructor, or <c>null</c> if none was set.</returns>
     public string? GetLogFilePath()
     {
         return _logFilePath;
@@ -68,6 +85,13 @@ public class LoggerFactory
     /// <summary>
     /// Validates that the log directory is accessible and writable.
     /// </summary>
+    /// <returns>
+    /// <c>true</c> if the log directory exists or can be created and accepts writes;
+    /// <c>true</c> when no log file path is set and file logging is disabled; otherwise <c>false</c>.
+    /// </returns>
+    /// <remarks>
+    /// Creates the log directory if it is missing. Writes and then deletes a temporary <c>.test</c> file to check permissions.
+    /// </remarks>
     public bool ValidateLogPath()
     {
         if (string.IsNullOrEmpty(_logFilePath))
@@ -103,6 +127,11 @@ public class LoggerFactory
     /// <summary>
     /// Rotates log files if they exceed a maximum size.
     /// </summary>
+    /// <param name="maxSizeBytes">The size in bytes above which the log file is archived. Defaults to 10 MB.</param>
+    /// <remarks>
+    /// The current log file is moved to <c>{name}.{yyyyMMdd_HHmmss}.log</c> in the same directory (UTC timestamp).
+    /// Does nothing if no log file path is set or the file does not exist.
+    /// </remarks>
     public void RotateLogFile(long maxSizeBytes = 10485760) // 10MB default
     {
         if (string.IsNullOrEmpty(_logFilePath) || !File.Exists(_logFilePath))
@@ -124,6 +153,12 @@ public class LoggerFactory
     /// <summary>
     /// Cleans up old log files based on retention policy.
     /// </summary>
+    /// <param name="retentionDays">The number of days to keep archived log files. Defaults to 30.</param>
+    /// <remarks>
+    /// Deletes archived files matching <c>{name}.*.log</c> in the log directory whose last write time (UTC)
+    /// is older than the retention period. The active log file is not matched by this pattern.
+    /// Errors are ignored.
+    /// </remarks>
     public void CleanupOldLogs(int retentionDays = 30)
     {
         if (string.IsNullOrEmpty(_logFilePath))
