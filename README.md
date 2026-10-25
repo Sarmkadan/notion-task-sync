@@ -2920,7 +2920,87 @@ class Program
 
 ## RateLimitingMiddleware
 
-The `RateLimitingMiddleware` class enforces rate limiting to prevent exceeding API quotas during task synchronization. It tracks API calls within a 60-second sliding window and automatically delays requests when approaching configured rate limits. The middleware supports both synchronous and asynchronous operations, and can process API-provided rate limit headers for intelligent backoff.
+The `RateLimitingMiddleware` class enforces rate limiting to prevent exceeding API quotas during task synchronization. It counts API calls in a fixed 60-second window and delays requests as the limit approaches. The middleware provides synchronous and asynchronous wrappers and accepts API-reported rate limit values.
+
+It is constructed by the caller. It is not registered in the DI container and `NotionApiService` does not use it.
+
+### Behavior
+
+**Window**
+
+- The window starts when the instance is constructed, when `Reset()` is called, or on the first call made after the previous window has expired.
+- Idle time does not roll the window forward. `GetStatus()` reports a fresh window once 60 seconds have passed, but the stored counter is only cleared by the next `ExecuteWithRateLimit` or `ExecuteWithRateLimitAsync` call.
+
+**Delays**
+
+Before each call, the middleware picks one of three outcomes:
+
+| Condition | Action |
+|---|---|
+| Count is at or above `requestsPerMinute` | Wait until the window ends, plus 100 ms |
+| Count is at or above 90% of the pace the window allows so far | Wait 500 ms |
+| Otherwise | Run immediately |
+
+The check runs once per call. The middleware does not re-check after sleeping.
+
+**Warnings**
+
+- The async method publishes a `RateLimitWarningEvent` on the `EventBus` once the count reaches 80% of the limit. It publishes on every call at or above that point, not once per window. The event carries `ApiService`, `RequestsRemaining` (never negative), `RequestLimit` and `ResetTime`.
+- The synchronous method does not publish events.
+- The count is incremented before the operation runs, so a call that throws still counts. The warning is not published if the operation throws.
+
+**Header values**
+
+`ProcessRateLimitHeader(int? remainingRequests, int? resetEpoch, string apiService)` takes already-parsed integers, not raw header strings. When `remainingRequests` is below 20% of the limit, it logs a warning. It does not change the counter or the window, and the reset time it computes is not stored.
+
+**Status**
+
+`GetStatus()` returns a `RateLimitStatus` with `RequestsUsed`, `RequestsRemaining`, `LimitPerMinute`, `WindowResetAt`, `UsagePercentage`, `IsHigh` (above 80%) and `IsCritical` (above 95%).
+
+**Concurrency and blocking**
+
+- The middleware takes no locks. The counter and window start are plain fields, so concurrent callers can read the same count, all pass the delay check, and exceed the limit. If the limit must hold strictly, serialize calls on the caller side, for example with a `SemaphoreSlim`.
+- `ExecuteWithRateLimit` blocks the calling thread with `Thread.Sleep`. Use `ExecuteWithRateLimitAsync` in UI and server code.
+- Delays use `Task.Delay` without a cancellation token, so a waiting call cannot be cancelled.
+- `Reset()` clears the counter and logs an Information message. It does not cancel delays that are already in progress.
+
+### Configuration
+
+The constructor takes three arguments:
+
+| Parameter | Type | Rules |
+|---|---|---|
+| `requestsPerMinute` | `int` | Must be greater than zero, otherwise `ArgumentException` |
+| `eventBus` | `EventBus` | Required, otherwise `ArgumentNullException` |
+| `logger` | `ILogger<RateLimitingMiddleware>` | Required, otherwise `ArgumentNullException` |
+
+The `NotionApi` section of `appsettings.json` contains two related settings:
+
+```json
+"NotionApi": {
+  "RateLimitPerMinute": 30,
+  "RespectRateLimits": true
+}
+```
+
+These map to `NotionApiSettings.RateLimitPerMinute` (default `30`) and `NotionApiSettings.RespectRateLimits` (default `true`). **Neither setting affects the middleware today.** `RateLimitPerMinute` is not passed to any constructor. `RespectRateLimits` and its `ShouldRespectRateLimits()` helper are not read by production code. To use the configured value, pass it in when you construct the middleware:
+
+```csharp
+var rateLimiter = new RateLimitingMiddleware(
+    requestsPerMinute: notionApiSettings.RateLimitPerMinute,
+    eventBus: eventBus,
+    logger: logger);
+```
+
+To react to warnings, subscribe to the event on the same `EventBus`:
+
+```csharp
+eventBus.Subscribe<RateLimitWarningEvent>(e =>
+{
+    Console.WriteLine($"{e.ApiService}: {e.RequestsRemaining}/{e.RequestLimit} left until {e.ResetTime:O}");
+    return Task.CompletedTask;
+});
+```
 
 ### Usage Example
 
@@ -2941,7 +3021,7 @@ class Program
         // Create rate limiting middleware with 30 requests per minute limit
         var rateLimiter = new RateLimitingMiddleware(
             requestsPerMinute: 30,
-            eventBus: new EventBus(),
+            eventBus: new EventBus(loggerFactory.CreateLogger<EventBus>()),
             logger: logger
         );
 
