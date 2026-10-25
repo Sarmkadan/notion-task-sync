@@ -33,6 +33,9 @@ public class LoggingMiddleware
         string operationName,
         Func<Task<T>> operation)
     {
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(operation);
+
         var stopwatch = Stopwatch.StartNew();
 
         try
@@ -70,6 +73,9 @@ public class LoggingMiddleware
         string operationName,
         Func<T> operation)
     {
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(operation);
+
         var stopwatch = Stopwatch.StartNew();
 
         try
@@ -110,6 +116,9 @@ public class LoggingMiddleware
         int changeCount,
         TimeSpan duration)
     {
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(status);
+
         _logger.LogInformation(
             "Sync operation completed - Name: {OperationName}, Status: {Status}, Items: {ItemCount}, Changes: {ChangeCount}, Duration: {Duration}ms",
             operationName,
@@ -125,6 +134,10 @@ public class LoggingMiddleware
     /// </summary>
     public void LogWarning(string operationName, string message, params object[] args)
     {
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(args);
+
         _logger.LogWarning("Operation {OperationName}: " + message,
             new object[] { operationName }.Concat(args).ToArray());
     }
@@ -135,6 +148,10 @@ public class LoggingMiddleware
     /// </summary>
     public void LogDebug(string operationName, string message, params object[] args)
     {
+        ArgumentNullException.ThrowIfNull(operationName);
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(args);
+
         _logger.LogDebug("Operation {OperationName}: " + message,
             new object[] { operationName }.Concat(args).ToArray());
     }
