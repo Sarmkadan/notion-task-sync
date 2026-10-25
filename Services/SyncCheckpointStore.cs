@@ -125,9 +125,8 @@ public sealed class SyncCheckpointStore : ISyncCheckpointStore
     }
 
     /// <inheritdoc />
-    /// <exception cref="ArgumentException">
-    /// <paramref name="configId"/> is <see cref="Guid.Empty"/>, or <paramref name="itemKey"/> is null or empty.
-    /// </exception>
+    /// <exception cref="ArgumentException"><paramref name="configId"/> is <see cref="Guid.Empty"/>, or <paramref name="itemKey"/> is empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="itemKey"/> is null.</exception>
     public void MarkItemApplied(Guid configId, string itemKey)
     {
         if (configId == Guid.Empty)
