@@ -6778,6 +6778,148 @@ public abstract class ApplicationEvent
 }
 ```
 
+## Events: EventBus and Event Handlers
+
+The event system is made of three parts:
+
+| Type | File | Role |
+|---|---|---|
+| `EventBus` | `Events/EventBus.cs` | In-process publish/subscribe. Routes an event to the handlers subscribed to its CLR type. |
+| `ApplicationEvent` | `Events/EventBus.cs` | Base class for events. Adds `EventId`, `Timestamp` (UTC) and `Source`. |
+| Event types | `Events/SyncEvents.cs` | `SyncStartedEvent`, `SyncCompletedEvent`, `ConflictDetectedEvent`, `ChangeDetectedEvent`, `TaskSynchronizedEvent`, `BackupCreatedEvent`, `RateLimitWarningEvent`, `ConfigurationChangedEvent`, `ValidationFailedEvent`. |
+| Event handlers | `Events/EventHandlers/` | `ConflictDetectedHandler` and `SyncCompletedHandler`. Plain classes with a `HandleAsync` method. |
+
+Handlers do not subscribe themselves. The caller creates each handler, then calls `EventBus.Subscribe<TEvent>(handler.HandleAsync)`.
+
+`EventBus` is not registered in `DependencyInjection.AddApplicationServices()`, and the `sync` path in `Program.cs` does not create one. Components that publish events (`Workers/SyncWorker.cs`, `Middleware/RateLimitingMiddleware.cs`, `Integration/WebhookHandler.cs`) take an `EventBus` instance from their caller.
+
+### EventBus Public Members
+
+| Member | Description |
+|---|---|
+| `Subscribe<T>(Func<T, Task> handler)` | Registers an async handler. `PublishAsync` awaits it. |
+| `Subscribe<T>(Action<T> handler)` | Registers a sync handler. Runs inline on the publishing thread. |
+| `PublishAsync<T>(T @event)` | Runs every handler for `T` and returns after all async handlers complete. |
+| `Publish<T>(T @event)` | Runs sync handlers only. Async handlers are skipped and a warning is logged. |
+| `GetSubscriberCount<T>()` | Number of handlers registered for `T`. |
+| `UnsubscribeAll<T>()` | Removes all handlers for `T`. |
+| `Clear()` | Removes all handlers for all event types. |
+| `GetSubscriberInfo()` | Returns a dictionary of event type name to handler count, for diagnostics. |
+
+### Delivery Behavior
+
+- Handlers are invoked in subscription order. Sync handlers finish inside that loop. Async handlers are started in the same loop, and `PublishAsync` then awaits them together with `Task.WhenAll`.
+- An exception that a handler throws synchronously is logged at `Error` level and is not rethrown. Other handlers still run. An async handler that faults after it starts is not caught by this logging: its exception propagates out of `PublishAsync` through `Task.WhenAll`.
+- The subscriber list is locked while it is read or changed. `PublishAsync` and `Publish` copy the list before invoking handlers, so a handler may subscribe or unsubscribe without corrupting the iteration.
+- Subscriptions live only as long as the `EventBus` instance. There is no persistence and no automatic unsubscribe.
+- Event type matching is exact: a handler for `ApplicationEvent` does not receive derived events.
+
+### Event Handlers
+
+#### ConflictDetectedHandler
+
+Handles `ConflictDetectedEvent`. For each event it:
+
+- Logs a warning with the task title, task ID, conflict type and both modification times.
+- Logs `LocalValues` and `RemoteValues` at `Debug` level, serialized with `JsonFormatter`. Each dictionary is logged only if it is not empty.
+- Calls a notification placeholder, `NotifyConflictAsync`. It does nothing yet.
+
+Constructor: `ConflictDetectedHandler(ILogger<ConflictDetectedHandler> logger, JsonFormatter jsonFormatter)`.
+
+#### SyncCompletedHandler
+
+Handles `SyncCompletedEvent`. For each event it:
+
+- Adds a `SyncOperationSnapshot` to `SyncStatistics` through `RecordOperation`. The snapshot holds the timestamp, duration, success flag, tasks processed, changes detected, conflicts resolved and error message.
+- Logs a summary at `Information` on success, or at `Error` on failure.
+- Logs warnings when the sync took more than 60 seconds, more than 10 conflicts were resolved, or more than 100 changes were detected.
+- Calls a post-sync placeholder, `PerformPostSyncActionsAsync`. It does nothing yet.
+
+Constructor: `SyncCompletedHandler(ILogger<SyncCompletedHandler> logger, SyncStatistics statistics)`.
+
+Both handlers catch their own exceptions and log them, so a failing handler does not reach `EventBus`.
+
+### Usage Example
+
+This example compiles against the current library. It uses a console logger and in-memory statistics.
+
+```csharp
+using System;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using NotionTaskSync.Events;
+using NotionTaskSync.Events.EventHandlers;
+using NotionTaskSync.Formatters;
+using NotionTaskSync.Models;
+
+class Program
+{
+    static async Task Main()
+    {
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+
+        var eventBus = new EventBus(loggerFactory.CreateLogger<EventBus>());
+        var statistics = new SyncStatistics();
+        var jsonFormatter = new JsonFormatter(loggerFactory.CreateLogger<JsonFormatter>());
+
+        var syncCompletedHandler = new SyncCompletedHandler(
+            loggerFactory.CreateLogger<SyncCompletedHandler>(), statistics);
+        var conflictHandler = new ConflictDetectedHandler(
+            loggerFactory.CreateLogger<ConflictDetectedHandler>(), jsonFormatter);
+
+        // Handlers do not subscribe themselves; wire each one to its event type.
+        eventBus.Subscribe<SyncCompletedEvent>(syncCompletedHandler.HandleAsync);
+        eventBus.Subscribe<ConflictDetectedEvent>(conflictHandler.HandleAsync);
+
+        await eventBus.PublishAsync(new ConflictDetectedEvent
+        {
+            TaskId = Guid.NewGuid(),
+            TaskTitle = "Write quarterly report",
+            ConflictType = "PropertyMismatch",
+            LocalModifiedAt = DateTime.UtcNow.AddMinutes(-5),
+            RemoteModifiedAt = DateTime.UtcNow.AddMinutes(-2),
+            LocalValues = new() { ["Status"] = "In progress" },
+            RemoteValues = new() { ["Status"] = "Done" },
+            Source = "SyncService"
+        });
+
+        await eventBus.PublishAsync(new SyncCompletedEvent
+        {
+            SyncConfigId = "daily-sync-config",
+            TasksProcessed = 42,
+            ChangesDetected = 7,
+            ConflictsResolved = 1,
+            Duration = TimeSpan.FromSeconds(12),
+            Success = true,
+            Source = "SyncService"
+        });
+
+        Console.WriteLine($"Recorded operations: {statistics.Operations.Count}");
+        Console.WriteLine($"SyncCompletedEvent subscribers: {eventBus.GetSubscriberCount<SyncCompletedEvent>()}");
+    }
+}
+```
+
+Expected output (log lines abbreviated):
+
+```
+warn: ...ConflictDetectedHandler[0]
+      Conflict detected for task 'Write quarterly report' (ID: ...). Type: PropertyMismatch. ...
+info: ...SyncCompletedHandler[0]
+      ✓ Sync completed successfully. Processed: 42 tasks, Changes: 7, Conflicts resolved: 1, Duration: 12000ms
+Recorded operations: 1
+SyncCompletedEvent subscribers: 1
+```
+
+### Limitations
+
+These describe the current behavior. They are not changed by this section.
+
+- `Publish<T>` (sync) does not run async handlers. A `Func<T, Task>` handler for that event type is skipped with a warning, so publish events that have async handlers with `PublishAsync`.
+- Subscriptions are not removed when a handler's owner is disposed. Call `UnsubscribeAll<T>()` or `Clear()` when you need to stop delivery.
+- `ConflictDetectedHandler` and `SyncCompletedHandler` do not send notifications or save statistics. Their placeholder methods are empty.
+- Nothing in the default `sync` path subscribes these handlers or creates an `EventBus`, so they run only when the caller wires them up.
+
 ## NotionApiServiceTests
 
 The `NotionApiServiceTests` class contains unit tests for the `NotionApiService` class, which provides a wrapper around the Notion API for fetching, creating, and updating pages in Notion databases. These tests verify API interaction patterns, error handling, authentication, pagination, and request/response formatting.
