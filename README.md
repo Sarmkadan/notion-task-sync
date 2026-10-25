@@ -3574,6 +3574,24 @@ class Program
 }
 ```
 
+### Configuration
+
+`HealthCheckWorker` has no `appsettings.json` section, and it is not registered in `DependencyInjection`. Create it directly and pass the interval to the constructor.
+
+| Option | Where | Default | Effect |
+|---|---|---|---|
+| `checkIntervalSeconds` | Constructor argument | `300` | Delay between checks. Values below `60` are raised to `60`. |
+| Memory threshold | Hard-coded | `500` MB | `Warning` log on each check and `IsHealthy = false` when exceeded. |
+| Thread threshold | Hard-coded | `50` | `Warning` log on each check and `IsHealthy = false` when exceeded. |
+
+Notes:
+
+- The thresholds are strict. Exactly 500 MB or 50 threads is still healthy.
+- The thresholds are literals in `CheckMemoryUsage`, `CheckThreadCount`, and `GetStatus()`. They are also repeated in `HealthCheckWorkerValidation`. Changing one requires changing the others.
+- The per-check memory and thread values are logged at `Debug`. To see them, enable `Debug` for the category `NotionTaskSync.Workers.HealthCheckWorker`.
+- `CheckConnectivityAsync()` is a placeholder and does nothing. No setting affects it, and it does not contact the Notion API.
+- `Start()` is a no-op with a warning if the worker is already running. Call `StopAsync()` before `Dispose()`.
+
 ## HealthCheckWorkerValidation
 
 The `HealthCheckWorkerValidation` static class provides validation helpers for health check data, ensuring that `HealthCheckWorker` and `HealthStatus` instances contain valid, non-default values within expected ranges. It helps catch configuration errors, memory leaks, and invalid states early by validating memory usage, thread counts, uptime, and timestamp values.
