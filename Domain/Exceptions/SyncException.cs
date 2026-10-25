@@ -14,8 +14,18 @@ using System;
 /// </summary>
 public class SyncException : Exception
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SyncException"/> class with a message.
+    /// </summary>
+    /// <param name="message">The message that describes the sync error.</param>
     public SyncException(string message) : base(message) { }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SyncException"/> class with a message
+    /// and a reference to the inner exception that caused this exception.
+    /// </summary>
+    /// <param name="message">The message that describes the sync error.</param>
+    /// <param name="innerException">The exception that caused the current exception.</param>
     public SyncException(string message, Exception innerException)
         : base(message, innerException) { }
 
