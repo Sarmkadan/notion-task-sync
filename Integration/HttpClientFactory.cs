@@ -66,6 +66,8 @@ public class HttpClientFactory
     /// </summary>
     public HttpClient CreateGenericHttpClient(string baseAddress, int timeoutSeconds = 30)
     {
+        ArgumentNullException.ThrowIfNull(baseAddress);
+
         var client = new HttpClient();
         client.BaseAddress = new Uri(baseAddress);
         client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
@@ -84,6 +86,9 @@ public class HttpClientFactory
         string authToken,
         int timeoutSeconds = 30)
     {
+        ArgumentNullException.ThrowIfNull(baseAddress);
+        ArgumentNullException.ThrowIfNull(authToken);
+
         var client = CreateGenericHttpClient(baseAddress, timeoutSeconds);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
 
@@ -96,6 +101,8 @@ public class HttpClientFactory
     /// </summary>
     public HttpClient CreateRateLimitAwareHttpClient(string baseAddress, int timeoutSeconds = 30)
     {
+        ArgumentNullException.ThrowIfNull(baseAddress);
+
         var handler = new SocketsHttpHandler
         {
             // Enable automatic decompression
@@ -129,6 +136,9 @@ public class HttpClientFactory
     /// </summary>
     public void ConfigureHeaders(HttpClient client, Dictionary<string, string> headers)
     {
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(headers);
+
         foreach (var kvp in headers)
         {
             client.DefaultRequestHeaders.Add(kvp.Key, kvp.Value);
