@@ -108,4 +108,18 @@ public static class ChangeLogExtensions
 
         return !string.IsNullOrEmpty(changeLog.UserEmail);
     }
+
+    /// <summary>
+    /// Determines if this change is a conflict that has been assigned a resolution strategy.
+    /// Useful for separating resolved conflicts from those still awaiting resolution.
+    /// </summary>
+    /// <param name="changeLog">The change log entry to check. Cannot be <see langword="null"/>.</param>
+    /// <returns>True if the change is a conflict with a non-empty resolution strategy, false otherwise.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="changeLog"/> is <see langword="null"/>.</exception>
+    public static bool IsConflictResolved(this ChangeLog changeLog)
+    {
+        ArgumentNullException.ThrowIfNull(changeLog);
+
+        return changeLog.IsConflict && !string.IsNullOrWhiteSpace(changeLog.ConflictResolutionStrategy);
+    }
 }
