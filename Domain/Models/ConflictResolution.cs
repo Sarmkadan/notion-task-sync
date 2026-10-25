@@ -15,31 +15,64 @@ using System.ComponentModel.DataAnnotations;
 /// </summary>
 public class ConflictResolution
 {
+    /// <summary>
+    /// Unique identifier of this conflict record.
+    /// </summary>
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    /// <summary>
+    /// Identifier of the task this conflict belongs to.
+    /// </summary>
     [Required]
     public required Guid TaskId { get; set; }
 
+    /// <summary>
+    /// Category of the conflict.
+    /// </summary>
     public ConflictType ConflictType { get; set; }
 
+    /// <summary>
+    /// Name of the property involved in the conflict, or null when the conflict is not tied to a single property.
+    /// </summary>
     [StringLength(200)]
     public string? PropertyName { get; set; }
 
+    /// <summary>
+    /// Value from the local task file, as a string.
+    /// </summary>
     [StringLength(1000)]
     public string? LocalValue { get; set; }
 
+    /// <summary>
+    /// Value from the Notion page, as a string.
+    /// </summary>
     [StringLength(1000)]
     public string? NotionValue { get; set; }
 
+    /// <summary>
+    /// Value chosen as the outcome of the resolution, or null if not yet resolved.
+    /// </summary>
     [StringLength(1000)]
     public string? ResolvedValue { get; set; }
 
+    /// <summary>
+    /// Method used to resolve the conflict.
+    /// </summary>
     public ResolutionMethod ResolutionMethod { get; set; }
 
+    /// <summary>
+    /// UTC time the conflict was detected.
+    /// </summary>
     public DateTime DetectedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// UTC time the conflict was resolved, or null if it has not been resolved.
+    /// </summary>
     public DateTime? ResolvedAt { get; set; }
 
+    /// <summary>
+    /// Current lifecycle status of the conflict.
+    /// </summary>
     public ResolutionStatus Status { get; set; } = ResolutionStatus.Pending;
 
     /// <summary>
@@ -54,9 +87,15 @@ public class ConflictResolution
     /// </summary>
     public DateTime? NotionModifiedAt { get; set; }
 
+    /// <summary>
+    /// Free-form notes about how the conflict was resolved, or why it was flagged for manual review.
+    /// </summary>
     [StringLength(500)]
     public string? ResolutionNotes { get; set; }
 
+    /// <summary>
+    /// Identifier of the user or system component that resolved the conflict.
+    /// </summary>
     [StringLength(256)]
     public string? ResolvedBy { get; set; }
 
@@ -126,28 +165,90 @@ public class ConflictResolution
     }
 }
 
+/// <summary>
+/// Categories of conflicts that can be detected during sync.
+/// </summary>
 public enum ConflictType
 {
+    /// <summary>
+    /// Conflict type could not be determined. Treated as invalid by <see cref="ConflictResolution.Validate"/>.
+    /// </summary>
     Unknown = 0,
+
+    /// <summary>
+    /// Both the local and Notion versions were modified since the last sync.
+    /// </summary>
     ConcurrentModification = 1,
+
+    /// <summary>
+    /// The task was deleted on one side while it was changed on the other.
+    /// </summary>
     DeletionConflict = 2,
+
+    /// <summary>
+    /// A property has different values on the local and Notion sides.
+    /// </summary>
     PropertyMismatch = 3,
+
+    /// <summary>
+    /// The conflict was caused by a validation failure.
+    /// </summary>
     ValidationError = 4
 }
 
+/// <summary>
+/// Strategies used to settle a conflict.
+/// </summary>
 public enum ResolutionMethod
 {
+    /// <summary>
+    /// The change with the most recent modification timestamp wins.
+    /// </summary>
     LastWrite = 0,
+
+    /// <summary>
+    /// The local value is kept.
+    /// </summary>
     LocalWins = 1,
+
+    /// <summary>
+    /// The Notion value is kept.
+    /// </summary>
     NotionWins = 2,
+
+    /// <summary>
+    /// The local and Notion values are combined into a new value.
+    /// </summary>
     Merged = 3,
+
+    /// <summary>
+    /// The conflict is settled by a person.
+    /// </summary>
     Manual = 4
 }
 
+/// <summary>
+/// Lifecycle states of a conflict resolution.
+/// </summary>
 public enum ResolutionStatus
 {
+    /// <summary>
+    /// The conflict has been detected and not yet resolved.
+    /// </summary>
     Pending = 0,
+
+    /// <summary>
+    /// The conflict is waiting for manual review by an administrator.
+    /// </summary>
     PendingReview = 1,
+
+    /// <summary>
+    /// The conflict has been resolved and a resolved value is set.
+    /// </summary>
     Resolved = 2,
+
+    /// <summary>
+    /// The conflict was dropped without being resolved.
+    /// </summary>
     Abandoned = 3
 }
