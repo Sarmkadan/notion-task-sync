@@ -6,15 +6,15 @@
 
 namespace NotionTaskSync.Services;
 
-using NotionTaskSync.Domain.Models;
-using NotionTaskSync.Data.Repositories;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Microsoft.Extensions.Logging;
+using NotionTaskSync.Data.Repositories;
+using NotionTaskSync.Domain.Models;
 
 /// <summary>
 /// Provides two-way synchronization between local tasks and iCal (.ics) calendar files.
