@@ -10,9 +10,14 @@ using NotionTaskSync.Domain.Models;
 using System;
 
 /// <summary>
-/// Maps between Task entities and their transfer objects.
+/// Maps between <c>Task</c> entities, Notion pages, and <see cref="TaskDto"/> transfer objects.
 /// Handles serialization, deserialization, and data transformation.
 /// </summary>
+/// <remarks>
+/// Notion page properties are read by well-known key (see the private constants in this class).
+/// Missing keys leave the corresponding task field unchanged; values that cannot be parsed
+/// into their target type are ignored rather than raising an error.
+/// </remarks>
 public static class TaskMapper
 {
     // Notion property names
@@ -34,8 +39,17 @@ public static class TaskMapper
     private const string IsoDateTimeFormat = "O";
 
     /// <summary>
-    /// Creates a task from a Notion page.
+    /// Creates a new task from a Notion page.
     /// </summary>
+    /// <remarks>
+    /// The returned task gets a newly generated <c>Id</c>. Title, Notion page ID, timestamps, and
+    /// archived state are taken from the page. Description, Status, DueDate, Priority, and AssignedTo
+    /// are set only when the matching property is present on the page.
+    /// </remarks>
+    /// <param name="page">The Notion page to map. Must pass <c>NotionPage.Validate()</c>.</param>
+    /// <returns>A new <see cref="Task"/> populated from the page.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="page"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">The page fails validation.</exception>
     public static Task MapFromNotionPage(NotionPage page)
     {
         ArgumentNullException.ThrowIfNull(page);
@@ -93,6 +107,15 @@ public static class TaskMapper
     /// <summary>
     /// Updates a task from a Notion page, preserving local-only fields.
     /// </summary>
+    /// <remarks>
+    /// Title, UpdatedAt, and IsDeleted are always overwritten from the page. Description, Status,
+    /// Priority, DueDate, and AssignedTo are overwritten only when the matching property is present.
+    /// The task's <c>Id</c>, <c>CreatedAt</c>, and <c>NotionPageId</c> are not changed.
+    /// </remarks>
+    /// <param name="task">The task to update in place.</param>
+    /// <param name="page">The Notion page supplying the new values. Must pass <c>NotionPage.Validate()</c>.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="task"/> or <paramref name="page"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">The page fails validation.</exception>
     public static void UpdateTaskFromPage(Task task, NotionPage page)
     {
         ArgumentNullException.ThrowIfNull(task);
@@ -137,6 +160,16 @@ public static class TaskMapper
     /// <summary>
     /// Converts a task to a Notion page representation.
     /// </summary>
+    /// <remarks>
+    /// The page ID is the task's <c>NotionPageId</c>, or a newly generated GUID string when that is unset.
+    /// The page's properties dictionary is replaced with Title, Description, Status, Priority, DueDate,
+    /// AssignedTo, Tags, CreatedAt, and UpdatedAt. Dates are written in round-trip ("O") format.
+    /// </remarks>
+    /// <param name="task">The task to convert. Must pass <c>Task.Validate()</c>.</param>
+    /// <param name="databaseId">The Notion database the page belongs to.</param>
+    /// <returns>A <see cref="NotionPage"/> representing the task.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="task"/> or <paramref name="databaseId"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">The task fails validation.</exception>
     public static NotionPage MapToNotionPage(Task task, string databaseId)
     {
         ArgumentNullException.ThrowIfNull(task);
@@ -174,6 +207,12 @@ public static class TaskMapper
     /// <summary>
     /// Creates a DTO representation of a task for API responses.
     /// </summary>
+    /// <remarks>
+    /// Status is converted to its string name. All other fields are copied as-is.
+    /// </remarks>
+    /// <param name="task">The task to copy from.</param>
+    /// <returns>A new <see cref="TaskDto"/> with the task's values.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="task"/> is <c>null</c>.</exception>
     public static TaskDto MapToDto(Task task)
     {
         ArgumentNullException.ThrowIfNull(task);
