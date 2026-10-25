@@ -51,6 +51,8 @@ public class ConfigRepository
     /// </summary>
     public async Task<bool> SaveConfigAsync(SyncConfig config)
     {
+        ArgumentNullException.ThrowIfNull(config);
+
         try
         {
             var fileName = GetConfigFileName(config.Name);
@@ -80,6 +82,8 @@ public class ConfigRepository
     /// </summary>
     public async Task<SyncConfig?> GetConfigAsync(string configName)
     {
+        ArgumentNullException.ThrowIfNull(configName);
+
         try
         {
             var fileName = GetConfigFileName(configName);
@@ -142,6 +146,8 @@ public class ConfigRepository
     /// </summary>
     public bool DeleteConfig(string configName)
     {
+        ArgumentNullException.ThrowIfNull(configName);
+
         try
         {
             var fileName = GetConfigFileName(configName);
@@ -168,6 +174,9 @@ public class ConfigRepository
     /// </summary>
     public async Task<bool> ExportConfigAsync(SyncConfig config, string exportPath)
     {
+        ArgumentNullException.ThrowIfNull(config);
+        ArgumentNullException.ThrowIfNull(exportPath);
+
         try
         {
             var json = _jsonFormatter.Format(config);
@@ -193,6 +202,8 @@ public class ConfigRepository
     /// </summary>
     public async Task<SyncConfig?> ImportConfigAsync(string importPath)
     {
+        ArgumentNullException.ThrowIfNull(importPath);
+
         try
         {
             var json = await _fileSystemHelper.ReadFileAsync(importPath);
@@ -224,6 +235,8 @@ public class ConfigRepository
     /// </summary>
     public bool ConfigExists(string configName)
     {
+        ArgumentNullException.ThrowIfNull(configName);
+
         var fileName = GetConfigFileName(configName);
         var filePath = Path.Combine(_configDirectory, fileName);
         return _fileSystemHelper.IsFile(filePath);
