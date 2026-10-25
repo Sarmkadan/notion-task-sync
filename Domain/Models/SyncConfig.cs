@@ -18,39 +18,89 @@ using System.Text.RegularExpressions;
 /// </summary>
 public class SyncConfig
 {
+    /// <summary>
+    /// Gets or sets the unique identifier of this sync configuration.
+    /// </summary>
     public Guid Id { get; set; }
 
+    /// <summary>
+    /// Gets or sets the human-readable name of this sync configuration.
+    /// Must be non-empty and at most 200 characters.
+    /// </summary>
     [Required]
     [StringLength(200)]
     public required string Name { get; set; }
 
+    /// <summary>
+    /// Gets or sets the ID of the Notion database to synchronize.
+    /// Expected to be a 36-character Notion identifier (UUID with dashes).
+    /// </summary>
     [Required]
     [StringLength(36)]
     public required string NotionDatabaseId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the local directory that holds the task files to synchronize.
+    /// Must be non-empty and at most 500 characters.
+    /// </summary>
     [Required]
     [StringLength(500)]
     public required string LocalFolderPath { get; set; }
 
-
+    /// <summary>
+    /// Gets or sets the direction in which changes are propagated between local files and Notion.
+    /// Defaults to <see cref="SyncDirection.Bidirectional"/>.
+    /// </summary>
     public SyncDirection Direction { get; set; } = SyncDirection.Bidirectional;
 
+    /// <summary>
+    /// Gets or sets the default strategy used to resolve conflicts when both sides changed.
+    /// Per-field overrides in <see cref="FieldConflictStrategies"/> take precedence.
+    /// Defaults to <see cref="ConflictResolutionStrategy.LastWrite"/>.
+    /// </summary>
     public ConflictResolutionStrategy ConflictStrategy { get; set; } = ConflictResolutionStrategy.LastWrite;
 
+    /// <summary>
+    /// Gets or sets the interval, in seconds, between scheduled sync runs.
+    /// Valid range is 1 to 3600. Default is 300 (5 minutes).
+    /// </summary>
     [Range(1, 3600)]
     public int SyncIntervalSeconds { get; set; } = 300;
 
+    /// <summary>
+    /// Gets or sets the maximum number of retry attempts for a failed sync operation.
+    /// Valid range is 0 to 100. Default is 3.
+    /// </summary>
     [Range(0, 100)]
     public int MaxRetries { get; set; } = 3;
 
+    /// <summary>
+    /// Gets or sets whether this configuration is active.
+    /// A disabled configuration is never reported as due by <see cref="IsSyncDue"/>.
+    /// Default is <c>true</c>.
+    /// </summary>
     public bool IsEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets the UTC timestamp at which this configuration was created.
+    /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Gets or sets the UTC timestamp of the last modification to this configuration.
+    /// Updated by <see cref="UpdateSyncStatus"/>.
+    /// </summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Gets or sets the UTC timestamp of the last completed sync, or <c>null</c> if no sync has run yet.
+    /// </summary>
     public DateTime? LastSyncAt { get; set; }
 
+    /// <summary>
+    /// Gets or sets the UTC timestamp at which the next sync is scheduled, or <c>null</c> if none is scheduled.
+    /// A <c>null</c> value makes <see cref="IsSyncDue"/> return <c>true</c> for an enabled configuration.
+    /// </summary>
     public DateTime? NextScheduledSyncAt { get; set; }
 
     /// <summary>
@@ -79,8 +129,16 @@ public class SyncConfig
     [Range(0, 86400000)] // 0 to 24 hours in milliseconds
     public int ClockSkewToleranceMs { get; set; } = 60000;
 
+    /// <summary>
+    /// Gets or sets the mapping from local field names to Notion property names.
+    /// Fields without an entry map to the same name. Used by <see cref="MapLocalFieldToNotion"/>.
+    /// </summary>
     public Dictionary<string, string>? FieldMappings { get; set; }
 
+    /// <summary>
+    /// Gets or sets the names of fields excluded from synchronization.
+    /// An empty or <c>null</c> list means all fields are synchronized. Used by <see cref="ShouldSyncField"/>.
+    /// </summary>
     public List<string>? IgnoredFields { get; set; }
 
     /// <summary>
