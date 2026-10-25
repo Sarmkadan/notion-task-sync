@@ -32,7 +32,9 @@ public class HealthCheckWorker : IDisposable
 
     public HealthCheckWorker(ILogger<HealthCheckWorker> logger, int checkIntervalSeconds = 300)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _logger = logger;
         _checkIntervalSeconds = Math.Max(checkIntervalSeconds, 60);
     }
 
