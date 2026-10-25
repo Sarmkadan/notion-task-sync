@@ -16,28 +16,58 @@ using System.Diagnostics.CodeAnalysis;
 /// </summary>
 public class TaskProperty
 {
+    /// <summary>
+    /// Gets or sets the unique identifier of this property.
+    /// </summary>
     public Guid Id { get; set; }
 
+    /// <summary>
+    /// Gets or sets the identifier of the task this property belongs to.
+    /// </summary>
     [Required]
     public required Guid TaskId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the name of the property. Limited to 100 characters.
+    /// </summary>
     [Required]
     [StringLength(100)]
     public required string PropertyName { get; set; }
 
+    /// <summary>
+    /// Gets or sets the raw string value of the property. Limited to 2000 characters; may be <c>null</c>.
+    /// </summary>
     [StringLength(2000)]
     public string? PropertyValue { get; set; }
 
+    /// <summary>
+    /// Gets or sets the data type that <see cref="PropertyValue"/> is expected to conform to.
+    /// </summary>
     public PropertyDataType DataType { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether a non-empty <see cref="PropertyValue"/> is required.
+    /// </summary>
     public bool IsRequired { get; set; }
 
+    /// <summary>
+    /// Gets or sets the UTC timestamp when the property was created.
+    /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Gets or sets the UTC timestamp when the property was last updated.
+    /// </summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether this property is pushed to Notion during sync.
+    /// </summary>
     public bool SyncToNotion { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether this property is written to local task files during sync.
+    /// </summary>
     public bool SyncToLocal { get; set; } = true;
 
     /// <summary>
