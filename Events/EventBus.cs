@@ -33,6 +33,8 @@ public class EventBus
     /// </summary>
     public void Subscribe<T>(Func<T, Task> handler) where T : class
     {
+        ArgumentNullException.ThrowIfNull(handler);
+
         var eventType = typeof(T);
 
         lock (_subscribers)
@@ -52,6 +54,8 @@ public class EventBus
     /// </summary>
     public void Subscribe<T>(Action<T> handler) where T : class
     {
+        ArgumentNullException.ThrowIfNull(handler);
+
         var eventType = typeof(T);
 
         lock (_subscribers)
@@ -72,6 +76,8 @@ public class EventBus
     /// </summary>
     public async Task PublishAsync<T>(T @event) where T : class
     {
+        ArgumentNullException.ThrowIfNull(@event);
+
         var eventType = typeof(T);
 
         List<Delegate>? handlers;
@@ -127,6 +133,8 @@ public class EventBus
     /// </summary>
     public void Publish<T>(T @event) where T : class
     {
+        ArgumentNullException.ThrowIfNull(@event);
+
         var eventType = typeof(T);
 
         List<Delegate>? handlers;
