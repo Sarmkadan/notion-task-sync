@@ -15,21 +15,43 @@ using System.ComponentModel.DataAnnotations;
 /// </summary>
 public class CalendarEvent
 {
+    /// <summary>
+    /// Unique identifier of the event. Generated automatically when the instance is created.
+    /// </summary>
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    /// <summary>
+    /// Human-readable title of the event. Required, up to 500 characters.
+    /// </summary>
     [Required]
     [StringLength(500)]
     public required string Title { get; set; }
 
+    /// <summary>
+    /// Optional free-text description of the event, up to 5000 characters.
+    /// </summary>
     [StringLength(5000)]
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Start of the event. For all-day events, only the date portion is meaningful.
+    /// </summary>
     public DateTime StartDate { get; set; }
 
+    /// <summary>
+    /// End of the event, or null when the event has no end date.
+    /// Must not be earlier than <see cref="StartDate"/> for the event to pass <see cref="Validate"/>.
+    /// </summary>
     public DateTime? EndDate { get; set; }
 
+    /// <summary>
+    /// Indicates whether the event spans the whole day rather than a specific time range.
+    /// </summary>
     public bool IsAllDay { get; set; }
 
+    /// <summary>
+    /// Optional location of the event, up to 500 characters.
+    /// </summary>
     [StringLength(500)]
     public string? Location { get; set; }
 
@@ -45,8 +67,14 @@ public class CalendarEvent
     /// </summary>
     public Guid? LinkedTaskId { get; set; }
 
+    /// <summary>
+    /// UTC timestamp of when the event was created. Set to the current UTC time by default.
+    /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// UTC timestamp of the last modification to the event. Set to the current UTC time by default.
+    /// </summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
