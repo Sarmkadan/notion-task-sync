@@ -38,6 +38,9 @@ public interface ICollaborationSession
     /// Registers a new participant and returns their initial bootstrap state,
     /// including the full server operation log up to the current revision.
     /// </summary>
+    /// <param name="participant">The participant joining the session.</param>
+    /// <param name="ct">Token used to cancel the join operation.</param>
+    /// <returns>A task that completes with the bootstrap state for the joining participant.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the session's participant limit is reached.</exception>
     global::System.Threading.Tasks.Task<SessionJoinResult> JoinAsync(Participant participant, CancellationToken ct = default);
 
@@ -45,12 +48,18 @@ public interface ICollaborationSession
     /// Gracefully removes a participant from the session.
     /// Remaining participants are notified via the event bus.
     /// </summary>
+    /// <param name="participantId">The identifier of the participant leaving the session.</param>
+    /// <param name="ct">Token used to cancel the leave operation.</param>
+    /// <returns>A task that completes once the participant has been removed.</returns>
     global::System.Threading.Tasks.Task LeaveAsync(string participantId, CancellationToken ct = default);
 
     /// <summary>
     /// Submits an <see cref="OperationBatch"/> for server-side OT transformation and linearisation.
     /// Returns the acknowledged revisions and the transformed operations as stored on the server.
     /// </summary>
+    /// <param name="batch">The batch of client operations to submit.</param>
+    /// <param name="ct">Token used to cancel the submission.</param>
+    /// <returns>A task that completes with the acknowledgement for the submitted batch.</returns>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the batch exceeds size limits, the submitter is not a session member,
     /// or an observer submits while observer edits are disabled.
@@ -61,6 +70,8 @@ public interface ICollaborationSession
     /// Returns the server operation log starting at <paramref name="fromRevision"/> (inclusive).
     /// Clients use this to catch up after a reconnect without a full state snapshot.
     /// </summary>
+    /// <param name="fromRevision">The first server revision to include in the result.</param>
+    /// <returns>The server operations from <paramref name="fromRevision"/> onwards, in revision order.</returns>
     IReadOnlyList<ServerOperation> GetLogSince(long fromRevision);
 }
 
@@ -137,17 +148,26 @@ public sealed record BatchAcknowledgement(
 public interface ICollaborationSessionRegistry
 {
     /// <summary>Creates a new session for the given scope, or returns the existing one if already open.</summary>
+    /// <param name="scopeId">The Notion database ID or local path the session is scoped to.</param>
+    /// <param name="options">The options used when a new session has to be created.</param>
+    /// <param name="ct">Token used to cancel the operation.</param>
+    /// <returns>A task that completes with the new or existing session for <paramref name="scopeId"/>.</returns>
     Task<ICollaborationSession> GetOrCreateAsync(
         string scopeId,
         CollaborationSessionOptions options,
         CancellationToken ct = default);
 
     /// <summary>Returns the session with the given identifier, or <see langword="null"/> if not found.</summary>
+    /// <param name="sessionId">The identifier of the session to look up.</param>
+    /// <returns>The matching session, or <see langword="null"/> if no open session has that identifier.</returns>
     ICollaborationSession? TryGet(string sessionId);
 
     /// <summary>Gets a point-in-time list of all currently active sessions.</summary>
     IReadOnlyList<ICollaborationSession> ActiveSessions { get; }
 
     /// <summary>Closes the named session and evicts all remaining participants.</summary>
+    /// <param name="sessionId">The identifier of the session to close.</param>
+    /// <param name="ct">Token used to cancel the close operation.</param>
+    /// <returns>A task that completes once the session has been closed.</returns>
     global::System.Threading.Tasks.Task CloseAsync(string sessionId, CancellationToken ct = default);
 }
