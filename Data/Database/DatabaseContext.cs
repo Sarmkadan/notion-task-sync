@@ -23,6 +23,13 @@ public class DatabaseContext : IDisposable
     private readonly int _commandTimeout;
     private bool _isDisposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DatabaseContext"/> class.
+    /// The connection is not opened until <see cref="OpenAsync"/> is called or <see cref="Connection"/> is first accessed.
+    /// </summary>
+    /// <param name="connectionString">The connection string used to open the database.</param>
+    /// <param name="databaseEngine">The engine name: "SQLite" (default), "SqlServer", or "PostgreSQL". Matched case-insensitively.</param>
+    /// <param name="commandTimeout">The command timeout, in seconds. Defaults to 30.</param>
     public DatabaseContext(string connectionString, string databaseEngine = "SQLite", int commandTimeout = 30)
     {
         _connectionString = connectionString;
@@ -77,8 +84,11 @@ public class DatabaseContext : IDisposable
     }
 
     /// <summary>
-    /// Begins a new transaction if one is not already active.
+    /// Begins a new transaction on the current connection.
     /// </summary>
+    /// <returns>The newly started transaction.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when a transaction is already active.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the context has been disposed.</exception>
     public IDbTransaction BeginTransaction()
     {
         ThrowIfDisposed();
@@ -117,6 +127,7 @@ public class DatabaseContext : IDisposable
     /// <summary>
     /// Tests the database connection.
     /// </summary>
+    /// <returns><c>true</c> if the connection test succeeds; otherwise <c>false</c>. Exceptions are swallowed.</returns>
     public async Task<bool> TestConnectionAsync()
     {
         try
@@ -131,7 +142,9 @@ public class DatabaseContext : IDisposable
 
     /// <summary>
     /// Executes an action within a transaction scope, auto-committing on success.
+    /// The transaction is rolled back and the exception rethrown if the action fails.
     /// </summary>
+    /// <param name="action">The asynchronous work to run inside the transaction.</param>
     public async Task ExecuteInTransactionAsync(Func<Task> action)
     {
         var transaction = BeginTransaction();
@@ -154,7 +167,11 @@ public class DatabaseContext : IDisposable
 
     /// <summary>
     /// Executes an action within a transaction scope and returns a result.
+    /// The transaction is rolled back and the exception rethrown if the action fails.
     /// </summary>
+    /// <typeparam name="T">The type of the result produced by the action.</typeparam>
+    /// <param name="action">The asynchronous work to run inside the transaction.</param>
+    /// <returns>The result produced by <paramref name="action"/>.</returns>
     public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action)
     {
         var transaction = BeginTransaction();
@@ -179,6 +196,9 @@ public class DatabaseContext : IDisposable
     /// <summary>
     /// Executes a command and returns the number of affected rows.
     /// </summary>
+    /// <param name="command">The command text to execute.</param>
+    /// <param name="parameters">Optional command parameters.</param>
+    /// <returns>The number of affected rows.</returns>
     public async Task<int> ExecuteAsync(string command, object? parameters = null)
     {
         ThrowIfDisposed();
@@ -188,6 +208,10 @@ public class DatabaseContext : IDisposable
     /// <summary>
     /// Executes a query and returns the first result.
     /// </summary>
+    /// <typeparam name="T">The type to map the result to.</typeparam>
+    /// <param name="query">The query text to execute.</param>
+    /// <param name="parameters">Optional query parameters.</param>
+    /// <returns>The first result, or the default value of <typeparamref name="T"/> if there is none.</returns>
     public async Task<T?> QueryFirstAsync<T>(string query, object? parameters = null)
     {
         ThrowIfDisposed();
@@ -197,6 +221,9 @@ public class DatabaseContext : IDisposable
     /// <summary>
     /// Executes a scalar query and returns a single value.
     /// </summary>
+    /// <param name="query">The query text to execute.</param>
+    /// <param name="parameters">Optional query parameters.</param>
+    /// <returns>The scalar value, or <c>null</c> if the query returns none.</returns>
     public async Task<object?> QueryScalarAsync(string query, object? parameters = null)
     {
         ThrowIfDisposed();
@@ -206,6 +233,7 @@ public class DatabaseContext : IDisposable
     /// <summary>
     /// Gets the current database engine being used.
     /// </summary>
+    /// <returns>The engine name as passed to the constructor (for example, "SQLite").</returns>
     public string GetDatabaseEngine()
     {
         return _databaseEngine;
@@ -214,6 +242,7 @@ public class DatabaseContext : IDisposable
     /// <summary>
     /// Gets the connection string with sensitive data masked.
     /// </summary>
+    /// <returns>The masked connection string, or <c>"***"</c> if no connection has been created yet.</returns>
     public string GetMaskedConnectionString()
     {
         return _connection?.GetMaskedConnectionString() ?? "***";
@@ -244,6 +273,7 @@ public class DatabaseContext : IDisposable
 
     /// <summary>
     /// Disposes the database context and closes the connection.
+    /// Calling this method more than once has no effect.
     /// </summary>
     public void Dispose()
     {
