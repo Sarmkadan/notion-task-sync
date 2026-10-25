@@ -11,7 +11,17 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
-/// <summary>Classifies the kind of change an operation applies to task content.</summary>
+/// <summary>
+/// Classifies the kind of change an operation applies to task content.
+/// </summary>
+/// <remarks>
+/// The model is operational transformation (OT) over task properties. Text properties are edited
+/// as a sequence of character-addressed <see cref="Insert"/>, <see cref="Delete"/> and
+/// <see cref="Retain"/> components, the classic OT delta vocabulary. Scalar and enum properties are
+/// replaced whole with <see cref="Update"/>. <see cref="Move"/> repositions a task within an ordered
+/// collection. Concurrent operations from different participants are rebased against each other so
+/// that all replicas converge on the same final state.
+/// </remarks>
 public enum OperationType
 {
     /// <summary>Inserts content at a specific position within a text property.</summary>
@@ -27,9 +37,15 @@ public enum OperationType
 }
 
 /// <summary>
-/// A Lamport-style vector clock for tracking causal ordering of distributed operations.
+/// A vector clock for tracking causal ordering of distributed operations.
 /// Thread-safe for concurrent reads and writes from multiple collaboration participants.
 /// </summary>
+/// <remarks>
+/// Each participant owns one component (a per-participant Lamport counter). OT uses the clock to
+/// decide whether two operations are causally ordered or concurrent. If neither clock
+/// <see cref="HappensBefore"/> the other, the operations are concurrent and must be transformed
+/// against each other before they can be applied. Missing components are treated as 0.
+/// </remarks>
 public sealed class VectorClock
 {
     private readonly ConcurrentDictionary<string, long> _components =
@@ -85,7 +101,10 @@ public sealed class VectorClock
     }
 }
 
-/// <summary>Causal metadata attached to every distributed operation.</summary>
+/// <summary>
+/// Causal metadata attached to every distributed operation.
+/// The OT transform uses it to identify concurrent operations and to detect gaps in a participant's stream.
+/// </summary>
 /// <param name="SessionId">The collaboration session this operation belongs to.</param>
 /// <param name="ParticipantId">Stable identifier of the originating participant.</param>
 /// <param name="SequenceNumber">Per-participant monotonic counter for gap detection and replay.</param>
@@ -101,6 +120,12 @@ public sealed record TransformContext(
 /// Text-addressed operations use <see cref="Position"/> and <see cref="Length"/>;
 /// scalar-property operations populate only <see cref="Payload"/>.
 /// </summary>
+/// <remarks>
+/// Operations are the unit of the OT model. Each one records the state it was authored against
+/// (<see cref="Context"/>) so that a receiver can transform it against concurrent operations.
+/// <see cref="PreviousValue"/> keeps the pre-image, so <see cref="Invert"/> can produce an undo
+/// operation. Records are immutable, so transforms return new instances rather than mutating these.
+/// </remarks>
 /// <param name="Id">Unique identifier of this operation instance.</param>
 /// <param name="TaskId">The task targeted by this operation.</param>
 /// <param name="PropertyName">Name of the task property being modified.</param>
@@ -146,8 +171,14 @@ public sealed record Operation(
 
     /// <summary>
     /// Returns the logical inverse of this operation for undo or rollback.
-    /// Insert ↔ Delete are swapped; Update swaps <see cref="Payload"/> and <see cref="PreviousValue"/>.
+    /// Insert ↔ Delete are swapped; <see cref="Payload"/> and <see cref="PreviousValue"/> are swapped
+    /// for every type. A new <see cref="Id"/> and <see cref="CreatedAt"/> are assigned.
     /// </summary>
+    /// <remarks>
+    /// Inverting a <see cref="OperationType.Delete"/> only restores the removed text if the
+    /// original operation stored it in <see cref="PreviousValue"/>. <see cref="OperationType.Update"/>,
+    /// <see cref="OperationType.Retain"/> and <see cref="OperationType.Move"/> keep their type.
+    /// </remarks>
     public Operation Invert() => this with
     {
         Id = Guid.NewGuid(),
@@ -170,7 +201,10 @@ public sealed record Operation(
         Type is OperationType.Insert or OperationType.Delete or OperationType.Retain;
 }
 
-/// <summary>Outcome of transforming two concurrent operations against each other.</summary>
+/// <summary>
+/// Outcome of transforming two concurrent operations against each other.
+/// The transformed operation is the one rebased to apply after the concurrent operation has been applied.
+/// </summary>
 /// <param name="Transformed">The rebased operation, safe to apply after the concurrent one.</param>
 /// <param name="HasConflict">
 /// <see langword="true"/> when the transform required an ambiguous or lossy resolution.
