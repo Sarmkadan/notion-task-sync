@@ -6,12 +6,12 @@
 
 namespace NotionTaskSync.Services;
 
-using NotionTaskSync.Domain.Models;
-using NotionTaskSync.Data.Repositories;
-using NotionTaskSync.Data.Mappers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using NotionTaskSync.Data.Mappers;
+using NotionTaskSync.Data.Repositories;
+using NotionTaskSync.Domain.Models;
 
 /// <summary>
 /// Detects changes to tasks in local and Notion sources since last sync.
