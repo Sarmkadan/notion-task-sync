@@ -29,9 +29,13 @@ public class ExternalApiWrapper
         ILogger<ExternalApiWrapper> logger,
         RetryHelper retryHelper)
     {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _retryHelper = retryHelper ?? throw new ArgumentNullException(nameof(retryHelper));
+        ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(retryHelper);
+
+        _httpClient = httpClient;
+        _logger = logger;
+        _retryHelper = retryHelper;
     }
 
     /// <summary>
@@ -42,6 +46,8 @@ public class ExternalApiWrapper
     {
         try
         {
+            ArgumentNullException.ThrowIfNull(endpoint);
+
             var response = await _retryHelper.ExecuteWithRetryAsync(
                 async () =>
                 {
@@ -72,6 +78,9 @@ public class ExternalApiWrapper
     {
         try
         {
+            ArgumentNullException.ThrowIfNull(endpoint);
+            ArgumentNullException.ThrowIfNull(payload);
+
             var jsonContent = JsonSerializer.Serialize(payload);
 
             var response = await _retryHelper.ExecuteWithRetryAsync(
@@ -105,6 +114,9 @@ public class ExternalApiWrapper
     {
         try
         {
+            ArgumentNullException.ThrowIfNull(endpoint);
+            ArgumentNullException.ThrowIfNull(payload);
+
             var jsonContent = JsonSerializer.Serialize(payload);
 
             var response = await _retryHelper.ExecuteWithRetryAsync(
@@ -138,6 +150,8 @@ public class ExternalApiWrapper
     {
         try
         {
+            ArgumentNullException.ThrowIfNull(endpoint);
+
             await _retryHelper.ExecuteWithRetryAsync(
                 async () =>
                 {
