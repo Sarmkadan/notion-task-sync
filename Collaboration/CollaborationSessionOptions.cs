@@ -99,6 +99,13 @@ public sealed class CollaborationSessionOptions
         MaxOperationsPerBatch is >= 1 and <= 500 &&
         IdleTimeout > TimeSpan.Zero &&
         HeartbeatInterval > TimeSpan.Zero;
+
+    /// <inheritdoc />
+    public override string ToString() =>
+        $"CollaborationSessionOptions {{ MaxParticipantsPerSession = {MaxParticipantsPerSession}, " +
+        $"OperationLogCapacity = {OperationLogCapacity}, MaxOperationsPerBatch = {MaxOperationsPerBatch}, " +
+        $"IdleTimeout = {IdleTimeout}, HeartbeatInterval = {HeartbeatInterval}, " +
+        $"AllowAutomaticTextMerge = {AllowAutomaticTextMerge} }}";
 }
 
 /// <summary>
