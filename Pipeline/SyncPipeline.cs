@@ -26,7 +26,9 @@ public class SyncPipeline
 
     public SyncPipeline(ILogger<SyncPipeline> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _logger = logger;
     }
 
     /// <summary>
@@ -35,8 +37,7 @@ public class SyncPipeline
     /// </summary>
     public void AddStep(ISyncStep step)
     {
-        if (step is null)
-            throw new ArgumentNullException(nameof(step));
+        ArgumentNullException.ThrowIfNull(step);
 
         _steps.Add(step);
         _logger.LogDebug("Added step to pipeline: {StepName}", step.Name);
