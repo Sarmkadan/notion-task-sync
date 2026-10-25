@@ -25,8 +25,11 @@ public class ConflictDetectedHandler
         ILogger<ConflictDetectedHandler> logger,
         JsonFormatter jsonFormatter)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _jsonFormatter = jsonFormatter ?? throw new ArgumentNullException(nameof(jsonFormatter));
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(jsonFormatter);
+
+        _logger = logger;
+        _jsonFormatter = jsonFormatter;
     }
 
     /// <summary>
@@ -37,6 +40,8 @@ public class ConflictDetectedHandler
     {
         try
         {
+            ArgumentNullException.ThrowIfNull(@event);
+
             // Log the conflict at warning level
             _logger.LogWarning(
                 "Conflict detected for task '{TaskTitle}' (ID: {TaskId}). " +
@@ -68,6 +73,8 @@ public class ConflictDetectedHandler
     /// </summary>
     private void LogDetailedConflictInfo(ConflictDetectedEvent @event)
     {
+        ArgumentNullException.ThrowIfNull(@event);
+
         if (@event.LocalValues.Count > 0)
         {
             _logger.LogDebug("Local values for conflict: {LocalValues}",
@@ -87,6 +94,8 @@ public class ConflictDetectedHandler
     /// </summary>
     private async Task NotifyConflictAsync(ConflictDetectedEvent @event)
     {
+        ArgumentNullException.ThrowIfNull(@event);
+
         // TODO: Implement actual notification (email, Slack, webhook, etc.)
         await Task.CompletedTask;
     }
