@@ -40,8 +40,11 @@ public class WebhookHandler
 
     public WebhookHandler(EventBus eventBus, ILogger<WebhookHandler> logger)
     {
-        _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(eventBus);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _eventBus = eventBus;
+        _logger = logger;
         _webhookHandlers = new Dictionary<string, Func<Dictionary<string, object>, Task>>();
 
         RegisterDefaultHandlers();
