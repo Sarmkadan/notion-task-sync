@@ -37,10 +37,15 @@ public class SyncWorker : IDisposable
         SyncConfig config,
         int syncIntervalSeconds = 300)
     {
-        _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
-        _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(syncService);
+        ArgumentNullException.ThrowIfNull(eventBus);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(config);
+
+        _syncService = syncService;
+        _eventBus = eventBus;
+        _logger = logger;
+        _config = config;
         _syncIntervalSeconds = Math.Max(syncIntervalSeconds, 60); // Minimum 60 seconds
     }
 
