@@ -16,7 +16,13 @@ using System.Threading.Tasks;
 /// <summary>
 /// Manages task file backups and restoration.
 /// Provides automated and manual backup functionality with retention policies.
+/// Each backup is a directory named <c>backup_{yyyyMMdd_HHmmss}_{label}</c> under the backup directory.
 /// </summary>
+/// <remarks>
+/// Backup and restore operations delegate file copying to <see cref="LocalFileService"/>.
+/// I/O errors from the create, restore and delete operations are wrapped in <see cref="SyncException"/>, except
+/// <see cref="GetAvailableBackups"/> and <see cref="GetBackupStats"/>, which swallow errors and return partial or empty results.
+/// </remarks>
 public sealed class BackupService
 {
     private const string BackupDirectoryPrefix = "backup_";
@@ -30,6 +36,13 @@ public sealed class BackupService
     private readonly int _maxBackupFiles;
     private readonly LocalFileService _fileService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BackupService"/> class.
+    /// </summary>
+    /// <param name="backupDirectory">Directory where backup folders are created and listed.</param>
+    /// <param name="maxBackupFiles">Maximum number of backups to keep; older backups are deleted after each new backup is created.</param>
+    /// <param name="fileService">File service used to read the current task files and to locate the task directory for restores.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="backupDirectory"/> or <paramref name="fileService"/> is <c>null</c>.</exception>
     public BackupService(string backupDirectory, int maxBackupFiles, LocalFileService fileService)
     {
         ArgumentNullException.ThrowIfNull(backupDirectory);
@@ -41,8 +54,11 @@ public sealed class BackupService
     }
 
     /// <summary>
-    /// Creates a backup of all task files.
+    /// Creates a backup of all task files, then removes backups beyond the retention limit.
     /// </summary>
+    /// <param name="label">Optional label appended to the backup folder name. Defaults to <c>auto</c>.</param>
+    /// <returns>Information about the newly created backup.</returns>
+    /// <exception cref="SyncException">The backup could not be created.</exception>
     public async Task<BackupInfo> CreateBackupAsync(string? label = null)
     {
         try
@@ -81,6 +97,9 @@ public sealed class BackupService
     /// <summary>
     /// Lists all available backups ordered by creation date (newest first).
     /// </summary>
+    /// <returns>
+    /// The known backups, or an empty list if the backup directory does not exist or cannot be read.
+    /// </returns>
     public List<BackupInfo> GetAvailableBackups()
     {
         var backups = new List<BackupInfo>();
@@ -116,8 +135,12 @@ public sealed class BackupService
     }
 
     /// <summary>
-    /// Restores tasks from a specific backup.
+    /// Restores tasks from a specific backup by copying its <c>*.md</c> task files
+    /// into the task directory, overwriting existing files with the same name.
     /// </summary>
+    /// <param name="backupPath">Path to the backup directory to restore from.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="backupPath"/> is <c>null</c>.</exception>
+    /// <exception cref="SyncException">The backup directory is missing or the restore failed.</exception>
     public async Task RestoreFromBackupAsync(string backupPath)
     {
         ArgumentNullException.ThrowIfNull(backupPath);
@@ -149,8 +172,12 @@ public sealed class BackupService
     }
 
     /// <summary>
-    /// Deletes a specific backup by path.
+    /// Deletes a specific backup directory and all of its contents.
+    /// Does nothing if the directory does not exist.
     /// </summary>
+    /// <param name="backupPath">Path to the backup directory to delete.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="backupPath"/> is <c>null</c>.</exception>
+    /// <exception cref="SyncException">The backup could not be deleted.</exception>
     public async Task DeleteBackupAsync(string backupPath)
     {
         ArgumentNullException.ThrowIfNull(backupPath);
@@ -171,8 +198,11 @@ public sealed class BackupService
     }
 
     /// <summary>
-    /// Gets backup statistics.
+    /// Gets backup statistics: backup count, total size on disk, and the time of the most recent backup.
     /// </summary>
+    /// <returns>
+    /// The statistics, or empty statistics if the backup directory does not exist or cannot be read.
+    /// </returns>
     public BackupStats GetBackupStats()
     {
         var stats = new BackupStats();
