@@ -14,6 +14,20 @@ using System.Text.Json.Serialization;
 /// Improves performance by avoiding reflection-based serialization and providing
 /// compile-time generated serialization metadata.
 /// </summary>
+/// <remarks>
+/// The <see cref="JsonSerializableAttribute"/> declarations below list every type that is
+/// serialized or deserialized through this context. The System.Text.Json source generator
+/// emits the metadata for those types at build time, so no reflection is needed at run time.
+/// This also makes the serialization path compatible with trimming and AOT publishing.
+/// Types that are not listed here are not covered by the generated metadata, so add a new
+/// attribute when a new DTO needs to go through this context.
+/// Enums are registered with an explicit <c>TypeInfoPropertyName</c> so that each generated
+/// <c>JsonTypeInfo</c> property has a stable, unambiguous name.
+/// The instance <see cref="Serialize{T}"/> and <see cref="Deserialize{T}"/> helpers pass
+/// <see cref="JsonSerializerContext.Options"/> to <see cref="JsonSerializer"/> so callers use
+/// the generated options.
+/// Used by <c>Formatters/JsonFormatter.cs</c>; covered by <c>JsonSerializerContextTests</c>.
+/// </remarks>
 [JsonSerializable(typeof(Task))]
 [JsonSerializable(typeof(SyncConfig))]
 [JsonSerializable(typeof(NotionPage))]
